@@ -787,7 +787,7 @@ local TitleText = Create("TextLabel", {
 local VersionBadge = Create("Frame", { Parent = TitleContainer, Size = UDim2.new(0, 48, 0, 18), BackgroundColor3 = Colors.Surface, LayoutOrder = 2 })
 Create("UICorner", { Parent = VersionBadge, CornerRadius = UDim.new(0, 4) })
 Create("UIStroke", { Parent = VersionBadge, Color = Colors.Border, Thickness = 1 })
-local VersionTag = Create("TextLabel", { Parent = VersionBadge, Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "V2.31B", TextColor3 = Colors.Active, Font = Enum.Font.GothamSemibold, TextSize = 10 })
+local VersionTag = Create("TextLabel", { Parent = VersionBadge, Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "V2.32", TextColor3 = Colors.Active, Font = Enum.Font.GothamSemibold, TextSize = 10 })
 
 local Controls = Create("Frame", { Parent = TopBar, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -15, 0.5, 0), Size = UDim2.new(0, 70, 1, 0), BackgroundTransparency = 1 })
 Create("UIListLayout", { Parent = Controls, FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right, VerticalAlignment = Enum.VerticalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 10) })
