@@ -4904,8 +4904,11 @@ _G.SearchEmotes = function(query)
     })
 
     task.spawn(function()
-
-        local url = "https://catalog.roproxy.com/v1/search/items/details?Category=12&Subcategory=39&SortType=" .. tostring(currentSortType) .. "&Limit=30"
+        -- Определяем доступную функцию запросов инжектора
+        local httpReq = request or http_request or (syn and syn.request)
+        -- Если есть внешняя функция запросов, используем официальный домен напрямую, иначе используем прокси
+        local domain = httpReq and "catalog.roblox.com" or "catalog.roproxy.com"
+        local url = "https://" .. domain .. "/v1/search/items/details?Category=12&Subcategory=39&SortType=" .. tostring(currentSortType) .. "&Limit=30"
         
         if currentSortType == 1 or currentSortType == 2 then
             url = url .. "&SortAggregation=5"
@@ -4916,8 +4919,17 @@ _G.SearchEmotes = function(query)
         end
 
         local success, response = pcall(function()
-            if request then
-                local res = request({ Url = url, Method = "GET" })
+            if httpReq then
+                -- Отправляем запрос с подменой User-Agent, чтобы Roblox не расценивал его как "In-Experience"
+                local res = httpReq({ 
+                    Url = url, 
+                    Method = "GET",
+                    Headers = {
+                        ["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                        ["Roblox-Place-Id"] = nil,
+                        ["Roblox-Universe-Id"] = nil
+                    }
+                })
                 return res.Body
             else
                 return game:HttpGet(url)
@@ -4945,7 +4957,6 @@ _G.SearchEmotes = function(query)
         end)
 
         if not decodeSuccess or not decoded or not decoded.data then
-
             local errMsg = "Ошибка обработки данных."
             if decoded and decoded.errors and decoded.errors[1] then
                 errMsg = errMsg .. " (" .. tostring(decoded.errors[1].message) .. ")"
