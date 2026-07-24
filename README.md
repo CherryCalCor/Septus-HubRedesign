@@ -2,11 +2,11 @@
 <div align="center">
 
 # SEPTUS HUB
-### REDESIGN V2.32
+### REDESIGN V2.33
 
 **"Precision in every line."**
 
-[ ![Version](https://img.shields.io/badge/Version-2.32-000000?style=for-the-badge) ](ССЫЛКА)
+[ ![Version](https://img.shields.io/badge/Version-2.33-000000?style=for-the-badge) ](ССЫЛКА)
 
 ---
 
