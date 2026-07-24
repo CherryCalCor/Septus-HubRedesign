@@ -27,9 +27,6 @@
 - [ ] Server connections via ID
 - [ ] Switching between places by ID
 - [ ] Change in the Stalk function
-- [ ] Item ESP Fix + name + outline
-- [ ] Healt ESP
-- [ ] Skeleton
 - [ ] Fix for texture deletion
 
 It will be released around July 27 – August 1, 2026.
