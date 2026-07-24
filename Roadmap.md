@@ -32,6 +32,8 @@
 - [ ] Skeleton
 - [ ] Fix for texture deletion
 
+It will be released around July 27 – August 1, 2026.
+
 ## 💬 Telegram
 
 <a href="https://telegram.me/RezinovieTapochkl">
