@@ -15,6 +15,23 @@
 - [ ] Fixing music playback in Music Player
 - [ ] Visually modified loading screen
 
+#### v2.4 [Major update] The work is 30 percent complete.
+- [ ] New section
+- [ ] Aim / Aim Bot
+- [ ] Trigger Bot [Team check Hold mode  Min/max delayCustom CPS  Miss chance %]
+- [ ] Hitbox Expander
+- [ ] Head only mode
+- [ ] Show Hitbox
+- [ ] Fov Changer
+- [ ] Refactoring server distribution logic
+- [ ] Server connections via ID
+- [ ] Switching between places by ID
+- [ ] Change in the Stalk function
+- [ ] Item ESP Fix + name + outline
+- [ ] Healt ESP
+- [ ] Skeleton
+- [ ] Fix for texture deletion
+
 ## 💬 Telegram
 
 <a href="https://telegram.me/RezinovieTapochkl">
