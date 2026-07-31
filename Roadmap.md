@@ -29,7 +29,7 @@
 - [ ] Change in the Stalk function
 - [ ] Fix for texture deletion
 
-It will be released around July 27 – August 1, 2026.
+The release of the update is postponed indefinitely pending the resolution of the issue.
 
 Unfortunately, there likely won't be a major v2.4 update; the script is so massive that we are hitting compiler limits and restrictions on the number of local variables. We won't be able to release the major update until we resolve this issue, so we will be releasing mini-updates instead. Sorry.
 
