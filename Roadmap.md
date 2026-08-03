@@ -33,6 +33,12 @@ The release of the update is postponed indefinitely pending the resolution of th
 
 Unfortunately, there likely won't be a major v2.4 update; the script is so massive that we are hitting compiler limits and restrictions on the number of local variables. We won't be able to release the major update until we resolve this issue, so we will be releasing mini-updates instead. Sorry.
 
+##### V2.34
+- [ ] Slightly modified menu.
+- [ ] Hitbox expander
+- [ ] Fov Changer
+- [ ] Fixing bugs with ESP
+- [ ] 
 ## 💬 Telegram
 
 <a href="https://telegram.me/RezinovieTapochkl">
