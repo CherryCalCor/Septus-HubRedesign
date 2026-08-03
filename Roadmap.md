@@ -38,7 +38,7 @@ Unfortunately, there likely won't be a major v2.4 update; the script is so massi
 - [ ] Hitbox expander
 - [ ] Fov Changer
 - [ ] Fixing bugs with ESP
-- [ ] 
+- [ ] Adding a couple of visuals and announcing the Future hub interface
 ## 💬 Telegram
 
 <a href="https://telegram.me/RezinovieTapochkl">
