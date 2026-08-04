@@ -5557,3 +5557,13 @@ if AntiAfk then
     AntiAfk.RequestHop.Fire = function() return end
     LP:SetAttribute("AntiAfkIdleOverride", 999999)
 end
+
+local function typeWrite(textLabel, fullText, delayTime)
+    textLabel.Text = "" 
+    
+    for first, last in utf8.graphemes(fullText) do
+        local currentText = string.sub(fullText, 1, last)
+        textLabel.Text = currentText
+        task.wait(delayTime or 0.03) 
+    end
+end
