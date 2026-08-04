@@ -570,13 +570,20 @@ local wTxt = Create("TextLabel", {
     Size = UDim2.new(1, -40, 0, 60),
     Position = UDim2.new(0, 20, 0, 25),
     BackgroundTransparency = 1,
-    Text = "Скрипт находится на стадии бета-тестирования, возможны небольшие баги и недоработки.",
+    Text = "",
     FontFace = Font.fromId(12187375422),
     TextSize = 13,
     TextColor3 = Colors.TextMain,
     TextWrapped = true,
     ZIndex = 1
 })
+
+local message = "Скрипт находится на стадии бета-тестирования, возможны небольшие баги и недоработки."
+
+task.spawn(function()
+    typeWrite(wTxt, message, 0.04)
+end)
+
 
 local GithubBtn = Create("TextButton", {
     Parent = WelcomeGui,
