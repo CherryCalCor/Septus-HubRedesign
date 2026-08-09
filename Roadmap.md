@@ -15,30 +15,27 @@
 - [ ] Fixing music playback in Music Player
 - [ ] Visually modified loading screen
 
-#### v2.4 [Major update] The work is 30 percent complete.
-- [ ] New section
-- [ ] Aim / Aim Bot
-- [ ] Trigger Bot [Team check Hold mode  Min/max delayCustom CPS  Miss chance %]
+#### v2.4 [Major update]
+- [ ] List of flight animations
+- [ ] Slightly modified Fling/Bring Parts/Stalk Mode menus.
+- [ ] New features for Stalk Mode
 - [ ] Hitbox Expander
-- [ ] Head only mode
-- [ ] Show Hitbox
+- [ ] Part Deleter in Boost FPS
+- [ ] Modified server list logic
 - [ ] Fov Changer
-- [ ] Refactoring server distribution logic
 - [ ] Server connections via ID
 - [ ] Switching between places by ID
-- [ ] Change in the Stalk function
 - [ ] Fix for texture deletion
+- [ ] Minor changes to some objects Name/Server Toggle
+- [ ] Fov Cicrle in ESP (They added it for the lulz.)
+- [ ] Functions are now located in libraries.
+- [ ] Optimization of snow and ESP functions
+- [ ] Cyberpunk Neon shader modification
+- [ ] RTX shader changes
+- [ ] 
 
-The release of the update is postponed indefinitely pending the resolution of the issue.
+We apologize for the delay in the update; we had to rewrite the script from scratch to rework the functions using libraries.
 
-Unfortunately, there likely won't be a major v2.4 update; the script is so massive that we are hitting compiler limits and restrictions on the number of local variables. We won't be able to release the major update until we resolve this issue, so we will be releasing mini-updates instead. Sorry.
-
-##### V2.34
-- [ ] Slightly modified menu.
-- [ ] Hitbox expander
-- [ ] Fov Changer
-- [ ] Fixing bugs with ESP
-- [ ] Adding a couple of visuals and announcing the Future hub interface
 ## 💬 Telegram
 
 <a href="https://telegram.me/RezinovieTapochkl">
