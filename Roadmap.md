@@ -44,3 +44,6 @@ We apologize for the delay in the update; we had to rewrite the script from scra
 
 **Есть идеи по улучшению?**  
 Здесь вы можете предложить новые функции, сообщить об ошибках и оставить свои предложения по развитию проекта.
+
+Have any ideas for improvement?
+Here you can suggest new features, report bugs, and share your proposals for the project's development.
