@@ -33,4 +33,3 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/CherryCalCor/Septus-H
 - [FAQ](FAQ.md)
 
 
-Coming soon V2.4 :)
