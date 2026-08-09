@@ -19,7 +19,19 @@ local Services = {
 }
 
 local LP = Services.Players.LocalPlayer
-local UI = { ActiveNotifs = {}, Pages = {}, NavBtns = {}, Connections = {}, Toggles = {} }
+local UI = { 
+    ActiveNotifs = {}, 
+    Pages = {}, 
+    NavBtns = {}, 
+    Connections = {}, 
+    Toggles = {},
+    State = {
+        isGuiVisible = false,
+        isMinimized = false,
+        oldDesignEnabled = false,
+        savedColors = {}
+    }
+}
 _G.pDrawings = {}
 _G.ConfigState = {}
 _G.ConfigUpdaters = {}
@@ -45,7 +57,146 @@ _G.NotificationsEnabled = true
 local TWEEN_INFO_FAST = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 local TWEEN_INFO_SMOOTH = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
-local function Create(className, properties)
+local Lib = {}
+
+local OfflinePlayers = {}
+
+Services.Players.PlayerRemoving:Connect(function(plr)
+    OfflinePlayers[plr.Name] = {
+        UserId = plr.UserId,
+        LeftTime = os.time()
+    }
+end)
+
+function Lib.populatePlayersAdvanced(scroll, layout, actionLbl, defaultText, targetCallback)
+
+    for _, v in pairs(scroll:GetChildren()) do 
+        if v:IsA("Frame") or v:IsA("TextButton") then 
+            v:Destroy() 
+        end 
+    end
+    
+    local function createPlayerCard(name, userId, isOnline)
+        local card = Lib.Create("Frame", {
+            Parent = scroll,
+            Size = UDim2.new(1, -6, 0, 50),
+            BackgroundColor3 = Colors.Surface,
+            BorderSizePixel = 0
+        })
+        Lib.Create("UICorner", { Parent = card, CornerRadius = UDim.new(0, 6) })
+        local cardStroke = Lib.Create("UIStroke", { Parent = card, Color = Colors.Border, Thickness = 1 })
+
+        local avatar = Lib.Create("ImageLabel", {
+            Parent = card,
+            Size = UDim2.new(0, 38, 0, 38),
+            Position = UDim2.new(0, 6, 0.5, -19),
+            BackgroundTransparency = 1,
+        })
+        Lib.Create("UICorner", { Parent = avatar, CornerRadius = UDim.new(1, 0) })
+        
+        task.spawn(function()
+            pcall(function()
+                avatar.Image = Services.Players:GetUserThumbnailAsync(userId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+            end)
+        end)
+
+        local nameLbl = Lib.Create("TextLabel", {
+            Parent = card,
+            Size = UDim2.new(1, -120, 0, 18),
+            Position = UDim2.new(0, 50, 0, 8),
+            BackgroundTransparency = 1,
+            Text = name,
+            TextColor3 = Colors.TextMain,
+            Font = Enum.Font.GothamBold,
+            TextSize = 12,
+            TextXAlignment = Enum.TextXAlignment.Left
+        })
+
+        local statusColor = isOnline and Color3.fromRGB(80, 220, 120) or Color3.fromRGB(240, 100, 100)
+        local statusText = isOnline and "Online" or "Offline"
+        
+        local statusLbl = Lib.Create("TextLabel", {
+            Parent = card,
+            Size = UDim2.new(1, -120, 0, 14),
+            Position = UDim2.new(0, 50, 0, 26),
+            BackgroundTransparency = 1,
+            Text = statusText,
+            TextColor3 = statusColor,
+            Font = Enum.Font.GothamSemibold,
+            TextSize = 10,
+            TextXAlignment = Enum.TextXAlignment.Left
+        })
+
+        if isOnline then
+            local selectBtn = Lib.Create("TextButton", {
+                Parent = card,
+                Size = UDim2.new(0, 60, 0, 24),
+                Position = UDim2.new(1, -70, 0.5, -12),
+                BackgroundColor3 = Colors.Active,
+                Text = "Select",
+                TextColor3 = Colors.Background,
+                Font = Enum.Font.GothamBold,
+                TextSize = 10,
+                BorderSizePixel = 0
+            })
+            Lib.Create("UICorner", { Parent = selectBtn, CornerRadius = UDim.new(0, 4) })
+            
+            selectBtn.MouseButton1Click:Connect(function()
+                local actualPlayer = Services.Players:FindFirstChild(name)
+                if actualPlayer then
+                    targetCallback(actualPlayer)
+                    actionLbl.Text = defaultText .. ": " .. name
+                end
+            end)
+        else
+            local offlineLbl = Lib.Create("TextLabel", {
+                Parent = card,
+                Size = UDim2.new(0, 60, 0, 24),
+                Position = UDim2.new(1, -70, 0.5, -12),
+                BackgroundTransparency = 1,
+                Text = "Left",
+                TextColor3 = Colors.TextDim,
+                Font = Enum.Font.GothamBold,
+                TextSize = 10
+            })
+        end
+    end
+
+    for _, plr in ipairs(Services.Players:GetPlayers()) do
+        if plr ~= LP then
+            createPlayerCard(plr.Name, plr.UserId, true)
+        end
+    end
+
+    local sortedOffline = {}
+    for opName, data in pairs(OfflinePlayers) do
+        table.insert(sortedOffline, {name = opName, userId = data.UserId, leftTime = data.LeftTime})
+    end
+    table.sort(sortedOffline, function(a, b) return a.leftTime > b.leftTime end)
+    
+    for i = 1, math.clamp(#sortedOffline, 0, 5) do
+        local item = sortedOffline[i]
+        createPlayerCard(item.name, item.userId, false)
+    end
+end
+
+local function addRefreshBtn(win, callback)
+    local refreshBtn = Lib.Create("TextButton", {
+        Parent = win,
+        Size = UDim2.new(0, 24, 0, 24),
+        Position = UDim2.new(1, -80, 0, 6),
+        BackgroundTransparency = 1,
+        Text = "🔄",
+        TextColor3 = Colors.TextDim,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 14,
+        ZIndex = 10
+    })
+    refreshBtn.MouseButton1Click:Connect(callback)
+    return refreshBtn
+end
+
+function Lib.Create(className, properties)
     local instance = Instance.new(className)
     for k, v in pairs(properties) do
         if k ~= "Parent" then instance[k] = v end
@@ -54,7 +205,7 @@ local function Create(className, properties)
     return instance
 end
 
-local function makeDraggable(guiObj, dragHandle)
+function Lib.makeDraggable(guiObj, dragHandle)
     dragHandle = dragHandle or guiObj
     local dragging, dragStart, startPos
     dragHandle.InputBegan:Connect(function(input)
@@ -75,7 +226,7 @@ local function makeDraggable(guiObj, dragHandle)
     end)
 end
 
-local function applyGradient(obj)
+function Lib.applyGradient(obj)
     local grad = Instance.new("UIGradient", obj)
     grad.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, _G.CurrentGradientColors[1]),
@@ -83,36 +234,21 @@ local function applyGradient(obj)
     })
     grad.Rotation = 45
 end
-_G.applyGradient = applyGradient
+_G.applyGradient = Lib.applyGradient
 
-_G.changeTheme = function(c1, c2)
-    _G.CurrentGradientColors = {c1, c2}
-    Colors.Active = c2
-    if not UI.Screen then return end
-    for _, v in pairs(UI.Screen:GetDescendants()) do
-        if v:IsA("UIGradient") then 
-            v.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, c1), ColorSequenceKeypoint.new(1, c2)}) 
-        elseif v:IsA("UIStroke") and v.Parent.Name ~= "MainFrame" then
-            v.Color = c2
-        elseif v.Name == "Indicator" and v.BackgroundTransparency == 0 then
-            v.BackgroundColor3 = c2
-        end
+function Lib.typeWrite(textLabel, fullText, delayTime)
+    textLabel.Text = "" 
+    for first, last in utf8.graphemes(fullText) do
+        local currentText = string.sub(fullText, 1, last)
+        textLabel.Text = currentText
+        task.wait(delayTime or 0.03) 
     end
 end
 
-local GuiParent = Services.Run:IsStudio() and LP.PlayerGui or Services.Core:FindFirstChild("RobloxGui") or LP:WaitForChild("PlayerGui")
-UI.Screen = Create("ScreenGui", {
-    Name = "SeptusHub_VactoryUI",
-    Parent = GuiParent,
-    ResetOnSpawn = false,
-    ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-    IgnoreGuiInset = true
-})
-
-local function showNotification(message)
+function Lib.showNotification(message)
     if not _G.NotificationsEnabled then return end
     
-    local notifFrame = Create("Frame", {
+    local notifFrame = Lib.Create("Frame", {
         Parent = UI.Screen,
         Size = UDim2.new(0, 280, 0, 65),
         Position = UDim2.new(1, 310, 1, -85),
@@ -120,19 +256,19 @@ local function showNotification(message)
         BorderSizePixel = 0,
         ZIndex = 10000
     })
-    Create("UICorner", { Parent = notifFrame, CornerRadius = UDim.new(0, 6) })
-    local stroke = Create("UIStroke", { Parent = notifFrame, Color = Colors.Active, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = notifFrame, CornerRadius = UDim.new(0, 6) })
+    local stroke = Lib.Create("UIStroke", { Parent = notifFrame, Color = Colors.Active, Thickness = 1 })
 
-    local girlIcon = Create("ImageLabel", {
+    local girlIcon = Lib.Create("ImageLabel", {
         Parent = notifFrame,
         Size = UDim2.new(0, 45, 0, 45),
         Position = UDim2.new(0, 10, 0.5, -22.5),
         BackgroundTransparency = 1,
         Image = _G.NotificationAssetID
     })
-    Create("UICorner", { Parent = girlIcon, CornerRadius = UDim.new(0, 4) })
+    Lib.Create("UICorner", { Parent = girlIcon, CornerRadius = UDim.new(0, 4) })
 
-    local titleLabel = Create("TextLabel", {
+    local titleLabel = Lib.Create("TextLabel", {
         Parent = notifFrame,
         Size = UDim2.new(1, -75, 0, 15),
         Position = UDim2.new(0, 65, 0, 10),
@@ -144,7 +280,7 @@ local function showNotification(message)
         TextXAlignment = Enum.TextXAlignment.Left
     })
 
-    local msgLabel = Create("TextLabel", {
+    local msgLabel = Lib.Create("TextLabel", {
         Parent = notifFrame,
         Size = UDim2.new(1, -75, 0, 30),
         Position = UDim2.new(0, 65, 0, 25),
@@ -182,23 +318,23 @@ local function showNotification(message)
     end)
 end
 
-local function CreateStyledCard(parent, sizeY)
-    local card = Create("Frame", {
+function Lib.CreateStyledCard(parent, sizeY)
+    local card = Lib.Create("Frame", {
         Size = UDim2.new(1, -6, 0, sizeY),
         BackgroundColor3 = Colors.Surface,
         Parent = parent,
         BorderSizePixel = 0
     })
-    Create("UICorner", { Parent = card, CornerRadius = UDim.new(0, 6) })
-    Create("UIStroke", { Parent = card, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = card, CornerRadius = UDim.new(0, 6) })
+    Lib.Create("UIStroke", { Parent = card, Color = Colors.Border, Thickness = 1 })
     return card
 end
 
-local function createToggle(parent, name, y, defaultState, callback)
-    local card = CreateStyledCard(parent, 40)
+function Lib.createToggle(parent, name, y, defaultState, callback)
+    local card = Lib.CreateStyledCard(parent, 40)
     card.Position = UDim2.new(0, 0, 0, y)
 
-    local lbl = Create("TextLabel", {
+    local lbl = Lib.Create("TextLabel", {
         Parent = card,
         Size = UDim2.new(1, -60, 1, 0),
         Position = UDim2.new(0, 12, 0, 0),
@@ -210,7 +346,7 @@ local function createToggle(parent, name, y, defaultState, callback)
         TextXAlignment = Enum.TextXAlignment.Left
     })
 
-    local switchShell = Create("Frame", {
+    local switchShell = Lib.Create("Frame", {
         Parent = card,
         AnchorPoint = Vector2.new(1, 0.5),
         Position = UDim2.new(1, -12, 0.5, 0),
@@ -218,19 +354,19 @@ local function createToggle(parent, name, y, defaultState, callback)
         BackgroundColor3 = Colors.ToggleShell,
         BorderSizePixel = 0
     })
-    Create("UICorner", { Parent = switchShell, CornerRadius = UDim.new(0, 5) })
-    local stroke = Create("UIStroke", { Parent = switchShell, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = switchShell, CornerRadius = UDim.new(0, 5) })
+    local stroke = Lib.Create("UIStroke", { Parent = switchShell, Color = Colors.Border, Thickness = 1 })
 
-    local knob = Create("Frame", {
+    local knob = Lib.Create("Frame", {
         Parent = switchShell,
         Position = defaultState and UDim2.new(1, -19, 0, 3) or UDim2.new(0, 3, 0, 3),
         Size = UDim2.new(0, 16, 0, 16),
         BackgroundColor3 = defaultState and Colors.TextMain or Colors.TextDim,
         BorderSizePixel = 0
     })
-    Create("UICorner", { Parent = knob, CornerRadius = UDim.new(0, 4) })
+    Lib.Create("UICorner", { Parent = knob, CornerRadius = UDim.new(0, 4) })
 
-    local clickArea = Create("TextButton", {
+    local clickArea = Lib.Create("TextButton", {
         Parent = switchShell,
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
@@ -249,7 +385,7 @@ local function createToggle(parent, name, y, defaultState, callback)
         Services.TS:Create(stroke, TWEEN_INFO_FAST, {Color = borderHex}):Play()
         
         if showNotif then 
-            showNotification(name .. (st and " включен!" or " выключен.")) 
+            Lib.showNotification(name .. (st and " включен!" or " выключен.")) 
         end
     end
 
@@ -269,11 +405,11 @@ local function createToggle(parent, name, y, defaultState, callback)
     return card, knob, setState
 end
 
-local function createSlider(parent, yPos, name, min, max, default, callback)
-    local card = CreateStyledCard(parent, 55)
+function Lib.createSlider(parent, yPos, name, min, max, default, callback)
+    local card = Lib.CreateStyledCard(parent, 55)
     card.Position = UDim2.new(0, 0, 0, yPos)
     
-    local lbl = Create("TextLabel", {
+    local lbl = Lib.Create("TextLabel", {
         Parent = card,
         Size = UDim2.new(1, -20, 0, 20),
         Position = UDim2.new(0, 12, 0, 6),
@@ -285,7 +421,7 @@ local function createSlider(parent, yPos, name, min, max, default, callback)
         TextXAlignment = Enum.TextXAlignment.Left
     })
 
-    local bg = Create("TextButton", {
+    local bg = Lib.Create("TextButton", {
         Parent = card,
         Text = "",
         AutoButtonColor = false,
@@ -294,24 +430,24 @@ local function createSlider(parent, yPos, name, min, max, default, callback)
         BackgroundColor3 = Colors.Background,
         BorderSizePixel = 0
     })
-    Create("UICorner", { Parent = bg })
+    Lib.Create("UICorner", { Parent = bg })
 
-    local fill = Create("Frame", {
+    local fill = Lib.Create("Frame", {
         Parent = bg,
         Size = UDim2.new((default - min) / (max - min), 0, 1, 0),
         BackgroundColor3 = Colors.Active,
         BorderSizePixel = 0
     })
-    Create("UICorner", { Parent = fill })
+    Lib.Create("UICorner", { Parent = fill })
 
-    local knob = Create("Frame", {
+    local knob = Lib.Create("Frame", {
         Parent = bg,
         Size = UDim2.new(0, 12, 0, 12),
         Position = UDim2.new((default - min) / (max - min), -6, 0.5, -6),
         BackgroundColor3 = Colors.TextMain,
         BorderSizePixel = 0
     })
-    Create("UICorner", { Parent = knob, CornerRadius = UDim.new(1, 0) })
+    Lib.Create("UICorner", { Parent = knob, CornerRadius = UDim.new(1, 0) })
 
     local dragging = false
     local function update(x, isValue)
@@ -348,11 +484,13 @@ local function createSlider(parent, yPos, name, min, max, default, callback)
 
     _G.ConfigUpdaters[name] = function(val) update(val, true) end
     _G.ConfigState[name] = default
+ _G.ConfigState[name] = default
+
     return card
 end
 
-local function createMenuBtn(parent, text, posY, showArrow)
-    local btn = Create("TextButton", {
+function Lib.createMenuBtn(parent, text, posY, showArrow)
+    local btn = Lib.Create("TextButton", {
         Parent = parent,
         Size = UDim2.new(1, -6, 0, 36),
         Position = UDim2.new(0, 3, 0, posY),
@@ -361,10 +499,10 @@ local function createMenuBtn(parent, text, posY, showArrow)
         AutoButtonColor = false,
         BorderSizePixel = 0
     })
-    Create("UICorner", { Parent = btn, CornerRadius = UDim.new(0, 6) })
-    local stroke = Create("UIStroke", { Parent = btn, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = btn, CornerRadius = UDim.new(0, 6) })
+    local stroke = Lib.Create("UIStroke", { Parent = btn, Color = Colors.Border, Thickness = 1 })
 
-    local lbl = Create("TextLabel", {
+    local lbl = Lib.Create("TextLabel", {
         Parent = btn,
         Size = UDim2.new(1, -40, 1, 0),
         Position = UDim2.new(0, 12, 0, 0),
@@ -378,7 +516,7 @@ local function createMenuBtn(parent, text, posY, showArrow)
 
     local arrow = nil
     if showArrow then
-        arrow = Create("TextLabel", {
+        arrow = Lib.Create("TextLabel", {
             Parent = btn,
             Size = UDim2.new(0, 20, 1, 0),
             Position = UDim2.new(1, -30, 0, 0),
@@ -401,11 +539,11 @@ local function createMenuBtn(parent, text, posY, showArrow)
     return btn, arrow, lbl
 end
 
-local function createFloatingMenu(titleText, sizeX, sizeY)
+function Lib.createFloatingMenu(titleText, sizeX, sizeY)
     sizeX = sizeX or 320
     sizeY = sizeY or 280
     
-    local win = Create("Frame", {
+    local win = Lib.Create("Frame", {
         Parent = UI.Screen,
         Size = UDim2.new(0, sizeX, 0, sizeY),
         Position = UDim2.new(0.5, -sizeX/2, 0.5, -sizeY/2),
@@ -414,17 +552,17 @@ local function createFloatingMenu(titleText, sizeX, sizeY)
         Visible = false,
         ClipsDescendants = true
     })
-    Create("UICorner", { Parent = win, CornerRadius = UDim.new(0, 8) })
-    Create("UIStroke", { Parent = win, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = win, CornerRadius = UDim.new(0, 8) })
+    Lib.Create("UIStroke", { Parent = win, Color = Colors.Border, Thickness = 1 })
 
-    local topBar = Create("Frame", {
+    local topBar = Lib.Create("Frame", {
         Parent = win,
         Size = UDim2.new(1, 0, 0, 36),
         BackgroundTransparency = 1
     })
-    makeDraggable(win, topBar)
+    Lib.makeDraggable(win, topBar)
 
-    local title = Create("TextLabel", {
+    local title = Lib.Create("TextLabel", {
         Parent = topBar,
         Size = UDim2.new(0.6, 0, 1, 0),
         Position = UDim2.new(0, 15, 0, 0),
@@ -436,7 +574,7 @@ local function createFloatingMenu(titleText, sizeX, sizeY)
         TextXAlignment = Enum.TextXAlignment.Left
     })
 
-    local minBtn = Create("TextButton", {
+    local minBtn = Lib.Create("TextButton", {
         Parent = topBar,
         Size = UDim2.new(0, 24, 0, 24),
         Position = UDim2.new(1, -55, 0.5, -12),
@@ -447,7 +585,7 @@ local function createFloatingMenu(titleText, sizeX, sizeY)
         TextSize = 14
     })
 
-    local closeBtn = Create("TextButton", {
+    local closeBtn = Lib.Create("TextButton", {
         Parent = topBar,
         Size = UDim2.new(0, 24, 0, 24),
         Position = UDim2.new(1, -30, 0.5, -12),
@@ -458,7 +596,7 @@ local function createFloatingMenu(titleText, sizeX, sizeY)
         TextSize = 18
     })
 
-    local scroll = Create("ScrollingFrame", {
+    local scroll = Lib.Create("ScrollingFrame", {
         Parent = win,
         Size = UDim2.new(1, -20, 1, -85),
         Position = UDim2.new(0, 10, 0, 40),
@@ -467,12 +605,12 @@ local function createFloatingMenu(titleText, sizeX, sizeY)
         ScrollBarImageColor3 = Colors.Border,
         BorderSizePixel = 0
     })
-    local layout = Create("UIListLayout", { Parent = scroll, Padding = UDim.new(0, 6) })
+    local layout = Lib.Create("UIListLayout", { Parent = scroll, Padding = UDim.new(0, 6) })
     layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 10)
     end)
 
-    local actionBtn = Create("TextButton", {
+    local actionBtn = Lib.Create("TextButton", {
         Parent = win,
         Size = UDim2.new(1, -20, 0, 30),
         Position = UDim2.new(0, 10, 1, -40),
@@ -480,10 +618,10 @@ local function createFloatingMenu(titleText, sizeX, sizeY)
         Text = "",
         BorderSizePixel = 0
     })
-    Create("UICorner", { Parent = actionBtn, CornerRadius = UDim.new(0, 6) })
-    local actStroke = Create("UIStroke", { Parent = actionBtn, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = actionBtn, CornerRadius = UDim.new(0, 6) })
+    local actStroke = Lib.Create("UIStroke", { Parent = actionBtn, Color = Colors.Border, Thickness = 1 })
 
-    local actionLbl = Create("TextLabel", {
+    local actionLbl = Lib.Create("TextLabel", {
         Parent = actionBtn,
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
@@ -507,11 +645,11 @@ local function createFloatingMenu(titleText, sizeX, sizeY)
     return win, closeBtn, scroll, layout, actionBtn, actionLbl
 end
 
-local function populatePlayers(scroll, layout, actionLbl, defaultText, targetCallback)
+function Lib.populatePlayers(scroll, layout, actionLbl, defaultText, targetCallback)
     for _, v in pairs(scroll:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
     for _, plr in ipairs(Services.Players:GetPlayers()) do
         if plr ~= LP then
-            local btn = Create("TextButton", {
+            local btn = Lib.Create("TextButton", {
                 Parent = scroll,
                 Size = UDim2.new(1, -5, 0, 26),
                 BackgroundColor3 = Colors.Surface,
@@ -521,8 +659,8 @@ local function populatePlayers(scroll, layout, actionLbl, defaultText, targetCal
                 TextSize = 12,
                 BorderSizePixel = 0
             })
-            Create("UICorner", { Parent = btn, CornerRadius = UDim.new(0, 4) })
-            local bStroke = Create("UIStroke", { Parent = btn, Color = Colors.Border, Thickness = 1 })
+            Lib.Create("UICorner", { Parent = btn, CornerRadius = UDim.new(0, 4) })
+            local bStroke = Lib.Create("UIStroke", { Parent = btn, Color = Colors.Border, Thickness = 1 })
 
             btn.MouseEnter:Connect(function() Services.TS:Create(bStroke, TWEEN_INFO_FAST, {Color = Colors.Active}):Play() end)
             btn.MouseLeave:Connect(function() Services.TS:Create(bStroke, TWEEN_INFO_FAST, {Color = Colors.Border}):Play() end)
@@ -535,7 +673,31 @@ local function populatePlayers(scroll, layout, actionLbl, defaultText, targetCal
     end
 end
 
-local WelcomeGui = Create("Frame", {
+_G.changeTheme = function(c1, c2)
+    _G.CurrentGradientColors = {c1, c2}
+    Colors.Active = c2
+    if not UI.Screen then return end
+    for _, v in pairs(UI.Screen:GetDescendants()) do
+        if v:IsA("UIGradient") then 
+            v.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, c1), ColorSequenceKeypoint.new(1, c2)}) 
+        elseif v:IsA("UIStroke") and v.Parent.Name ~= "MainFrame" then
+            v.Color = c2
+        elseif v.Name == "Indicator" and v.BackgroundTransparency == 0 then
+            v.BackgroundColor3 = c2
+        end
+    end
+end
+
+local GuiParent = Services.Run:IsStudio() and LP.PlayerGui or Services.Core:FindFirstChild("RobloxGui") or LP:WaitForChild("PlayerGui")
+UI.Screen = Lib.Create("ScreenGui", {
+    Name = "SeptusHub_VactoryUI",
+    Parent = GuiParent,
+    ResetOnSpawn = false,
+    ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+    IgnoreGuiInset = true
+})
+
+local WelcomeGui = Lib.Create("Frame", {
     Parent = UI.Screen,
     Size = UDim2.new(0, 400, 0, 180),
     Position = UDim2.new(0.5, -200, 0.5, -90),
@@ -543,15 +705,15 @@ local WelcomeGui = Create("Frame", {
     BorderSizePixel = 0,
     ZIndex = 50000
 })
-Create("UICorner", { Parent = WelcomeGui, CornerRadius = UDim.new(0, 8) })
-Create("UIStroke", { Parent = WelcomeGui, Color = Colors.Border, Thickness = 1 })
+Lib.Create("UICorner", { Parent = WelcomeGui, CornerRadius = UDim.new(0, 8) })
+Lib.Create("UIStroke", { Parent = WelcomeGui, Color = Colors.Border, Thickness = 1 })
 
-local welcomeSnow = Create("Frame", { Parent = WelcomeGui, Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, ZIndex = 0 })
+local welcomeSnow = Lib.Create("Frame", { Parent = WelcomeGui, Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, ZIndex = 0 })
 local wRNG = Random.new()
 task.spawn(function()
     while WelcomeGui and WelcomeGui.Parent do
         local size = wRNG:NextNumber(2, 4)
-        local fl = Create("Frame", {
+        local fl = Lib.Create("Frame", {
             Parent = welcomeSnow,
             Size = UDim2.new(0, size, 0, size),
             BackgroundColor3 = Color3.fromRGB(255, 255, 255),
@@ -559,13 +721,13 @@ task.spawn(function()
             BorderSizePixel = 0,
             Position = UDim2.new(wRNG:NextNumber(0, 1), 0, -0.05, 0)
         })
-        Create("UICorner", { Parent = fl, CornerRadius = UDim.new(1, 0) })
+        Lib.Create("UICorner", { Parent = fl, CornerRadius = UDim.new(1, 0) })
         Services.TS:Create(fl, TweenInfo.new(wRNG:NextNumber(3, 7), Enum.EasingStyle.Linear), {Position = UDim2.new(fl.Position.X.Scale + wRNG:NextNumber(-0.1, 0.1), 0, 1.05, 0)}):Play()
         task.wait(0.4)
     end
 end)
 
-local wTxt = Create("TextLabel", {
+local wTxt = Lib.Create("TextLabel", {
     Parent = WelcomeGui,
     Size = UDim2.new(1, -40, 0, 60),
     Position = UDim2.new(0, 20, 0, 25),
@@ -581,11 +743,10 @@ local wTxt = Create("TextLabel", {
 local message = "Скрипт находится на стадии бета-тестирования, возможны небольшие баги и недоработки."
 
 task.spawn(function()
-    typeWrite(wTxt, message, 0.04)
+    Lib.typeWrite(wTxt, message, 0.04)
 end)
 
-
-local GithubBtn = Create("TextButton", {
+local GithubBtn = Lib.Create("TextButton", {
     Parent = WelcomeGui,
     Size = UDim2.new(0, 170, 0, 36),
     Position = UDim2.new(0, 20, 0, 110),
@@ -596,14 +757,14 @@ local GithubBtn = Create("TextButton", {
     TextSize = 12,
     ZIndex = 1
 })
-Create("UICorner", { Parent = GithubBtn, CornerRadius = UDim.new(0, 6) })
-local ghStroke = Create("UIStroke", { Parent = GithubBtn, Color = Colors.Border, Thickness = 1 })
+Lib.Create("UICorner", { Parent = GithubBtn, CornerRadius = UDim.new(0, 6) })
+local ghStroke = Lib.Create("UIStroke", { Parent = GithubBtn, Color = Colors.Border, Thickness = 1 })
 GithubBtn.MouseButton1Click:Connect(function() 
     pcall(function() setclipboard("https://github.com/CherryCalCor") end) 
-    showNotification("Ссылка скопирована в буфер обмена!")
+    Lib.showNotification("Ссылка скопирована в буфер обмена!")
 end)
 
-local LaunchBtn = Create("TextButton", {
+local LaunchBtn = Lib.Create("TextButton", {
     Parent = WelcomeGui,
     Size = UDim2.new(0, 170, 0, 36),
     Position = UDim2.new(1, -190, 0, 110),
@@ -614,14 +775,14 @@ local LaunchBtn = Create("TextButton", {
     TextSize = 12,
     ZIndex = 1
 })
-Create("UICorner", { Parent = LaunchBtn, CornerRadius = UDim.new(0, 6) })
+Lib.Create("UICorner", { Parent = LaunchBtn, CornerRadius = UDim.new(0, 6) })
 
 local welcomeDone = false
 LaunchBtn.MouseButton1Click:Connect(function() 
     welcomeDone = true 
     WelcomeGui:Destroy() 
 end)
-makeDraggable(WelcomeGui)
+Lib.makeDraggable(WelcomeGui)
 repeat task.wait() until welcomeDone
 
 local TweenService = Services.TS
@@ -803,7 +964,7 @@ Blur:Destroy()
 
 _G.MainMenuLoaded = true
 
-UI.Frame = Create("Frame", {
+UI.Frame = Lib.Create("Frame", {
     Parent = UI.Screen,
     Size = UDim2.new(0, 0, 0, 0),
     Position = UDim2.new(0.5, 0, 0.5, 0),
@@ -812,13 +973,13 @@ UI.Frame = Create("Frame", {
     ClipsDescendants = true,
     Visible = false
 })
-Create("UICorner", { Parent = UI.Frame, CornerRadius = UDim.new(0, 8) })
-local mainStroke = Create("UIStroke", { Parent = UI.Frame, Color = Colors.Border, Thickness = 1 })
+Lib.Create("UICorner", { Parent = UI.Frame, CornerRadius = UDim.new(0, 8) })
+local mainStroke = Lib.Create("UIStroke", { Parent = UI.Frame, Color = Colors.Border, Thickness = 1 })
 
-local SnowContainer = Create("Frame", { Parent = UI.Frame, Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, ZIndex = 0 })
+local SnowContainer = Lib.Create("Frame", { Parent = UI.Frame, Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, ZIndex = 0 })
 local function SpawnSnowflake()
     local size = wRNG:NextNumber(2, 4)
-    local flake = Create("Frame", {
+    local flake = Lib.Create("Frame", {
         Parent = SnowContainer,
         Size = UDim2.new(0, size, 0, size),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
@@ -826,7 +987,7 @@ local function SpawnSnowflake()
         BorderSizePixel = 0,
         ZIndex = 0
     })
-    Create("UICorner", { Parent = flake, CornerRadius = UDim.new(1, 0) })
+    Lib.Create("UICorner", { Parent = flake, CornerRadius = UDim.new(1, 0) })
 
     local function AnimateFlake()
         flake.Position = UDim2.new(wRNG:NextNumber(0, 1), 0, -0.05, 0)
@@ -846,7 +1007,7 @@ local function SpawnSnowflake()
 end
 for _ = 1, 20 do SpawnSnowflake() end
 
-local Shadow = Create("ImageLabel", {
+local Shadow = Lib.Create("ImageLabel", {
     Parent = UI.Frame,
     AnchorPoint = Vector2.new(0.5, 0.5),
     Position = UDim2.new(0.5, 0, 0.5, 0),
@@ -860,7 +1021,7 @@ local Shadow = Create("ImageLabel", {
     ZIndex = -1
 })
 
-local Watermark = Create("ImageLabel", {
+local Watermark = Lib.Create("ImageLabel", {
     Parent = UI.Frame,
     Size = UDim2.new(0, 130, 0, 130),
     Position = UDim2.new(1, -120, 1, -120),
@@ -870,32 +1031,54 @@ local Watermark = Create("ImageLabel", {
     ZIndex = 0
 })
 
-local TopBar = Create("Frame", { Parent = UI.Frame, Size = UDim2.new(1, 0, 0, 38), BackgroundTransparency = 1 })
-local TitleContainer = Create("Frame", { Parent = TopBar, Position = UDim2.new(0, 15, 0, 0), Size = UDim2.new(0.5, 0, 1, 0), BackgroundTransparency = 1 })
-Create("UIListLayout", { Parent = TitleContainer, FillDirection = Enum.FillDirection.Horizontal, SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 8) })
+local TopBar = Lib.Create("Frame", { Parent = UI.Frame, Size = UDim2.new(1, 0, 0, 38), BackgroundTransparency = 1 })
+local TitleContainer = Lib.Create("Frame", { Parent = TopBar, Position = UDim2.new(0, 15, 0, 0), Size = UDim2.new(0.5, 0, 1, 0), BackgroundTransparency = 1 })
+Lib.Create("UIListLayout", { Parent = TitleContainer, FillDirection = Enum.FillDirection.Horizontal, SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 8) })
 
-local TitleText = Create("TextLabel", {
+local TitleText = Lib.Create("TextLabel", {
     Parent = TitleContainer,
     Size = UDim2.new(0, 0, 1, 0),
     AutomaticSize = Enum.AutomaticSize.X,
     BackgroundTransparency = 1,
     Text = "SEPTUS HUB",
-    TextColor3 = Colors.TextMain,
+    TextColor3 = Color3.new(1, 1, 1), 
     Font = Enum.Font.GothamBold,
     TextSize = 13,
     LayoutOrder = 1
 })
 
-local VersionBadge = Create("Frame", { Parent = TitleContainer, Size = UDim2.new(0, 48, 0, 18), BackgroundColor3 = Colors.Surface, LayoutOrder = 2 })
-Create("UICorner", { Parent = VersionBadge, CornerRadius = UDim.new(0, 4) })
-Create("UIStroke", { Parent = VersionBadge, Color = Colors.Border, Thickness = 1 })
-local VersionTag = Create("TextLabel", { Parent = VersionBadge, Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "V2.33", TextColor3 = Colors.Active, Font = Enum.Font.GothamSemibold, TextSize = 10 })
+local TextGradient = Instance.new("UIGradient")
+TextGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0.0, Color3.new(0, 0, 0)),   
+    ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)),   
+    ColorSequenceKeypoint.new(1.0, Color3.new(0, 0, 0))    
+})
+TextGradient.Rotation = 0 
+TextGradient.Parent = TitleText
 
-local Controls = Create("Frame", { Parent = TopBar, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -15, 0.5, 0), Size = UDim2.new(0, 70, 1, 0), BackgroundTransparency = 1 })
-Create("UIListLayout", { Parent = Controls, FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right, VerticalAlignment = Enum.VerticalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 10) })
+local TweenService = game:GetService("TweenService")
+local tweenInfo = TweenInfo.new(
+    2,
+    Enum.EasingStyle.Linear, 
+    Enum.EasingDirection.InOut, 
+    -1, 
+    false 
+)
+
+local tween = TweenService:Create(TextGradient, tweenInfo, {Offset = Vector2.new(1, 0)})
+TextGradient.Offset = Vector2.new(-1, 0) 
+tween:Play()
+
+local VersionBadge = Lib.Create("Frame", { Parent = TitleContainer, Size = UDim2.new(0, 48, 0, 18), BackgroundColor3 = Colors.Surface, LayoutOrder = 2 })
+Lib.Create("UICorner", { Parent = VersionBadge, CornerRadius = UDim.new(0, 4) })
+Lib.Create("UIStroke", { Parent = VersionBadge, Color = Colors.Border, Thickness = 1 })
+local VersionTag = Lib.Create("TextLabel", { Parent = VersionBadge, Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "V2.4", TextColor3 = Colors.Active, Font = Enum.Font.GothamSemibold, TextSize = 10 })
+
+local Controls = Lib.Create("Frame", { Parent = TopBar, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -15, 0.5, 0), Size = UDim2.new(0, 70, 1, 0), BackgroundTransparency = 1 })
+Lib.Create("UIListLayout", { Parent = Controls, FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right, VerticalAlignment = Enum.VerticalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 10) })
 
 local function CreateCtrlBtn(text, order)
-    local b = Create("TextButton", { Parent = Controls, Size = UDim2.new(0, 20, 0, 20), BackgroundTransparency = 1, Text = text, TextColor3 = Colors.TextDim, Font = Enum.Font.GothamMedium, TextSize = 15, LayoutOrder = order, AutoButtonColor = false })
+    local b = Lib.Create("TextButton", { Parent = Controls, Size = UDim2.new(0, 20, 0, 20), BackgroundTransparency = 1, Text = text, TextColor3 = Colors.TextDim, Font = Enum.Font.GothamMedium, TextSize = 15, LayoutOrder = order, AutoButtonColor = false })
     b.MouseEnter:Connect(function() Services.TS:Create(b, TWEEN_INFO_FAST, {TextColor3 = Colors.TextMain}):Play() end)
     b.MouseLeave:Connect(function() Services.TS:Create(b, TWEEN_INFO_FAST, {TextColor3 = Colors.TextDim}):Play() end)
     return b
@@ -904,9 +1087,9 @@ end
 local MinBtn = CreateCtrlBtn("—", 1)
 local CloseBtn = CreateCtrlBtn("×", 2)
 
-local ContentFrame = Create("Frame", { Parent = UI.Frame, Position = UDim2.new(0, 0, 0, 38), Size = UDim2.new(1, 0, 1, -38), BackgroundTransparency = 1 })
+local ContentFrame = Lib.Create("Frame", { Parent = UI.Frame, Position = UDim2.new(0, 0, 0, 38), Size = UDim2.new(1, 0, 1, -38), BackgroundTransparency = 1 })
 
-local Sidebar = Create("ScrollingFrame", {
+local Sidebar = Lib.Create("ScrollingFrame", {
     Parent = ContentFrame,
     Size = UDim2.new(0, 130, 1, 0),
     BackgroundTransparency = 1,
@@ -915,17 +1098,17 @@ local Sidebar = Create("ScrollingFrame", {
     BorderSizePixel = 0,
     CanvasSize = UDim2.new(0, 0, 0, 0)
 })
-Create("UIPadding", { Parent = Sidebar, PaddingTop = UDim.new(0, 8), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 4) })
-local SidebarLayout = Create("UIListLayout", { Parent = Sidebar, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4) })
+Lib.Create("UIPadding", { Parent = Sidebar, PaddingTop = UDim.new(0, 8), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 4) })
+local SidebarLayout = Lib.Create("UIListLayout", { Parent = Sidebar, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4) })
 SidebarLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     Sidebar.CanvasSize = UDim2.new(0, 0, 0, SidebarLayout.AbsoluteContentSize.Y + 15)
 end)
 
-local TabContainer = Create("Frame", { Parent = ContentFrame, Position = UDim2.new(0, 130, 0, 0), Size = UDim2.new(1, -130, 1, 0), BackgroundTransparency = 1 })
-Create("UIPadding", { Parent = TabContainer, PaddingTop = UDim.new(0, 8), PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10) })
+local TabContainer = Lib.Create("Frame", { Parent = ContentFrame, Position = UDim2.new(0, 130, 0, 0), Size = UDim2.new(1, -130, 1, 0), BackgroundTransparency = 1 })
+Lib.Create("UIPadding", { Parent = TabContainer, PaddingTop = UDim.new(0, 8), PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10) })
 
 local function CreatePage(name)
-    local scroll = Create("ScrollingFrame", {
+    local scroll = Lib.Create("ScrollingFrame", {
         Name = name .. "Tab",
         Parent = TabContainer,
         Size = UDim2.new(1, 0, 1, 0),
@@ -935,7 +1118,7 @@ local function CreatePage(name)
         Visible = false,
         BorderSizePixel = 0
     })
-    local layout = Create("UIListLayout", { Parent = scroll, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8) })
+    local layout = Lib.Create("UIListLayout", { Parent = scroll, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8) })
     layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 15)
     end)
@@ -945,7 +1128,7 @@ end
 
 local ActiveTab = nil
 local function CreateTabButton(tabName, order)
-    local b = Create("TextButton", {
+    local b = Lib.Create("TextButton", {
         Name = tabName.."Btn",
         Parent = Sidebar,
         Size = UDim2.new(1, 0, 0, 26),
@@ -958,27 +1141,58 @@ local function CreateTabButton(tabName, order)
         LayoutOrder = order,
         AutoButtonColor = false
     })
-    local ind = Create("Frame", {
+    local ind = Lib.Create("Frame", {
         Name = "Indicator",
         Parent = b,
         AnchorPoint = Vector2.new(0, 0.5),
         Position = UDim2.new(0, -12, 0.5, 0),
         Size = UDim2.new(0, 2, 0, 0),
-        BackgroundColor3 = Colors.Active,
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         BackgroundTransparency = 1,
         BorderSizePixel = 0
     })
-    Create("UICorner", { Parent = ind })
+    Lib.Create("UICorner", { Parent = ind })
+    
+    local grad = Lib.Create("UIGradient", {
+        Parent = ind,
+        Rotation = 90,
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+        }),
+        Offset = Vector2.new(0, -1)
+    })
+    task.spawn(function()
+        Services.TS:Create(grad, TweenInfo.new(1.5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {Offset = Vector2.new(0, 1)}):Play()
+    end)
+
+    local glow = Lib.Create("ImageLabel", {
+        Name = "Glow",
+        Parent = b,
+        AnchorPoint = Vector2.new(0, 0.5),
+        Position = UDim2.new(0, -25, 0.5, 0),
+        Size = UDim2.new(0, 30, 0, 30),
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://5028857084",
+        ImageColor3 = Colors.Active,
+        ImageTransparency = 1,
+        ZIndex = 0
+    })
 
     b.MouseEnter:Connect(function() if ActiveTab ~= tabName then Services.TS:Create(b, TWEEN_INFO_FAST, {TextColor3 = Color3.fromRGB(220, 220, 220)}):Play() end end)
     b.MouseLeave:Connect(function() if ActiveTab ~= tabName then Services.TS:Create(b, TWEEN_INFO_FAST, {TextColor3 = Colors.TextDim}):Play() end end)
 
     b.MouseButton1Click:Connect(function()
         if ActiveTab == tabName then return end
+
         for _, child in pairs(Sidebar:GetChildren()) do
             if child:IsA("TextButton") and child.Name ~= tabName.."Btn" then
                 Services.TS:Create(child, TWEEN_INFO_SMOOTH, {TextColor3 = Colors.TextDim}):Play()
                 Services.TS:Create(child.Indicator, TWEEN_INFO_SMOOTH, {Size = UDim2.new(0, 2, 0, 0), BackgroundTransparency = 1}):Play()
+                if child:FindFirstChild("Glow") then
+                    Services.TS:Create(child.Glow, TWEEN_INFO_SMOOTH, {ImageTransparency = 1}):Play()
+                end
             end
         end
         if ActiveTab and UI.Pages[ActiveTab] then
@@ -987,9 +1201,11 @@ local function CreateTabButton(tabName, order)
             tw:Play(); tw.Completed:Wait()
             prev.Visible = false
         end
+        
         ActiveTab = tabName
         Services.TS:Create(b, TWEEN_INFO_SMOOTH, {TextColor3 = Colors.TextMain}):Play()
         Services.TS:Create(ind, TWEEN_INFO_SMOOTH, {Size = UDim2.new(0, 3, 0, 16), BackgroundTransparency = 0}):Play()
+        Services.TS:Create(glow, TWEEN_INFO_SMOOTH, {ImageTransparency = 0.65}):Play()
 
         local curr = UI.Pages[tabName]
         if curr then
@@ -1000,19 +1216,19 @@ local function CreateTabButton(tabName, order)
     end)
 end
 
-local HomeTab = CreatePage("Home")
-local ServerTab = CreatePage("Server")
-local TeleportTab = CreatePage("Teleport")
-local MovedTab = CreatePage("Movement")
-local VisualsTab = CreatePage("Visuals")
-local ShadersTab = CreatePage("Shaders")
-local ProtectTab = CreatePage("Protect")
-local FunnyTab = CreatePage("Funny")
-local ConfigTab = CreatePage("Config")
-local QoLTab = CreatePage("QoL")
-local MiscTab = CreatePage("Misc") 
-local HelpTab = CreatePage("Help")
-local SettingsTab = CreatePage("Settings")
+CreatePage("Home")
+CreatePage("Server")
+CreatePage("Teleport")
+CreatePage("Movement")
+CreatePage("Visuals")
+CreatePage("Shaders")
+CreatePage("Protect")
+CreatePage("Funny")
+CreatePage("Config")
+CreatePage("QoL")
+CreatePage("Misc") 
+CreatePage("Help")
+CreatePage("Settings")
 
 CreateTabButton("Home", 1)
 CreateTabButton("Server", 2)
@@ -1029,8 +1245,8 @@ CreateTabButton("Help", 12)
 CreateTabButton("Settings", 13)
 
 do
-    local pCard = CreateStyledCard(HomeTab, 65)
-    local avatar = Create("ImageLabel", {
+    local pCard = Lib.CreateStyledCard(UI.Pages.Home, 65)
+    local avatar = Lib.Create("ImageLabel", {
         Parent = pCard,
         Position = UDim2.new(0, 12, 0.5, 0),
         AnchorPoint = Vector2.new(0, 0.5),
@@ -1038,10 +1254,10 @@ do
         BackgroundTransparency = 1,
         Image = Services.Players:GetUserThumbnailAsync(LP.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
     })
-    Create("UICorner", { Parent = avatar, CornerRadius = UDim.new(1, 0) })
-    Create("UIStroke", { Parent = avatar, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = avatar, CornerRadius = UDim.new(1, 0) })
+    Lib.Create("UIStroke", { Parent = avatar, Color = Colors.Border, Thickness = 1 })
 
-    local welcome = Create("TextLabel", {
+    local welcome = Lib.Create("TextLabel", {
         Parent = pCard,
         Position = UDim2.new(0, 64, 0.5, 0),
         AnchorPoint = Vector2.new(0, 0.5),
@@ -1054,12 +1270,12 @@ do
         TextXAlignment = Enum.TextXAlignment.Left
     })
 
-    local sCard = CreateStyledCard(HomeTab, 105)
-    Create("UIPadding", { Parent = sCard, PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 12) })
-    Create("UIListLayout", { Parent = sCard, Padding = UDim.new(0, 6) })
+    local sCard = Lib.CreateStyledCard(UI.Pages.Home, 105)
+    Lib.Create("UIPadding", { Parent = sCard, PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 12) })
+    Lib.Create("UIListLayout", { Parent = sCard, Padding = UDim.new(0, 6) })
 
     local function createStatusLine(key, val)
-        local l = Create("TextLabel", {
+        local l = Lib.Create("TextLabel", {
             Parent = sCard,
             Size = UDim2.new(1, 0, 0, 14),
             BackgroundTransparency = 1,
@@ -1090,7 +1306,7 @@ do
         end
     end)
 
-    local NotepadWin = Create("Frame", {
+    local NotepadWin = Lib.Create("Frame", {
         Parent = UI.Screen,
         Size = UDim2.new(0, 320, 0, 240),
         Position = UDim2.new(0.5, 80, 0.5, -120),
@@ -1099,16 +1315,16 @@ do
         Visible = false,
         ClipsDescendants = true
     })
-    Create("UICorner", { Parent = NotepadWin, CornerRadius = UDim.new(0, 8) })
-    Create("UIStroke", { Parent = NotepadWin, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = NotepadWin, CornerRadius = UDim.new(0, 8) })
+    Lib.Create("UIStroke", { Parent = NotepadWin, Color = Colors.Border, Thickness = 1 })
 
-    local noteTopBar = Create("Frame", { Parent = NotepadWin, Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1 })
-    makeDraggable(NotepadWin, noteTopBar)
-    Create("TextLabel", { Parent = noteTopBar, Size = UDim2.new(0.6, 0, 1, 0), Position = UDim2.new(0, 15, 0, 0), BackgroundTransparency = 1, Text = "Notepad", TextColor3 = Colors.TextMain, Font = Enum.Font.GothamBold, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left })
-    local noteMinBtn = Create("TextButton", { Parent = noteTopBar, Size = UDim2.new(0, 24, 0, 24), Position = UDim2.new(1, -55, 0.5, -12), BackgroundTransparency = 1, Text = "—", TextColor3 = Colors.TextDim, Font = Enum.Font.GothamMedium, TextSize = 14 })
-    local noteCloseBtn = Create("TextButton", { Parent = noteTopBar, Size = UDim2.new(0, 24, 0, 24), Position = UDim2.new(1, -30, 0.5, -12), BackgroundTransparency = 1, Text = "×", TextColor3 = Colors.TextDim, Font = Enum.Font.GothamMedium, TextSize = 18 })
+    local noteTopBar = Lib.Create("Frame", { Parent = NotepadWin, Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1 })
+    Lib.makeDraggable(NotepadWin, noteTopBar)
+    Lib.Create("TextLabel", { Parent = noteTopBar, Size = UDim2.new(0.6, 0, 1, 0), Position = UDim2.new(0, 15, 0, 0), BackgroundTransparency = 1, Text = "Notepad", TextColor3 = Colors.TextMain, Font = Enum.Font.GothamBold, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left })
+    local noteMinBtn = Lib.Create("TextButton", { Parent = noteTopBar, Size = UDim2.new(0, 24, 0, 24), Position = UDim2.new(1, -55, 0.5, -12), BackgroundTransparency = 1, Text = "—", TextColor3 = Colors.TextDim, Font = Enum.Font.GothamMedium, TextSize = 14 })
+    local noteCloseBtn = Lib.Create("TextButton", { Parent = noteTopBar, Size = UDim2.new(0, 24, 0, 24), Position = UDim2.new(1, -30, 0.5, -12), BackgroundTransparency = 1, Text = "×", TextColor3 = Colors.TextDim, Font = Enum.Font.GothamMedium, TextSize = 18 })
 
-    local noteBox = Create("TextBox", {
+    local noteBox = Lib.Create("TextBox", {
         Parent = NotepadWin,
         Size = UDim2.new(1, -20, 1, -48),
         Position = UDim2.new(0, 10, 0, 38),
@@ -1124,8 +1340,8 @@ do
         TextWrapped = true,
         Text = "Write your notes here..."
     })
-    Create("UICorner", { Parent = noteBox, CornerRadius = UDim.new(0, 6) })
-    Create("UIStroke", { Parent = noteBox, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = noteBox, CornerRadius = UDim.new(0, 6) })
+    Lib.Create("UIStroke", { Parent = noteBox, Color = Colors.Border, Thickness = 1 })
 
     local noteMin = false
     noteMinBtn.MouseButton1Click:Connect(function()
@@ -1134,10 +1350,10 @@ do
         noteBox.Visible = not noteMin
     end)
 
-    local noteTogCard, _, setNotepad = createToggle(HomeTab, "Notepad", 175, false, function(st) NotepadWin.Visible = st end)
+    local noteTogCard, _, setNotepad = Lib.createToggle(UI.Pages.Home, "Notepad", 175, false, function(st) NotepadWin.Visible = st end)
     noteCloseBtn.MouseButton1Click:Connect(function() setNotepad(false, true); NotepadWin.Visible = false end)
 
-    local ManualOpPanel = Create("Frame", {
+    local ManualOpPanel = Lib.Create("Frame", {
         Parent = UI.Screen,
         Size = UDim2.new(0, 320, 0, 42),
         Position = UDim2.new(0.5, -160, 0, 15),
@@ -1145,10 +1361,10 @@ do
         BorderSizePixel = 0,
         Visible = false
     })
-    Create("UICorner", { Parent = ManualOpPanel, CornerRadius = UDim.new(0, 6) })
-    Create("UIStroke", { Parent = ManualOpPanel, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = ManualOpPanel, CornerRadius = UDim.new(0, 6) })
+    Lib.Create("UIStroke", { Parent = ManualOpPanel, Color = Colors.Border, Thickness = 1 })
 
-    local manInput = Create("TextBox", {
+    local manInput = Lib.Create("TextBox", {
         Parent = ManualOpPanel,
         Size = UDim2.new(1, -85, 1, -12),
         Position = UDim2.new(0, 10, 0, 6),
@@ -1161,10 +1377,10 @@ do
         Text = "",
         ClearTextOnFocus = false
     })
-    Create("UICorner", { Parent = manInput, CornerRadius = UDim.new(0, 4) })
-    Create("UIStroke", { Parent = manInput, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = manInput, CornerRadius = UDim.new(0, 4) })
+    Lib.Create("UIStroke", { Parent = manInput, Color = Colors.Border, Thickness = 1 })
 
-    local manEnter = Create("TextButton", {
+    local manEnter = Lib.Create("TextButton", {
         Parent = ManualOpPanel,
         Size = UDim2.new(0, 65, 1, -12),
         Position = UDim2.new(1, -75, 0, 6),
@@ -1175,7 +1391,7 @@ do
         TextSize = 12,
         BorderSizePixel = 0
     })
-    Create("UICorner", { Parent = manEnter, CornerRadius = UDim.new(0, 4) })
+    Lib.Create("UICorner", { Parent = manEnter, CornerRadius = UDim.new(0, 4) })
 
     local function execCommand()
         local cmd = manInput.Text:lower()
@@ -1183,19 +1399,19 @@ do
         for name, updater in pairs(_G.ConfigUpdaters) do
             if name:lower() == cmd then
                 updater(not _G.ConfigState[name])
-                showNotification(name .. " toggled manually!")
+                Lib.showNotification(name .. " toggled manually!")
                 found = true; break
             end
         end
-        if not found then showNotification("Function not found: " .. manInput.Text) end
+        if not found then Lib.showNotification("Function not found: " .. manInput.Text) end
         manInput.Text = ""
     end
     manEnter.MouseButton1Click:Connect(execCommand)
     manInput.FocusLost:Connect(function(enter) if enter then execCommand() end end)
 
-    local manTogCard, _, setManual = createToggle(HomeTab, "Manual operation", 220, false, function(st) ManualOpPanel.Visible = st end)
+    local manTogCard, _, setManual = Lib.createToggle(UI.Pages.Home, "Manual operation", 220, false, function(st) ManualOpPanel.Visible = st end)
 
-    local InstrWin = Create("Frame", {
+    local InstrWin = Lib.Create("Frame", {
         Parent = UI.Screen,
         Size = UDim2.new(0, 340, 0, 280),
         Position = UDim2.new(0.5, -170, 0.5, -140),
@@ -1204,15 +1420,15 @@ do
         Visible = false,
         ClipsDescendants = true
     })
-    Create("UICorner", { Parent = InstrWin, CornerRadius = UDim.new(0, 8) })
-    Create("UIStroke", { Parent = InstrWin, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = InstrWin, CornerRadius = UDim.new(0, 8) })
+    Lib.Create("UIStroke", { Parent = InstrWin, Color = Colors.Border, Thickness = 1 })
 
-    local insTopBar = Create("Frame", { Parent = InstrWin, Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1 })
-    makeDraggable(InstrWin, insTopBar)
-    Create("TextLabel", { Parent = insTopBar, Size = UDim2.new(0.6, 0, 1, 0), Position = UDim2.new(0, 15, 0, 0), BackgroundTransparency = 1, Text = "Instruction Manual", TextColor3 = Colors.TextMain, Font = Enum.Font.GothamBold, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left })
-    local insCloseBtn = Create("TextButton", { Parent = insTopBar, Size = UDim2.new(0, 24, 0, 24), Position = UDim2.new(1, -30, 0.5, -12), BackgroundTransparency = 1, Text = "×", TextColor3 = Colors.TextDim, Font = Enum.Font.GothamMedium, TextSize = 18 })
+    local insTopBar = Lib.Create("Frame", { Parent = InstrWin, Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1 })
+    Lib.makeDraggable(InstrWin, insTopBar)
+    Lib.Create("TextLabel", { Parent = insTopBar, Size = UDim2.new(0.6, 0, 1, 0), Position = UDim2.new(0, 15, 0, 0), BackgroundTransparency = 1, Text = "Instruction Manual", TextColor3 = Colors.TextMain, Font = Enum.Font.GothamBold, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left })
+    local insCloseBtn = Lib.Create("TextButton", { Parent = insTopBar, Size = UDim2.new(0, 24, 0, 24), Position = UDim2.new(1, -30, 0.5, -12), BackgroundTransparency = 1, Text = "×", TextColor3 = Colors.TextDim, Font = Enum.Font.GothamMedium, TextSize = 18 })
 
-    local insText = Create("TextLabel", {
+    local insText = Lib.Create("TextLabel", {
         Parent = InstrWin,
         Size = UDim2.new(1, -24, 0, 48),
         Position = UDim2.new(0, 12, 0, 38),
@@ -1226,7 +1442,7 @@ do
         TextYAlignment = Enum.TextYAlignment.Top
     })
 
-    local funcScroll = Create("ScrollingFrame", {
+    local funcScroll = Lib.Create("ScrollingFrame", {
         Parent = InstrWin,
         Size = UDim2.new(1, -24, 1, -100),
         Position = UDim2.new(0, 12, 0, 88),
@@ -1235,7 +1451,7 @@ do
         ScrollBarImageColor3 = Colors.Border,
         BorderSizePixel = 0
     })
-    local funcLayout = Create("UIListLayout", { Parent = funcScroll, Padding = UDim.new(0, 4) })
+    local funcLayout = Lib.Create("UIListLayout", { Parent = funcScroll, Padding = UDim.new(0, 4) })
     funcLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         funcScroll.CanvasSize = UDim2.new(0, 0, 0, funcLayout.AbsoluteContentSize.Y + 5)
     end)
@@ -1243,7 +1459,7 @@ do
     local function refreshFunctions()
         for _, v in pairs(funcScroll:GetChildren()) do if v:IsA("TextLabel") then v:Destroy() end end
         for name, _ in pairs(_G.ConfigUpdaters) do
-            local lbl = Create("TextLabel", {
+            local lbl = Lib.Create("TextLabel", {
                 Parent = funcScroll,
                 Size = UDim2.new(1, -4, 0, 22),
                 BackgroundColor3 = Colors.Surface,
@@ -1253,18 +1469,18 @@ do
                 TextSize = 11,
                 TextXAlignment = Enum.TextXAlignment.Left
             })
-            Create("UICorner", { Parent = lbl, CornerRadius = UDim.new(0, 4) })
-            Create("UIStroke", { Parent = lbl, Color = Colors.Border, Thickness = 1 })
+            Lib.Create("UICorner", { Parent = lbl, CornerRadius = UDim.new(0, 4) })
+            Lib.Create("UIStroke", { Parent = lbl, Color = Colors.Border, Thickness = 1 })
         end
     end
 
-    local insTogCard, _, setInstr = createToggle(HomeTab, "Instruction manual", 265, false, function(st)
+    local insTogCard, _, setInstr = Lib.createToggle(UI.Pages.Home, "Instruction manual", 265, false, function(st)
         InstrWin.Visible = st
         if st then refreshFunctions() end
     end)
     insCloseBtn.MouseButton1Click:Connect(function() setInstr(false, true); InstrWin.Visible = false end)
 
-    local TopStatusPanel = Create("Frame", {
+    local TopStatusPanel = Lib.Create("Frame", {
         Parent = UI.Screen,
         Size = UDim2.new(0.3, 0, 0, 32),
         Position = UDim2.new(0.5, 0, 0, 6),
@@ -1273,13 +1489,13 @@ do
         Visible = false,
         BorderSizePixel = 0
     })
-    Create("UICorner", { Parent = TopStatusPanel, CornerRadius = UDim.new(0, 6) })
-    Create("UIStroke", { Parent = TopStatusPanel, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = TopStatusPanel, CornerRadius = UDim.new(0, 6) })
+    Lib.Create("UIStroke", { Parent = TopStatusPanel, Color = Colors.Border, Thickness = 1 })
 
-    local topStatusLayout = Create("UIListLayout", { Parent = TopStatusPanel, FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 12) })
+    local topStatusLayout = Lib.Create("UIListLayout", { Parent = TopStatusPanel, FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 12) })
 
     local function createTopLabel(text)
-        local lbl = Create("TextLabel", {
+        local lbl = Lib.Create("TextLabel", {
             Parent = TopStatusPanel,
             Size = UDim2.new(0, 0, 1, 0),
             AutomaticSize = Enum.AutomaticSize.X,
@@ -1313,16 +1529,17 @@ do
         end
     end)
 
-    local statusTogCard, _, setStatus = createToggle(HomeTab, "Status display", 310, false, function(st) TopStatusPanel.Visible = st end)
+    local statusTogCard, _, setStatus = Lib.createToggle(UI.Pages.Home, "Status display", 310, false, function(st) TopStatusPanel.Visible = st end)
 end
 
-do
-    local serverCard = CreateStyledCard(ServerTab, 90)
-    Create("UIPadding", { Parent = serverCard, PaddingTop = UDim.new(0, 10), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
-    Create("UIListLayout", { Parent = serverCard, Padding = UDim.new(0, 8) })
+do 
+
+    local serverCard = Lib.CreateStyledCard(UI.Pages.Server, 90)
+    Lib.Create("UIPadding", { Parent = serverCard, PaddingTop = UDim.new(0, 10), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
+    Lib.Create("UIListLayout", { Parent = serverCard, Padding = UDim.new(0, 8) })
 
     local function createActBtn(text, parent, callback)
-        local btn = Create("TextButton", {
+        local btn = Lib.Create("TextButton", {
             Parent = parent,
             Size = UDim2.new(1, 0, 0, 30),
             BackgroundColor3 = Colors.Surface,
@@ -1332,21 +1549,21 @@ do
             TextSize = 12,
             BorderSizePixel = 0
         })
-        Create("UICorner", { Parent = btn, CornerRadius = UDim.new(0, 6) })
-        local bStroke = Create("UIStroke", { Parent = btn, Color = Colors.Border, Thickness = 1 })
+        Lib.Create("UICorner", { Parent = btn, CornerRadius = UDim.new(0, 6) })
+        local bStroke = Lib.Create("UIStroke", { Parent = btn, Color = Colors.Border, Thickness = 1 })
         btn.MouseEnter:Connect(function() Services.TS:Create(bStroke, TWEEN_INFO_FAST, {Color = Colors.Active}):Play() end)
         btn.MouseLeave:Connect(function() Services.TS:Create(bStroke, TWEEN_INFO_FAST, {Color = Colors.Border}):Play() end)
         btn.MouseButton1Click:Connect(callback)
         return btn
     end
 
-    createActBtn("🖱 Rejoin", serverCard, function()
-        showNotification("Перезаход на сервер...")
+    createActBtn("Rejoin", serverCard, function()
+        Lib.showNotification("Перезаход на сервер...")
         Services.TP:TeleportToPlaceInstance(game.PlaceId, game.JobId, LP)
     end)
 
-    createActBtn("🖱 Server Hop", serverCard, function()
-        showNotification("Ищем другой сервер...")
+    createActBtn("Server Hop", serverCard, function()
+        Lib.showNotification("Ищем другой сервер...")
         task.spawn(function()
             local s, r = pcall(function()
                 return Services.Http:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. tostring(game.PlaceId) .. "/servers/Public?sortOrder=Asc&limit=100"))
@@ -1359,11 +1576,11 @@ do
                     end
                 end
             end
-            showNotification("Не удалось найти подходящий сервер")
+            Lib.showNotification("Не удалось найти подходящий сервер")
         end)
     end)
 
-    local ServerWidget = Create("Frame", {
+    local ServerWidget = Lib.Create("Frame", {
         Parent = UI.Screen,
         Size = UDim2.new(0, 120, 0, 36),
         Position = UDim2.new(0.5, -60, 0, 20),
@@ -1371,21 +1588,46 @@ do
         Visible = false,
         BorderSizePixel = 0
     })
-    Create("UICorner", { Parent = ServerWidget, CornerRadius = UDim.new(0, 6) })
-    local sWidgetStroke = Create("UIStroke", { Parent = ServerWidget, Color = Colors.Border, Thickness = 1 })
 
-    local widgetBtn = Create("TextButton", {
+    Lib.Create("UICorner", { Parent = ServerWidget, CornerRadius = UDim.new(1, 0) })
+    local sWidgetStroke = Lib.Create("UIStroke", { Parent = ServerWidget, Color = Colors.Border, Thickness = 1 })
+
+    local widgetDot = Lib.Create("Frame", {
         Parent = ServerWidget,
-        Size = UDim2.new(1, 0, 1, 0),
+        Size = UDim2.new(0, 8, 0, 8),
+        Position = UDim2.new(0, 12, 0.5, -4),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BorderSizePixel = 0
+    })
+    Lib.Create("UICorner", { Parent = widgetDot, CornerRadius = UDim.new(1, 0) })
+    local dotGrad = Lib.Create("UIGradient", {
+        Parent = widgetDot,
+        Rotation = 90,
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+        }),
+        Offset = Vector2.new(0, -1)
+    })
+    task.spawn(function()
+        Services.TS:Create(dotGrad, TweenInfo.new(1.5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {Offset = Vector2.new(0, 1)}):Play()
+    end)
+
+    local widgetBtn = Lib.Create("TextButton", {
+        Parent = ServerWidget,
+        Size = UDim2.new(1, -28, 1, 0),
+        Position = UDim2.new(0, 24, 0, 0),
         BackgroundTransparency = 1,
         Text = "Servers",
         TextColor3 = Colors.TextMain,
         Font = Enum.Font.GothamBold,
-        TextSize = 12
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left
     })
-    makeDraggable(ServerWidget, widgetBtn)
+    Lib.makeDraggable(ServerWidget, widgetBtn)
 
-    local ServerMenu = Create("Frame", {
+local ServerMenu = Lib.Create("Frame", {
         Parent = UI.Screen,
         Size = UDim2.new(0, 360, 0, 280),
         Position = UDim2.new(0.5, -180, 0.5, -140),
@@ -1394,14 +1636,14 @@ do
         Visible = false,
         ClipsDescendants = true
     })
-    Create("UICorner", { Parent = ServerMenu, CornerRadius = UDim.new(0, 8) })
-    Create("UIStroke", { Parent = ServerMenu, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = ServerMenu, CornerRadius = UDim.new(0, 8) })
+    Lib.Create("UIStroke", { Parent = ServerMenu, Color = Colors.Border, Thickness = 1 })
 
-    local srvTopBar = Create("Frame", { Parent = ServerMenu, Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1 })
-    makeDraggable(ServerMenu, srvTopBar)
-    Create("TextLabel", { Parent = srvTopBar, Size = UDim2.new(0.4, 0, 1, 0), Position = UDim2.new(0, 15, 0, 0), BackgroundTransparency = 1, Text = "Server List", TextColor3 = Colors.TextMain, Font = Enum.Font.GothamBold, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left })
+    local srvTopBar = Lib.Create("Frame", { Parent = ServerMenu, Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1 })
+    Lib.makeDraggable(ServerMenu, srvTopBar)
+    Lib.Create("TextLabel", { Parent = srvTopBar, Size = UDim2.new(0, 100, 1, 0), Position = UDim2.new(0, 15, 0, 0), BackgroundTransparency = 1, Text = "Server List", TextColor3 = Colors.TextMain, Font = Enum.Font.GothamBold, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left })
     
-    local srvSortBtn = Create("TextButton", {
+    local srvSortBtn = Lib.Create("TextButton", {
         Parent = srvTopBar,
         Size = UDim2.new(0, 120, 0, 22),
         Position = UDim2.new(1, -195, 0.5, -11),
@@ -1412,13 +1654,13 @@ do
         TextSize = 11,
         BorderSizePixel = 0
     })
-    Create("UICorner", { Parent = srvSortBtn, CornerRadius = UDim.new(0, 4) })
-    local sortStroke = Create("UIStroke", { Parent = srvSortBtn, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = srvSortBtn, CornerRadius = UDim.new(0, 4) })
+    local sortStroke = Lib.Create("UIStroke", { Parent = srvSortBtn, Color = Colors.Border, Thickness = 1 })
 
-    local srvMinBtn = Create("TextButton", { Parent = srvTopBar, Size = UDim2.new(0, 24, 0, 24), Position = UDim2.new(1, -60, 0.5, -12), BackgroundTransparency = 1, Text = "—", TextColor3 = Colors.TextDim, Font = Enum.Font.GothamMedium, TextSize = 14 })
-    local srvCloseBtn = Create("TextButton", { Parent = srvTopBar, Size = UDim2.new(0, 24, 0, 24), Position = UDim2.new(1, -30, 0.5, -12), BackgroundTransparency = 1, Text = "×", TextColor3 = Colors.TextDim, Font = Enum.Font.GothamMedium, TextSize = 18 })
+    local srvMinBtn = Lib.Create("TextButton", { Parent = srvTopBar, Size = UDim2.new(0, 24, 0, 24), Position = UDim2.new(1, -60, 0.5, -12), BackgroundTransparency = 1, Text = "—", TextColor3 = Colors.TextDim, Font = Enum.Font.GothamMedium, TextSize = 14 })
+    local srvCloseBtn = Lib.Create("TextButton", { Parent = srvTopBar, Size = UDim2.new(0, 24, 0, 24), Position = UDim2.new(1, -30, 0.5, -12), BackgroundTransparency = 1, Text = "×", TextColor3 = Colors.TextDim, Font = Enum.Font.GothamMedium, TextSize = 18 })
 
-    local srvScroll = Create("ScrollingFrame", {
+    local srvScroll = Lib.Create("ScrollingFrame", {
         Parent = ServerMenu,
         Size = UDim2.new(1, -24, 1, -48),
         Position = UDim2.new(0, 12, 0, 38),
@@ -1427,50 +1669,155 @@ do
         ScrollBarImageColor3 = Colors.Border,
         BorderSizePixel = 0
     })
-    local srvLayout = Create("UIListLayout", { Parent = srvScroll, Padding = UDim.new(0, 4) })
+    local srvLayout = Lib.Create("UIListLayout", { Parent = srvScroll, Padding = UDim.new(0, 4) })
     srvLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         srvScroll.CanvasSize = UDim2.new(0, 0, 0, srvLayout.AbsoluteContentSize.Y + 10)
     end)
 
     local srvSortAsc = true
     local srvMinimized = false
+    local srvSearchMode = "filled" 
 
-    local function populateServers()
-        for _, v in pairs(srvScroll:GetChildren()) do if v:IsA("Frame") then v:Destroy() end end
+    local srvModeBtn = Lib.Create("TextButton", {
+        Parent = srvTopBar,
+        Size = UDim2.new(0, 90, 0, 22),
+        Position = UDim2.new(1, -290, 0.5, -11),
+        BackgroundColor3 = Colors.Surface,
+        Text = "Mode: 60-80%",
+        TextColor3 = Colors.TextMain,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 11,
+        BorderSizePixel = 0
+    })
+    Lib.Create("UICorner", { Parent = srvModeBtn, CornerRadius = UDim.new(0, 4) })
+    local modeStroke = Lib.Create("UIStroke", { Parent = srvModeBtn, Color = Colors.Border, Thickness = 1 })
+
+    srvModeBtn.MouseButton1Click:Connect(function()
+        if srvSearchMode == "filled" then
+            srvSearchMode = "empty"
+            srvModeBtn.Text = "Mode: Empty"
+        else
+            srvSearchMode = "filled"
+            srvModeBtn.Text = "Mode: 60-80%"
+        end
+        task.spawn(populateServers)
+    end)
+
+    function populateServers()
+
+        for _, v in pairs(srvScroll:GetChildren()) do 
+            if v:IsA("Frame") then v:Destroy() end 
+        end
+        
+        local order = srvSearchMode == "filled" and "Desc" or "Asc"
+        
         local s, r = pcall(function()
-            return Services.Http:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. tostring(game.PlaceId) .. "/servers/Public?sortOrder=Asc&limit=100"))
+
+            local url = "https://games.roblox.com/v1/games/" .. tostring(game.PlaceId) .. "/servers/Public?sortOrder=" .. order .. "&limit=100"
+            if srvSearchMode == "filled" then
+                url = url .. "&excludeFullGames=true"
+            end
+            return Services.Http:JSONDecode(game:HttpGet(url))
         end)
+        
         if s and r and r.data then
             local servers = {}
             for _, srv in pairs(r.data) do
                 if srv.playing and srv.maxPlayers and srv.playing < srv.maxPlayers then
-                    table.insert(servers, srv)
+                    local fillPercent = (srv.playing / srv.maxPlayers) * 100
+                    if srvSearchMode == "filled" then
+                        -- Фильтр 60-80%
+                        if fillPercent >= 60 and fillPercent <= 80 then
+                            table.insert(servers, srv)
+                        end
+                    else
+                        table.insert(servers, srv)
+                    end
                 end
             end
-            table.sort(servers, function(a, b)
-                return srvSortAsc and a.playing < b.playing or a.playing > b.playing
-            end)
-            for _, srv in ipairs(servers) do
-                local item = Create("Frame", { Parent = srvScroll, Size = UDim2.new(1, -4, 0, 30), BackgroundColor3 = Colors.Surface, BorderSizePixel = 0 })
-                Create("UICorner", { Parent = item, CornerRadius = UDim.new(0, 4) })
-                local itemStroke = Create("UIStroke", { Parent = item, Color = Colors.Border, Thickness = 1 })
 
-                local info = Create("TextLabel", {
+            if #servers == 0 and srvSearchMode == "filled" then
+                for _, srv in pairs(r.data) do
+                    if srv.playing and srv.maxPlayers and srv.playing < srv.maxPlayers then
+                        table.insert(servers, srv)
+                    end
+                end
+            end
+
+            table.sort(servers, function(a, b)
+                if srvSearchMode == "filled" then
+                    if srvSortAsc then
+                        return a.playing < b.playing
+                    else
+                        return a.playing > b.playing
+                    end
+                else
+                    return a.playing < b.playing 
+                end
+            end)
+
+            for _, srv in ipairs(servers) do
+                local fillPercent = math.clamp((srv.playing / srv.maxPlayers) * 100, 0, 100)
+                
+                local statusColor = Color3.fromRGB(80, 220, 120) 
+                if fillPercent >= 80 then
+                    statusColor = Color3.fromRGB(240, 100, 100) 
+                elseif fillPercent >= 60 then
+                    statusColor = Color3.fromRGB(250, 180, 60) 
+                end
+
+                local item = Lib.Create("Frame", { 
+                    Parent = srvScroll, 
+                    Size = UDim2.new(1, -4, 0, 54), 
+                    BackgroundColor3 = Colors.Surface, 
+                    BorderSizePixel = 0 
+                })
+                Lib.Create("UICorner", { Parent = item, CornerRadius = UDim.new(0, 6) })
+                local itemStroke = Lib.Create("UIStroke", { Parent = item, Color = Colors.Border, Thickness = 1 })
+
+                local indicator = Lib.Create("Frame", {
                     Parent = item,
-                    Size = UDim2.new(0.7, 0, 1, 0),
-                    Position = UDim2.new(0, 10, 0, 0),
+                    Size = UDim2.new(0, 8, 0, 8),
+                    Position = UDim2.new(0, 12, 0.5, -4),
+                    BackgroundColor3 = statusColor,
+                    BorderSizePixel = 0
+                })
+                Lib.Create("UICorner", { Parent = indicator, CornerRadius = UDim.new(1, 0) })
+                Lib.Create("UIStroke", { Parent = indicator, Color = statusColor, Thickness = 1.5 })
+
+                local info = Lib.Create("TextLabel", {
+                    Parent = item,
+                    Size = UDim2.new(0.5, 0, 0, 18),
+                    Position = UDim2.new(0, 28, 0, 10),
                     BackgroundTransparency = 1,
-                    Text = "Players: " .. srv.playing .. "/" .. srv.maxPlayers .. " | Ping: " .. (srv.ping or "?"),
+                    Text = "Players: " .. srv.playing .. "/" .. srv.maxPlayers .. " (" .. math.floor(fillPercent) .. "%)",
                     TextColor3 = Colors.TextMain,
-                    Font = Enum.Font.Gotham,
-                    TextSize = 11,
+                    Font = Enum.Font.GothamBold,
+                    TextSize = 12,
                     TextXAlignment = Enum.TextXAlignment.Left
                 })
 
-                local join = Create("TextButton", {
+                local pingText = "Ping: " .. (srv.ping and tostring(srv.ping) .. "ms" or "N/A")
+                if srv.fps then
+                    pingText = pingText .. " | FPS: " .. math.floor(srv.fps)
+                end
+
+                local subInfo = Lib.Create("TextLabel", {
                     Parent = item,
-                    Size = UDim2.new(0, 60, 0, 22),
-                    Position = UDim2.new(1, -70, 0.5, -11),
+                    Size = UDim2.new(0.5, 0, 0, 14),
+                    Position = UDim2.new(0, 28, 0, 28),
+                    BackgroundTransparency = 1,
+                    Text = pingText,
+                    TextColor3 = Colors.TextDim,
+                    Font = Enum.Font.GothamMedium,
+                    TextSize = 10,
+                    TextXAlignment = Enum.TextXAlignment.Left
+                })
+
+                local join = Lib.Create("TextButton", {
+                    Parent = item,
+                    Size = UDim2.new(0, 70, 0, 26),
+                    Position = UDim2.new(1, -82, 0.5, -13),
                     BackgroundColor3 = Colors.Active,
                     Text = "Join",
                     TextColor3 = Colors.Background,
@@ -1478,9 +1825,10 @@ do
                     TextSize = 11,
                     BorderSizePixel = 0
                 })
-                Create("UICorner", { Parent = join, CornerRadius = UDim.new(0, 4) })
+                Lib.Create("UICorner", { Parent = join, CornerRadius = UDim.new(0, 5) })
+
                 join.MouseButton1Click:Connect(function()
-                    showNotification("Подключение...")
+                    Lib.showNotification("Подключение...")
                     Services.TP:TeleportToPlaceInstance(game.PlaceId, srv.id, LP)
                 end)
             end
@@ -1505,27 +1853,114 @@ do
         if ServerMenu.Visible then task.spawn(populateServers) end
     end)
 
-    createToggle(ServerTab, "Servers Toggle", 105, false, function(st)
+    Lib.createToggle(UI.Pages.Server, "Servers Toggle", 105, false, function(st)
         ServerWidget.Visible = st
         if not st then ServerMenu.Visible = false end
     end)
-end
+end    
+
+    local IdMenu = Lib.Create("Frame", {
+        Parent = UI.Screen,
+        Size = UDim2.new(0, 300, 0, 165),
+        Position = UDim2.new(0.5, -150, 0.5, -82),
+        BackgroundColor3 = Colors.Background,
+        BorderSizePixel = 0,
+        Visible = false,
+        ZIndex = 16000
+    })
+    Lib.Create("UICorner", { Parent = IdMenu, CornerRadius = UDim.new(0, 8) })
+    local idStroke = Lib.Create("UIStroke", { Parent = IdMenu, Color = Colors.Border, Thickness = 1 })
+
+    local idTopBar = Lib.Create("Frame", { Parent = IdMenu, Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1 })
+    Lib.makeDraggable(IdMenu, idTopBar)
+    Lib.Create("TextLabel", { Parent = idTopBar, Size = UDim2.new(0.6, 0, 1, 0), Position = UDim2.new(0, 15, 0, 0), BackgroundTransparency = 1, Text = "Join by ID", TextColor3 = Colors.TextMain, Font = Enum.Font.GothamBold, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left })
+    local idCloseBtn = Lib.Create("TextButton", { Parent = idTopBar, Size = UDim2.new(0, 24, 0, 24), Position = UDim2.new(1, -30, 0.5, -12), BackgroundTransparency = 1, Text = "×", TextColor3 = Colors.TextDim, Font = Enum.Font.GothamMedium, TextSize = 18 })
+
+    idCloseBtn.MouseButton1Click:Connect(function() 
+        IdMenu.Visible = false 
+        if _G.ConfigUpdaters["Using the ID"] then
+            _G.ConfigUpdaters["Using the ID"](false)
+        end
+    end)
+
+    local placeInput = Lib.Create("TextBox", {
+        Parent = IdMenu,
+        Size = UDim2.new(1, -24, 0, 30),
+        Position = UDim2.new(0, 12, 0, 40),
+        BackgroundColor3 = Colors.Surface,
+        BorderSizePixel = 0,
+        TextColor3 = Colors.TextMain,
+        PlaceholderText = "Place ID (Необязательно)",
+        Font = Enum.Font.Gotham,
+        TextSize = 11,
+        Text = ""
+    })
+    Lib.Create("UICorner", { Parent = placeInput, CornerRadius = UDim.new(0, 4) })
+    Lib.Create("UIStroke", { Parent = placeInput, Color = Colors.Border, Thickness = 1 })
+
+    local jobInput = Lib.Create("TextBox", {
+        Parent = IdMenu,
+        Size = UDim2.new(1, -24, 0, 30),
+        Position = UDim2.new(0, 12, 0, 78),
+        BackgroundColor3 = Colors.Surface,
+        BorderSizePixel = 0,
+        TextColor3 = Colors.TextMain,
+        PlaceholderText = "Server / Job ID",
+        Font = Enum.Font.Gotham,
+        TextSize = 11,
+        Text = ""
+    })
+    Lib.Create("UICorner", { Parent = jobInput, CornerRadius = UDim.new(0, 4) })
+    Lib.Create("UIStroke", { Parent = jobInput, Color = Colors.Border, Thickness = 1 })
+
+    local joinBtn = Lib.Create("TextButton", {
+        Parent = IdMenu,
+        Size = UDim2.new(1, -24, 0, 30),
+        Position = UDim2.new(0, 12, 1, -42),
+        BackgroundColor3 = Colors.Active,
+        Text = "Join Server",
+        TextColor3 = Colors.Background,
+        Font = Enum.Font.GothamBold,
+        TextSize = 12,
+        BorderSizePixel = 0
+    })
+    Lib.Create("UICorner", { Parent = joinBtn, CornerRadius = UDim.new(0, 6) })
+
+    joinBtn.MouseButton1Click:Connect(function()
+        local targetPlace = tonumber(placeInput.Text) or game.PlaceId
+        local targetJob = jobInput.Text
+        if targetJob and targetJob ~= "" then
+            Lib.showNotification("Подключение по ID...")
+            pcall(function()
+                Services.TP:TeleportToPlaceInstance(targetPlace, targetJob, LP)
+            end)
+        else
+            Lib.showNotification("Переход на Place: " .. tostring(targetPlace))
+            pcall(function()
+                Services.TP:Teleport(targetPlace, LP)
+            end)
+        end
+    end)
+
+    Lib.createToggle(UI.Pages.Server, "Using the ID", 150, false, function(st)
+        IdMenu.Visible = st
+    end)
 
 do
-    local TPCard = CreateStyledCard(TeleportTab, 85)
-    Create("UIPadding", { Parent = TPCard, PaddingTop = UDim.new(0, 10), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
+    local TPCard = Lib.CreateStyledCard(UI.Pages.Teleport, 85)
+    Lib.Create("UIPadding", { Parent = TPCard, PaddingTop = UDim.new(0, 10), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
 
-    local avatar = Create("ImageLabel", {
+    local avatar = Lib.Create("ImageLabel", {
         Parent = TPCard,
         Size = UDim2.new(0, 42, 0, 42),
         Position = UDim2.new(0, 0, 0, 12),
         BackgroundTransparency = 1,
         Image = "rbxassetid://115669221263328"
     })
-    Create("UICorner", { Parent = avatar, CornerRadius = UDim.new(1, 0) })
-    Create("UIStroke", { Parent = avatar, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = avatar, CornerRadius = UDim.new(1, 0) })
+    Lib.Create("UIStroke", { Parent = avatar, Color = Colors.Border, Thickness = 1 })
 
-    local nameLbl = Create("TextLabel", {
+    local nameLbl = Lib.Create("TextLabel", {
         Parent = TPCard,
         Position = UDim2.new(0, 52, 0, 12),
         Size = UDim2.new(1, -60, 0, 15),
@@ -1540,7 +1975,7 @@ do
     local TPPlayer = nil
 
     local function makeActBtn(text, posX, callback)
-        local b = Create("TextButton", {
+        local b = Lib.Create("TextButton", {
             Parent = TPCard,
             Size = UDim2.new(0, 95, 0, 26),
             Position = UDim2.new(0, posX, 0, 36),
@@ -1551,8 +1986,8 @@ do
             TextSize = 11,
             BorderSizePixel = 0
         })
-        Create("UICorner", { Parent = b, CornerRadius = UDim.new(0, 4) })
-        local bStroke = Create("UIStroke", { Parent = b, Color = Colors.Border, Thickness = 1 })
+        Lib.Create("UICorner", { Parent = b, CornerRadius = UDim.new(0, 4) })
+        local bStroke = Lib.Create("UIStroke", { Parent = b, Color = Colors.Border, Thickness = 1 })
         b.MouseEnter:Connect(function() Services.TS:Create(bStroke, TWEEN_INFO_FAST, {Color = Colors.Active}):Play() end)
         b.MouseLeave:Connect(function() Services.TS:Create(bStroke, TWEEN_INFO_FAST, {Color = Colors.Border}):Play() end)
         b.MouseButton1Click:Connect(callback)
@@ -1562,35 +1997,34 @@ do
     makeActBtn("Teleport", 52, function()
         if TPPlayer and LP.Character and TPPlayer.Character and TPPlayer.Character:FindFirstChild("HumanoidRootPart") then
             LP.Character:MoveTo(TPPlayer.Character.HumanoidRootPart.Position)
-            showNotification("Телепортирован к " .. TPPlayer.Name)
+            Lib.showNotification("Телепортирован к " .. TPPlayer.Name)
         end
     end)
 
-  local currentSpectateTarget = nil
+    local currentSpectateTarget = nil
     makeActBtn("Spectate", 155, function()
         if currentSpectateTarget == TPPlayer then
-  
             if LP.Character and LP.Character:FindFirstChildOfClass("Humanoid") then
                 workspace.CurrentCamera.CameraSubject = LP.Character:FindFirstChildOfClass("Humanoid")
             end
             currentSpectateTarget = nil
-            showNotification("Наблюдение отключено")
+            Lib.showNotification("Наблюдение отключено")
         else
             if TPPlayer and TPPlayer.Character then
                 local hum = TPPlayer.Character:FindFirstChildOfClass("Humanoid")
                 if hum then
                     currentSpectateTarget = TPPlayer
                     workspace.CurrentCamera.CameraSubject = hum
-                    showNotification("Наблюдение за " .. TPPlayer.Name)
+                    Lib.showNotification("Наблюдение за " .. TPPlayer.Name)
                 end
             else
-                showNotification("Игрок не выбран")
+                Lib.showNotification("Игрок не выбран")
             end
         end
     end)
 
-    local PlayersMenu = Create("Frame", {
-        Parent = TeleportTab,
+    local PlayersMenu = Lib.Create("Frame", {
+        Parent = UI.Pages.Teleport,
         Size = UDim2.new(1, -6, 0, 0),
         Position = UDim2.new(0, 3, 0, 135),
         BackgroundColor3 = Colors.Surface,
@@ -1598,10 +2032,10 @@ do
         Visible = false,
         ClipsDescendants = true
     })
-    Create("UICorner", { Parent = PlayersMenu, CornerRadius = UDim.new(0, 6) })
-    local pMenuStroke = Create("UIStroke", { Parent = PlayersMenu, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = PlayersMenu, CornerRadius = UDim.new(0, 6) })
+    local pMenuStroke = Lib.Create("UIStroke", { Parent = PlayersMenu, Color = Colors.Border, Thickness = 1 })
 
-    local pScroll = Create("ScrollingFrame", {
+    local pScroll = Lib.Create("ScrollingFrame", {
         Parent = PlayersMenu,
         Size = UDim2.new(1, -20, 1, -20),
         Position = UDim2.new(0, 10, 0, 10),
@@ -1610,7 +2044,7 @@ do
         ScrollBarImageColor3 = Colors.Border,
         BorderSizePixel = 0
     })
-    local pLayout = Create("UIListLayout", { Parent = pScroll, Padding = UDim.new(0, 4) })
+    local pLayout = Lib.Create("UIListLayout", { Parent = pScroll, Padding = UDim.new(0, 4) })
     pLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         pScroll.CanvasSize = UDim2.new(0, 0, 0, pLayout.AbsoluteContentSize.Y + 5)
     end)
@@ -1619,7 +2053,7 @@ do
         for _, v in pairs(pScroll:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
         for _, plr in ipairs(Services.Players:GetPlayers()) do
             if plr ~= LP then
-                local b = Create("TextButton", {
+                local b = Lib.Create("TextButton", {
                     Parent = pScroll,
                     Size = UDim2.new(1, -4, 0, 26),
                     BackgroundColor3 = Colors.Background,
@@ -1629,8 +2063,8 @@ do
                     TextSize = 12,
                     BorderSizePixel = 0
                 })
-                Create("UICorner", { Parent = b, CornerRadius = UDim.new(0, 4) })
-                local bStroke = Create("UIStroke", { Parent = b, Color = Colors.Border, Thickness = 1 })
+                Lib.Create("UICorner", { Parent = b, CornerRadius = UDim.new(0, 4) })
+                local bStroke = Lib.Create("UIStroke", { Parent = b, Color = Colors.Border, Thickness = 1 })
                 b.MouseEnter:Connect(function() Services.TS:Create(bStroke, TWEEN_INFO_FAST, {Color = Colors.Active}):Play() end)
                 b.MouseLeave:Connect(function() Services.TS:Create(bStroke, TWEEN_INFO_FAST, {Color = Colors.Border}):Play() end)
 
@@ -1646,8 +2080,8 @@ do
     end
 
     local playersOpen = false
-    local plrsBtn, plrsArrow = createMenuBtn(TeleportTab, "Players", 95, true)
-    local toolBtn = createMenuBtn(TeleportTab, "Teleport Tool", 135, false)
+    local plrsBtn, plrsArrow = Lib.createMenuBtn(UI.Pages.Teleport, "Players", 95, true)
+    local toolBtn = Lib.createMenuBtn(UI.Pages.Teleport, "Teleport Tool", 135, false)
 
     plrsBtn.MouseButton1Click:Connect(function()
         playersOpen = not playersOpen
@@ -1660,7 +2094,7 @@ do
     end)
 
     toolBtn.MouseButton1Click:Connect(function()
-        showNotification("Teleport Tool выдан!")
+        Lib.showNotification("Teleport Tool выдан!")
         local tool = Instance.new("Tool")
         tool.Name = "Teleport Tool"
         tool.RequiresHandle = false
@@ -1675,13 +2109,13 @@ do
 end
 
 do
-    createSlider(MovedTab, 10, "Speed", 16, 200, 16, function(v)
+    Lib.createSlider(UI.Pages.Movement, 10, "Speed", 16, 200, 16, function(v)
         if LP.Character and LP.Character:FindFirstChild("Humanoid") then
             LP.Character.Humanoid.WalkSpeed = v
         end
     end)
 
-    createSlider(MovedTab, 70, "Jump", 50, 200, 50, function(v)
+    Lib.createSlider(UI.Pages.Movement, 70, "Jump", 50, 200, 50, function(v)
         if LP.Character and LP.Character:FindFirstChild("Humanoid") then
             LP.Character.Humanoid.UseJumpPower = true
             LP.Character.Humanoid.JumpPower = v
@@ -1689,15 +2123,15 @@ do
     end)
 
     local endless = false
-    createToggle(MovedTab, "Endless Jump", 130, false, function(st) endless = st end)
+    Lib.createToggle(UI.Pages.Movement, "Endless Jump", 130, false, function(st) endless = st end)
     table.insert(UI.Connections, Services.UIS.JumpRequest:Connect(function()
         if endless and LP.Character and LP.Character:FindFirstChildOfClass("Humanoid") then
             LP.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
         end
     end))
 
-   local wall = false
-    createToggle(MovedTab, "Climbing Walls", 175, false, function(st) wall = st end)
+    local wall = false
+    Lib.createToggle(UI.Pages.Movement, "Climbing Walls", 175, false, function(st) wall = st end)
     task.spawn(function()
         while task.wait(0.1) do
             if wall and LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") and LP.Character:FindFirstChild("Humanoid") then
@@ -1717,10 +2151,10 @@ do
     end)
 
     local flySpeed = 50
-    local speedCard = CreateStyledCard(MovedTab, 40)
+    local speedCard = Lib.CreateStyledCard(UI.Pages.Movement, 40)
     speedCard.Position = UDim2.new(0, 0, 0, 220)
     
-    local speedLbl = Create("TextLabel", {
+    local speedLbl = Lib.Create("TextLabel", {
         Parent = speedCard,
         Size = UDim2.new(1, -80, 1, 0),
         Position = UDim2.new(0, 12, 0, 0),
@@ -1732,7 +2166,7 @@ do
         TextXAlignment = Enum.TextXAlignment.Left
     })
 
-    local speedInput = Create("TextBox", {
+    local speedInput = Lib.Create("TextBox", {
         Parent = speedCard,
         Size = UDim2.new(0, 60, 0, 24),
         Position = UDim2.new(1, -72, 0.5, -12),
@@ -1743,8 +2177,8 @@ do
         TextSize = 12,
         Text = tostring(flySpeed)
     })
-    Create("UICorner", { Parent = speedInput, CornerRadius = UDim.new(0, 4) })
-    local sInStroke = Create("UIStroke", { Parent = speedInput, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = speedInput, CornerRadius = UDim.new(0, 4) })
+    local sInStroke = Lib.Create("UIStroke", { Parent = speedInput, Color = Colors.Border, Thickness = 1 })
     speedInput.FocusLost:Connect(function()
         local v = tonumber(speedInput.Text)
         if v then flySpeed = v else speedInput.Text = tostring(flySpeed) end
@@ -1752,7 +2186,7 @@ do
 
     local flying = false
     local bg, bv
-    createToggle(MovedTab, "Flight (PC & Mobile)", 265, false, function(st)
+    Lib.createToggle(UI.Pages.Movement, "Flight (PC & Mobile)", 265, false, function(st)
         flying = st
         local char = LP.Character
         if flying and char and char:FindFirstChild("HumanoidRootPart") then
@@ -1789,24 +2223,159 @@ do
     end))
 end
 
+    local flightAnimButton = Lib.createMenuBtn(UI.Pages.Movement, "List of flight animations", 310, false)
+
+    local AnimWin, AnimClose, AnimScroll, AnimLayout, AnimActionBtn, AnimActionLbl = Lib.createFloatingMenu("Flight Animations", 260, 240)
+    AnimActionBtn.Visible = false
+    AnimActionLbl.Visible = false
+    AnimScroll.Size = UDim2.new(1, -20, 1, -48)
+
+    local selectedAnimId = nil
+    local currentFlightTrack = nil
+    local currentFlightAnimObj = nil
+
+    local function stopFlightAnimation()
+        if currentFlightTrack then
+            currentFlightTrack:Stop(0.3)
+            currentFlightTrack:Destroy()
+            currentFlightTrack = nil
+        end
+        if currentFlightAnimObj then
+            currentFlightAnimObj:Destroy()
+            currentFlightAnimObj = nil
+        end
+    end
+
+    local function playFlightAnimation(id)
+        local char = LP.Character
+        if not char then return end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if not hum then return end
+        local animator = hum:FindFirstChildOfClass("Animator") or hum:WaitForChild("Animator", 5)
+        if not animator then return end
+
+        stopFlightAnimation()
+
+        currentFlightAnimObj = Instance.new("Animation")
+        currentFlightAnimObj.AnimationId = "rbxassetid://" .. tostring(id)
+
+        local success, track = pcall(function()
+            return animator:LoadAnimation(currentFlightAnimObj)
+        end)
+
+        if success and track then
+            currentFlightTrack = track
+            track.Priority = Enum.AnimationPriority.Action4
+            track.Looped = true
+            track:Play(0.3)
+        end
+    end
+
+    task.spawn(function()
+        while task.wait(0.1) do
+            local isFlying = _G.ConfigState["Flight (PC & Mobile)"]
+            local char = LP.Character
+            if isFlying and char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+                local hum = char.Humanoid
+                local isMoving = hum.MoveDirection.Magnitude > 0.05
+                
+                if isMoving and selectedAnimId then
+
+                    if not currentFlightTrack or currentFlightTrack.Animation.AnimationId ~= "rbxassetid://" .. tostring(selectedAnimId) then
+                        playFlightAnimation(selectedAnimId)
+                    end
+                else
+
+                    if currentFlightTrack then
+                        stopFlightAnimation()
+                    end
+                end
+            else
+
+                if currentFlightTrack then
+                    stopFlightAnimation()
+                end
+            end
+        end
+    end)
+
+    local anims = {
+        { name = "Mark", id = 110778746401300 },
+        { name = "None / Default", id = nil }
+    }
+
+    local activeAnimButtons = {}
+
+    local function updateAnimButtonsVisuals()
+        for idStr, btn in pairs(activeAnimButtons) do
+            local btnId = idStr == "nil" and nil or tonumber(idStr)
+            if selectedAnimId == btnId then
+                btn.BackgroundColor3 = Colors.Active
+                btn.TextColor3 = Colors.Background
+            else
+                btn.BackgroundColor3 = Colors.Surface
+                btn.TextColor3 = Colors.TextMain
+            end
+        end
+    end
+
+    for _, anim in ipairs(anims) do
+        local btn = Lib.Create("TextButton", {
+            Parent = AnimScroll,
+            Size = UDim2.new(1, -4, 0, 30),
+            BackgroundColor3 = Colors.Surface,
+            Text = anim.name,
+            TextColor3 = Colors.TextMain,
+            Font = Enum.Font.GothamBold,
+            TextSize = 11,
+            BorderSizePixel = 0
+        })
+        Lib.Create("UICorner", { Parent = btn, CornerRadius = UDim.new(0, 4) })
+        local bStroke = Lib.Create("UIStroke", { Parent = btn, Color = Colors.Border, Thickness = 1 })
+
+        local key = tostring(anim.id)
+        activeAnimButtons[key] = btn
+
+        btn.MouseButton1Click:Connect(function()
+            selectedAnimId = anim.id
+            updateAnimButtonsVisuals()
+            if selectedAnimId then
+                Lib.showNotification("Выбрана анимация полета: " .. anim.name)
+            else
+                Lib.showNotification("Анимация сброшена по умолчанию")
+                stopFlightAnimation()
+            end
+        end)
+    end
+
+    updateAnimButtonsVisuals()
+
+    flightAnimButton.MouseButton1Click:Connect(function()
+        AnimWin.Visible = not AnimWin.Visible
+    end)
+
+    AnimClose.MouseButton1Click:Connect(function()
+        AnimWin.Visible = false
+    end)
+
 do
-    local ESPBtn, Arrow = createMenuBtn(VisualsTab, "ESP", 10, true)
-    local ESPMenu = Create("Frame", { Parent = VisualsTab, Size = UDim2.new(1, -6, 0, 0), Position = UDim2.new(0, 3, 0, 50), BackgroundTransparency = 1, ClipsDescendants = true, Visible = false })
-    local espLayout = Create("UIListLayout", { Parent = ESPMenu, Padding = UDim.new(0, 4) })
+    local ESPBtn, Arrow = Lib.createMenuBtn(UI.Pages.Visuals, "ESP", 10, true)
+    local ESPMenu = Lib.Create("Frame", { Parent = UI.Pages.Visuals, Size = UDim2.new(1, -6, 0, 0), Position = UDim2.new(0, 3, 0, 50), BackgroundTransparency = 1, ClipsDescendants = true, Visible = false })
+    local espLayout = Lib.Create("UIListLayout", { Parent = ESPMenu, Padding = UDim.new(0, 4) })
 
-    local BoostBtn, BoostArrow = createMenuBtn(VisualsTab, "Boost FPS", 55, true)
-    local BoostMenu = Create("Frame", { Parent = VisualsTab, Size = UDim2.new(1, -6, 0, 0), Position = UDim2.new(0, 3, 0, 95), BackgroundTransparency = 1, ClipsDescendants = true, Visible = false })
-    local boostLayout = Create("UIListLayout", { Parent = BoostMenu, Padding = UDim.new(0, 4) })
+    local BoostBtn, BoostArrow = Lib.createMenuBtn(UI.Pages.Visuals, "Boost FPS", 55, true)
+    local BoostMenu = Lib.Create("Frame", { Parent = UI.Pages.Visuals, Size = UDim2.new(1, -6, 0, 0), Position = UDim2.new(0, 3, 0, 95), BackgroundTransparency = 1, ClipsDescendants = true, Visible = false })
+    local boostLayout = Lib.Create("UIListLayout", { Parent = BoostMenu, Padding = UDim.new(0, 4) })
 
-    local MiscBtn, MiscArrow = createMenuBtn(VisualsTab, "Misc", 95, true)
-    local MiscMenu = Create("Frame", { Parent = VisualsTab, Size = UDim2.new(1, -6, 0, 0), Position = UDim2.new(0, 3, 0, 135), BackgroundTransparency = 1, ClipsDescendants = true, Visible = false })
-    local miscLayout = Create("UIListLayout", { Parent = MiscMenu, Padding = UDim.new(0, 4) })
+    local MiscBtn, MiscArrow = Lib.createMenuBtn(UI.Pages.Visuals, "Misc", 95, true)
+    local MiscMenu = Lib.Create("Frame", { Parent = UI.Pages.Visuals, Size = UDim2.new(1, -6, 0, 0), Position = UDim2.new(0, 3, 0, 135), BackgroundTransparency = 1, ClipsDescendants = true, Visible = false })
+    local miscLayout = Lib.Create("UIListLayout", { Parent = MiscMenu, Padding = UDim.new(0, 4) })
 
     local espOpened, boostOpened, miscOpened = false, false, false
     local function updatePositions()
-        local espHeight = espOpened and 265 or 0
-        local boostHeight = boostOpened and 265 or 0
-        local miscHeight = miscOpened and 264 or 0 -- Изменено с 220 на 264 для вмещения новой кнопки
+        local espHeight = espOpened and 310 or 0
+        local boostHeight = boostOpened and 310 or 0
+        local miscHeight = miscOpened and 264 or 0
         Services.TS:Create(BoostBtn, TWEEN_INFO_FAST, {Position = UDim2.new(0, 3, 0, 55 + espHeight)}):Play()
         Services.TS:Create(BoostMenu, TWEEN_INFO_FAST, {Position = UDim2.new(0, 3, 0, 95 + espHeight)}):Play()
         Services.TS:Create(MiscBtn, TWEEN_INFO_FAST, {Position = UDim2.new(0, 3, 0, 95 + espHeight + boostHeight)}):Play()
@@ -1817,7 +2386,7 @@ do
         espOpened = not espOpened
         ESPMenu.Visible = true
         Services.TS:Create(Arrow, TWEEN_INFO_FAST, {Rotation = espOpened and 180 or 0}):Play()
-        local t = Services.TS:Create(ESPMenu, TWEEN_INFO_FAST, {Size = UDim2.new(1, -6, 0, espOpened and 260 or 0)})
+        local t = Services.TS:Create(ESPMenu, TWEEN_INFO_FAST, {Size = UDim2.new(1, -6, 0, espOpened and 310 or 0)})
         t:Play(); t.Completed:Wait(); updatePositions()
     end)
 
@@ -1825,7 +2394,7 @@ do
         boostOpened = not boostOpened
         BoostMenu.Visible = true
         Services.TS:Create(BoostArrow, TWEEN_INFO_FAST, {Rotation = boostOpened and 180 or 0}):Play()
-        local t = Services.TS:Create(BoostMenu, TWEEN_INFO_FAST, {Size = UDim2.new(1, -6, 0, boostOpened and 260 or 0)})
+        local t = Services.TS:Create(BoostMenu, TWEEN_INFO_FAST, {Size = UDim2.new(1, -6, 0, boostOpened and 310 or 0)})
         t:Play(); t.Completed:Wait(); updatePositions()
     end)
 
@@ -1833,19 +2402,19 @@ do
         miscOpened = not miscOpened
         MiscMenu.Visible = true
         Services.TS:Create(MiscArrow, TWEEN_INFO_FAST, {Rotation = miscOpened and 180 or 0}):Play()
-        local t = Services.TS:Create(MiscMenu, TWEEN_INFO_FAST, {Size = UDim2.new(1, -6, 0, miscOpened and 264 or 0)}) -- Изменено с 220 на 264
+        local t = Services.TS:Create(MiscMenu, TWEEN_INFO_FAST, {Size = UDim2.new(1, -6, 0, miscOpened and 264 or 0)})
         t:Play(); t.Completed:Wait(); updatePositions()
     end)
 
     local nameESP, outlineESP, itemESP, boxESP, tracersESP = false, false, false, false, false
-    createToggle(ESPMenu, "ESP Name", 0, false, function(st) nameESP = st end)
-    createToggle(ESPMenu, "ESP Outline", 44, false, function(st) outlineESP = st end)
-    createToggle(ESPMenu, "Item ESP", 88, false, function(st) itemESP = st end)
-    createToggle(ESPMenu, "Box ESP", 132, false, function(st) boxESP = st end)
-    createToggle(ESPMenu, "Tracers", 176, false, function(st) tracersESP = st end)
+    Lib.createToggle(ESPMenu, "ESP Name", 0, false, function(st) nameESP = st end)
+    Lib.createToggle(ESPMenu, "ESP Outline", 44, false, function(st) outlineESP = st end)
+    Lib.createToggle(ESPMenu, "Item ESP", 88, false, function(st) itemESP = st end)
+    Lib.createToggle(ESPMenu, "Box ESP", 132, false, function(st) boxESP = st end)
+    Lib.createToggle(ESPMenu, "Tracers", 176, false, function(st) tracersESP = st end)
 
     local xrayOriginals = {}
-    createToggle(ESPMenu, "X-Ray", 220, false, function(st)
+    Lib.createToggle(ESPMenu, "X-Ray", 220, false, function(st)
         for _, obj in pairs(workspace:GetDescendants()) do
             if obj:IsA("BasePart") and not obj.Parent:FindFirstChild("Humanoid") then
                 if st then
@@ -1858,10 +2427,36 @@ do
         end
     end)
 
+    local fovCircleEnabled = false
+    local fovRadius = 120 
+
+    local fovCircle = Drawing.new("Circle")
+    fovCircle.Visible = false
+    fovCircle.Thickness = 1.5
+    fovCircle.NumSides = 64
+    fovCircle.Filled = false
+
+    Lib.createToggle(ESPMenu, "FOV Circle", 264, false, function(st)
+        fovCircleEnabled = st
+        fovCircle.Visible = st
+    end)
+
+    table.insert(UI.Connections, Services.Run.RenderStepped:Connect(function()
+        if fovCircleEnabled then
+            local viewportSize = workspace.CurrentCamera.ViewportSize
+            fovCircle.Position = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
+            fovCircle.Radius = fovRadius
+            fovCircle.Color = Colors.Active
+            fovCircle.Visible = true
+        else
+            fovCircle.Visible = false
+        end
+    end))
+
     local boostFPS, skinReplace, potatoEnabled, removeEnabled, fullbright, effectsEnabled = false, false, false, false, false, false
     local RemoveTool, oldLighting = nil, {}
 
-    createToggle(BoostMenu, "Boostfps", 0, false, function(st)
+    Lib.createToggle(BoostMenu, "Boostfps", 0, false, function(st)
         boostFPS = st
         if st then
             for _, obj in pairs(workspace:GetDescendants()) do
@@ -1870,7 +2465,7 @@ do
             end
         end
     end)
-    createToggle(BoostMenu, "Skin Replacement", 44, false, function(st)
+    Lib.createToggle(BoostMenu, "Skin Replacement", 44, false, function(st)
         skinReplace = st
         for _, plr in pairs(Services.Players:GetPlayers()) do
             if plr ~= LP and plr.Character then
@@ -1880,7 +2475,7 @@ do
             end
         end
     end)
-    createToggle(BoostMenu, "Potato Mode", 88, false, function(st)
+    Lib.createToggle(BoostMenu, "Potato Mode", 88, false, function(st)
         potatoEnabled = st
         if st then
             for _, obj in pairs(workspace:GetDescendants()) do
@@ -1891,7 +2486,7 @@ do
             end
         end
     end)
-    createToggle(BoostMenu, "Removing Textures", 132, false, function(st)
+    Lib.createToggle(BoostMenu, "Removing Textures", 132, false, function(st)
         removeEnabled = st
         if st then
             RemoveTool = Instance.new("Tool"); RemoveTool.Name = "Texture Remover"; RemoveTool.RequiresHandle = false; RemoveTool.Parent = LP.Backpack
@@ -1906,7 +2501,7 @@ do
             if RemoveTool then RemoveTool:Destroy(); RemoveTool = nil end
         end
     end)
-    createToggle(BoostMenu, "FullBright", 176, false, function(st)
+    Lib.createToggle(BoostMenu, "FullBright", 176, false, function(st)
         fullbright = st
         local L = Services.Lighting
         if st then
@@ -1916,7 +2511,7 @@ do
             L.Brightness = oldLighting.Brightness or 1; L.ClockTime = oldLighting.ClockTime or 14; L.GlobalShadows = oldLighting.GlobalShadows; L.FogEnd = oldLighting.FogEnd or 1000
         end
     end)
-    createToggle(BoostMenu, "Remove Effects", 220, false, function(st)
+    Lib.createToggle(BoostMenu, "Remove Effects", 220, false, function(st)
         effectsEnabled = st
         for _, v in pairs(Services.Lighting:GetChildren()) do
             if v:IsA("BlurEffect") or v:IsA("BloomEffect") or v:IsA("ColorCorrectionEffect") or v:IsA("SunRaysEffect") or v:IsA("DepthOfFieldEffect") or v:IsA("Atmosphere") then
@@ -1925,10 +2520,63 @@ do
         end
     end)
 
+local pdTool = nil
+local pdClickConnection = nil
+local pdMoveConnection = nil
+
+local pdSelectionBox = Instance.new("SelectionBox")
+pdSelectionBox.Color3 = Color3.fromRGB(255, 50, 50)
+pdSelectionBox.LineThickness = 0.05
+pdSelectionBox.Parent = workspace.CurrentCamera
+
+Lib.createToggle(BoostMenu, "Part Deleter", 264, false, function(st)
+    if st then
+        pdTool = Instance.new("Tool")
+        pdTool.Name = "Part Deleter"
+        pdTool.RequiresHandle = false
+        pdTool.CanBeDropped = false
+        
+        pdTool.Equipped:Connect(function()
+           local mouse = LP:GetMouse()
+            pdMoveConnection = mouse.Move:Connect(function()
+                local target = mouse.Target
+                if target and target:IsA("BasePart") then
+                    pdSelectionBox.Adornee = target
+                else
+                    pdSelectionBox.Adornee = nil
+                end
+            end)
+
+            pdClickConnection = mouse.Button1Down:Connect(function()
+                local target = mouse.Target
+                if target and target:IsA("BasePart") then
+                    target:Destroy()
+                    pdSelectionBox.Adornee = nil
+                end
+            end)
+        end)
+
+        pdTool.Unequipped:Connect(function()
+            pdSelectionBox.Adornee = nil
+            if pdClickConnection then pdClickConnection:Disconnect(); pdClickConnection = nil end
+            if pdMoveConnection then pdMoveConnection:Disconnect(); pdMoveConnection = nil end
+        end)
+
+        if LP:FindFirstChild("Backpack") then
+            pdTool.Parent = LP.Backpack
+        end
+    else
+        pdSelectionBox.Adornee = nil
+        if pdClickConnection then pdClickConnection:Disconnect(); pdClickConnection = nil end
+        if pdMoveConnection then pdMoveConnection:Disconnect(); pdMoveConnection = nil end
+        if pdTool then pdTool:Destroy(); pdTool = nil end
+    end
+end)
+
     local headless, korblox, skyboxEnabled, thirdPersonEnabled = false, false, false, false
     local oldSkybox = nil
 
-    createToggle(MiscMenu, "Headless", 0, false, function(st)
+    Lib.createToggle(MiscMenu, "Headless", 0, false, function(st)
         headless = st
         if LP.Character and LP.Character:FindFirstChild("Head") then
             LP.Character.Head.Transparency = st and 1 or 0
@@ -1936,8 +2584,8 @@ do
         end
     end)
 
-local currentKorblox = nil
-    createToggle(MiscMenu, "Korblox", 44, false, function(st)
+    local currentKorblox = nil
+    Lib.createToggle(MiscMenu, "Korblox", 44, false, function(st)
         korblox = st
         local char = LP.Character
         if not char then return end
@@ -1957,7 +2605,6 @@ local currentKorblox = nil
         
         if st then
             pcall(function()
-
                 local objects = game:GetObjects("rbxassetid://139607718")
                 if objects and objects[1] then
                     currentKorblox = objects[1]
@@ -1967,7 +2614,7 @@ local currentKorblox = nil
         end
     end)
 
-    createToggle(MiscMenu, "Skybox Changer", 88, false, function(st)
+    Lib.createToggle(MiscMenu, "Skybox Changer", 88, false, function(st)
         skyboxEnabled = st
         local L = Services.Lighting
         if st then
@@ -1983,7 +2630,7 @@ local currentKorblox = nil
             if oldSkybox then oldSkybox.Parent = L end
         end
     end)
-    createToggle(MiscMenu, "Third Person Mode", 132, false, function(st)
+    Lib.createToggle(MiscMenu, "Third Person Mode", 132, false, function(st)
         thirdPersonEnabled = st
         if st then
             LP.CameraMode = Enum.CameraMode.Classic; LP.CameraMaxZoomDistance = 12; LP.CameraMinZoomDistance = 12
@@ -1992,21 +2639,21 @@ local currentKorblox = nil
         end
     end)
 
-    local RadarWin = Create("Frame", { Parent = UI.Screen, Size = UDim2.new(0, 140, 0, 140), Position = UDim2.new(1, -165, 0, 55), BackgroundColor3 = Colors.Background, Visible = false, BorderSizePixel = 0 })
-    Create("UICorner", { Parent = RadarWin, CornerRadius = UDim.new(1, 0) })
-    Create("UIStroke", { Parent = RadarWin, Color = Colors.Border, Thickness = 1 })
+    local RadarWin = Lib.Create("Frame", { Parent = UI.Screen, Size = UDim2.new(0, 140, 0, 140), Position = UDim2.new(1, -165, 0, 55), BackgroundColor3 = Colors.Background, Visible = false, BorderSizePixel = 0 })
+    Lib.Create("UICorner", { Parent = RadarWin, CornerRadius = UDim.new(1, 0) })
+    Lib.Create("UIStroke", { Parent = RadarWin, Color = Colors.Border, Thickness = 1 })
     
-    local rCenter = Create("Frame", { Parent = RadarWin, Size = UDim2.new(0, 4, 0, 4), Position = UDim2.new(0.5, -2, 0.5, -2), BackgroundColor3 = Colors.TextMain, BorderSizePixel = 0 })
-    Create("UICorner", { Parent = rCenter, CornerRadius = UDim.new(1, 0) })
-    makeDraggable(RadarWin)
+    local rCenter = Lib.Create("Frame", { Parent = RadarWin, Size = UDim2.new(0, 4, 0, 4), Position = UDim2.new(0.5, -2, 0.5, -2), BackgroundColor3 = Colors.TextMain, BorderSizePixel = 0 })
+    Lib.Create("UICorner", { Parent = rCenter, CornerRadius = UDim.new(1, 0) })
+    Lib.makeDraggable(RadarWin)
 
     local radarEnabled = false
-    createToggle(MiscMenu, "Radar", 176, false, function(st)
+    Lib.createToggle(MiscMenu, "Radar", 176, false, function(st)
         radarEnabled = st
         RadarWin.Visible = st
     end)
 
-    local MusicWin = Create("Frame", {
+    local MusicWin = Lib.Create("Frame", {
         Parent = UI.Screen,
         Size = UDim2.new(0, 320, 0, 350),
         Position = UDim2.new(0.5, -160, 0.5, -175),
@@ -2016,13 +2663,13 @@ local currentKorblox = nil
         ClipsDescendants = true,
         ZIndex = 15000
     })
-    Create("UICorner", { Parent = MusicWin, CornerRadius = UDim.new(0, 8) })
-    Create("UIStroke", { Parent = MusicWin, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = MusicWin, CornerRadius = UDim.new(0, 8) })
+    Lib.Create("UIStroke", { Parent = MusicWin, Color = Colors.Border, Thickness = 1 })
 
-    local musTopBar = Create("Frame", { Parent = MusicWin, Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1 })
-    makeDraggable(MusicWin, musTopBar)
+    local musTopBar = Lib.Create("Frame", { Parent = MusicWin, Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1 })
+    Lib.makeDraggable(MusicWin, musTopBar)
 
-    Create("TextLabel", {
+    Lib.Create("TextLabel", {
         Parent = musTopBar,
         Size = UDim2.new(0.6, 0, 1, 0),
         Position = UDim2.new(0, 15, 0, 0),
@@ -2034,7 +2681,7 @@ local currentKorblox = nil
         TextXAlignment = Enum.TextXAlignment.Left
     })
 
-    local musCloseBtn = Create("TextButton", {
+    local musCloseBtn = Lib.Create("TextButton", {
         Parent = musTopBar,
         Size = UDim2.new(0, 24, 0, 24),
         Position = UDim2.new(1, -30, 0.5, -12),
@@ -2045,7 +2692,7 @@ local currentKorblox = nil
         TextSize = 18
     })
 
-    local musScroll = Create("ScrollingFrame", {
+    local musScroll = Lib.Create("ScrollingFrame", {
         Parent = MusicWin,
         Size = UDim2.new(1, -24, 0, 230),
         Position = UDim2.new(0, 12, 0, 38),
@@ -2054,22 +2701,22 @@ local currentKorblox = nil
         ScrollBarImageColor3 = Colors.Border,
         BorderSizePixel = 0
     })
-    local musLayout = Create("UIListLayout", { Parent = musScroll, Padding = UDim.new(0, 4) })
+    local musLayout = Lib.Create("UIListLayout", { Parent = musScroll, Padding = UDim.new(0, 4) })
     musLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         musScroll.CanvasSize = UDim2.new(0, 0, 0, musLayout.AbsoluteContentSize.Y + 5)
     end)
 
-    local customPanel = Create("Frame", {
+    local customPanel = Lib.Create("Frame", {
         Parent = MusicWin,
         Size = UDim2.new(1, -24, 0, 50),
         Position = UDim2.new(0, 12, 0, 280),
         BackgroundColor3 = Colors.Surface,
         BorderSizePixel = 0
     })
-    Create("UICorner", { Parent = customPanel, CornerRadius = UDim.new(0, 6) })
-    Create("UIStroke", { Parent = customPanel, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = customPanel, CornerRadius = UDim.new(0, 6) })
+    Lib.Create("UIStroke", { Parent = customPanel, Color = Colors.Border, Thickness = 1 })
 
-    local customInput = Create("TextBox", {
+    local customInput = Lib.Create("TextBox", {
         Parent = customPanel,
         Size = UDim2.new(1, -90, 1, -16),
         Position = UDim2.new(0, 10, 0, 8),
@@ -2082,10 +2729,10 @@ local currentKorblox = nil
         Text = "",
         ClearTextOnFocus = false
     })
-    Create("UICorner", { Parent = customInput, CornerRadius = UDim.new(0, 4) })
-    Create("UIStroke", { Parent = customInput, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = customInput, CornerRadius = UDim.new(0, 4) })
+    Lib.Create("UIStroke", { Parent = customInput, Color = Colors.Border, Thickness = 1 })
 
-    local customPlayBtn = Create("TextButton", {
+    local customPlayBtn = Lib.Create("TextButton", {
         Parent = customPanel,
         Size = UDim2.new(0, 70, 1, -16),
         Position = UDim2.new(1, -80, 0, 8),
@@ -2096,7 +2743,7 @@ local currentKorblox = nil
         TextSize = 11,
         BorderSizePixel = 0
     })
-    Create("UICorner", { Parent = customPlayBtn, CornerRadius = UDim.new(0, 4) })
+    Lib.Create("UICorner", { Parent = customPlayBtn, CornerRadius = UDim.new(0, 4) })
 
     local currentSound = nil
     local currentPlayingId = nil
@@ -2238,16 +2885,16 @@ local currentKorblox = nil
     }
 
     for _, song in ipairs(songs) do
-        local item = Create("Frame", {
+        local item = Lib.Create("Frame", {
             Parent = musScroll,
             Size = UDim2.new(1, -4, 0, 30),
             BackgroundColor3 = Colors.Surface,
             BorderSizePixel = 0
         })
-        Create("UICorner", { Parent = item, CornerRadius = UDim.new(0, 4) })
-        local itemStroke = Create("UIStroke", { Parent = item, Color = Colors.Border, Thickness = 1 })
+        Lib.Create("UICorner", { Parent = item, CornerRadius = UDim.new(0, 4) })
+        local itemStroke = Lib.Create("UIStroke", { Parent = item, Color = Colors.Border, Thickness = 1 })
 
-        local title = Create("TextLabel", {
+        local title = Lib.Create("TextLabel", {
             Parent = item,
             Size = UDim2.new(1, -75, 1, 0),
             Position = UDim2.new(0, 10, 0, 0),
@@ -2260,7 +2907,7 @@ local currentKorblox = nil
             ClipsDescendants = true
         })
 
-        local playBtn = Create("TextButton", {
+        local playBtn = Lib.Create("TextButton", {
             Parent = item,
             Size = UDim2.new(0, 55, 0, 22),
             Position = UDim2.new(1, -65, 0.5, -11),
@@ -2271,7 +2918,7 @@ local currentKorblox = nil
             TextSize = 11,
             BorderSizePixel = 0
         })
-        Create("UICorner", { Parent = playBtn, CornerRadius = UDim.new(0, 4) })
+        Lib.Create("UICorner", { Parent = playBtn, CornerRadius = UDim.new(0, 4) })
 
         buttonsList[tostring(song.id)] = playBtn
 
@@ -2280,7 +2927,7 @@ local currentKorblox = nil
         end)
     end
 
-    createToggle(MiscMenu, "Music Player", 220, false, function(st)
+    Lib.createToggle(MiscMenu, "Music Player", 220, false, function(st)
         MusicWin.Visible = st
         if not st then
             stopCurrentSound()
@@ -2304,8 +2951,8 @@ local currentKorblox = nil
                 if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 then
                     local dot = radarDots[plr]
                     if not dot then
-                        dot = Create("Frame", { Parent = RadarWin, Size = UDim2.new(0, 4, 0, 4), BackgroundColor3 = Color3.fromRGB(255, 80, 80), BorderSizePixel = 0 })
-                        Create("UICorner", { Parent = dot, CornerRadius = UDim.new(1, 0) })
+                        dot = Lib.Create("Frame", { Parent = RadarWin, Size = UDim2.new(0, 4, 0, 4), BackgroundColor3 = Color3.fromRGB(255, 80, 80), BorderSizePixel = 0 })
+                        Lib.Create("UICorner", { Parent = dot, CornerRadius = UDim.new(1, 0) })
                         radarDots[plr] = dot
                     end
                     local offset = myHrp.CFrame:ToObjectSpace(char.HumanoidRootPart.CFrame).Position
@@ -2335,8 +2982,8 @@ local currentKorblox = nil
                             if (obj:IsA("Tool") or obj.Name:lower():find("gun") or obj.Name:lower():find("key")) and not obj:FindFirstChild("ItemESP") then
                                 local part = obj:FindFirstChildWhichIsA("BasePart")
                                 if part then
-                                    local bb = Create("BillboardGui", { Parent = obj, Name = "ItemESP", Size = UDim2.new(0, 100, 0, 30), AlwaysOnTop = true, Adornee = part })
-                                    local txt = Create("TextLabel", { Parent = bb, Size = UDim2.new(1,0,1,0), BackgroundTransparency = 1, Text = obj.Name, TextScaled = true, TextColor3 = Colors.Active, Font = Enum.Font.GothamBold })
+                                    local bb = Lib.Create("BillboardGui", { Parent = obj, Name = "ItemESP", Size = UDim2.new(0, 100, 0, 30), AlwaysOnTop = true, Adornee = part })
+                                    local txt = Lib.Create("TextLabel", { Parent = bb, Size = UDim2.new(1,0,1,0), BackgroundTransparency = 1, Text = obj.Name, TextScaled = true, TextColor3 = Colors.Active, Font = Enum.Font.GothamBold })
                                 end
                             end
                         end
@@ -2344,8 +2991,8 @@ local currentKorblox = nil
                     local char = plr.Character
                     if char and char:FindFirstChild("Head") and char:FindFirstChild("HumanoidRootPart") then
                         if nameESP then
-                            local gui = char.Head:FindFirstChild("ESP") or Create("BillboardGui", { Parent = char.Head, Name = "ESP", Size = UDim2.new(0, 100, 0, 40), AlwaysOnTop = true, StudsOffset = Vector3.new(0, 2, 0), Adornee = char.Head })
-                            local txt = gui:FindFirstChild("TXT") or Create("TextLabel", { Parent = gui, Name = "TXT", Size = UDim2.new(1,0,1,0), BackgroundTransparency = 1, TextColor3 = Colors.Active, TextStrokeTransparency = 0, Font = Enum.Font.GothamBold, TextScaled = true })
+                            local gui = char.Head:FindFirstChild("ESP") or Lib.Create("BillboardGui", { Parent = char.Head, Name = "ESP", Size = UDim2.new(0, 100, 0, 40), AlwaysOnTop = true, StudsOffset = Vector3.new(0, 2, 0), Adornee = char.Head })
+                            local txt = gui:FindFirstChild("TXT") or Lib.Create("TextLabel", { Parent = gui, Name = "TXT", Size = UDim2.new(1,0,1,0), BackgroundTransparency = 1, TextColor3 = Colors.Active, TextStrokeTransparency = 0, Font = Enum.Font.GothamBold, TextScaled = true })
                             if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
                                 txt.Text = plr.Name .. "\n" .. math.floor((LP.Character.HumanoidRootPart.Position - char.HumanoidRootPart.Position).Magnitude) .. "m"
                             end
@@ -2354,7 +3001,7 @@ local currentKorblox = nil
                         end
                         if outlineESP then
                             if not char:FindFirstChild("ESPHighlight") then
-                                local hl = Create("Highlight", { Parent = char, Name = "ESPHighlight", FillColor = Colors.Active, FillTransparency = 0.7, OutlineColor = Colors.Active, DepthMode = Enum.HighlightDepthMode.AlwaysOnTop })
+                                local hl = Lib.Create("Highlight", { Parent = char, Name = "ESPHighlight", FillColor = Colors.Active, FillTransparency = 0.7, OutlineColor = Colors.Active, DepthMode = Enum.HighlightDepthMode.AlwaysOnTop })
                             end
                         else
                             if char:FindFirstChild("ESPHighlight") then char.ESPHighlight:Destroy() end
@@ -2422,44 +3069,118 @@ do
     local ccEffect = Instance.new("ColorCorrectionEffect")
     ccEffect.Name = "RetroCC"; ccEffect.Brightness = 0.1; ccEffect.Contrast = 0.5; ccEffect.Saturation = -0.4; ccEffect.TintColor = Color3.fromRGB(255, 230, 200)
 
-    createToggle(ShadersTab, "Retro Game", 10, false, function(st)
+    Lib.createToggle(UI.Pages.Shaders, "Retro Game", 10, false, function(st)
         retroEnabled = st
         ccEffect.Parent = st and Services.Lighting or nil
     end)
 
     local rtxEnabled = false
-    local rCC = Instance.new("ColorCorrectionEffect")
-    rCC.Name = "RTX_CC"; rCC.Contrast = 0.3; rCC.Saturation = 0.6; rCC.Brightness = 0.1; rCC.TintColor = Color3.fromRGB(255, 255, 255)
-    local rBloom = Instance.new("BloomEffect")
-    rBloom.Name = "RTX_Bloom"; rBloom.Intensity = 0.8; rBloom.Size = 24
-    local rDof = Instance.new("DepthOfFieldEffect")
-    rDof.Name = "RTX_DoF"; rDof.FocusDistance = 10; rDof.InFocusRadius = 20; rDof.NearIntensity = 0.1; rDof.FarIntensity = 0.5
-    local rSun = Instance.new("SunRaysEffect")
-    rSun.Name = "RTX_Sun"; rSun.Intensity = 0.1
+    
+    local RtxFolder = Instance.new("Folder")
+    RtxFolder.Name = "RTXShaders"
 
-    createToggle(ShadersTab, "RTX / Vibrant", 55, false, function(st)
+    local rCC = Instance.new("ColorCorrectionEffect", RtxFolder)
+    rCC.Contrast = 0.35
+    rCC.Saturation = 0.45
+    rCC.Brightness = 0.05
+    rCC.TintColor = Color3.fromRGB(255, 255, 255)
+
+    local rBloom = Instance.new("BloomEffect", RtxFolder)
+    rBloom.Intensity = 0.45
+    rBloom.Size = 12
+    rBloom.Threshold = 0.85
+
+    local rDof = Instance.new("DepthOfFieldEffect", RtxFolder)
+    rDof.FocusDistance = 25
+    rDof.InFocusRadius = 50
+    rDof.NearIntensity = 0
+    rDof.FarIntensity = 0.15
+
+    local rAtmosphere = Instance.new("Atmosphere", RtxFolder)
+    rAtmosphere.Density = 0.2
+    rAtmosphere.Color = Color3.fromRGB(190, 210, 230)
+    rAtmosphere.Glare = 0.3
+    rAtmosphere.Haze = 0.5
+
+    local rSun = Instance.new("SunRaysEffect", RtxFolder)
+    rSun.Intensity = 0.08
+
+    local origRtxLighting = {}
+
+    Lib.createToggle(UI.Pages.Shaders, "RTX / Vibrant", 55, false, function(st)
         rtxEnabled = st
-        rCC.Parent = st and Services.Lighting or nil
-        rBloom.Parent = st and Services.Lighting or nil
-        rDof.Parent = st and Services.Lighting or nil
-        rSun.Parent = st and Services.Lighting or nil
-    end)
+        local L = Services.Lighting
+        RtxFolder.Parent = st and L or nil
+        
+        if st then
 
+            origRtxLighting.Ambient = L.Ambient
+            origRtxLighting.OutdoorAmbient = L.OutdoorAmbient
+            origRtxLighting.Brightness = L.Brightness
+            
+            L.Brightness = 2.2
+            L.Ambient = Color3.fromRGB(75, 80, 90)
+            L.OutdoorAmbient = Color3.fromRGB(145, 165, 185)
+        else
+
+            if origRtxLighting.Brightness then
+                L.Brightness = origRtxLighting.Brightness
+                L.Ambient = origRtxLighting.Ambient
+                L.OutdoorAmbient = origRtxLighting.OutdoorAmbient
+            end
+        end
+    end)
+    
     local cyberEnabled = false
     local CyberFolder = Instance.new("Folder")
     CyberFolder.Name = "CyberShaders"
-    local cCC = Instance.new("ColorCorrectionEffect", CyberFolder); cCC.Contrast = 0.4; cCC.Saturation = 0.8; cCC.TintColor = Color3.fromRGB(255, 200, 255)
-    Instance.new("BloomEffect", CyberFolder).Intensity = 1.2
-    local cyberConn = nil
 
-    createToggle(ShadersTab, "Cyberpunk Neon", 100, false, function(st)
+    local cCC = Instance.new("ColorCorrectionEffect", CyberFolder)
+    cCC.Contrast = 0.45
+    cCC.Saturation = 0.85
+    cCC.TintColor = Color3.fromRGB(255, 180, 255)
+    
+    local cBloom = Instance.new("BloomEffect", CyberFolder)
+    cBloom.Intensity = 1.8
+    cBloom.Size = 30
+    cBloom.Threshold = 0.1
+    
+    local cAtmosphere = Instance.new("Atmosphere", CyberFolder)
+    cAtmosphere.Density = 0.35
+    cAtmosphere.Offset = 0.25
+    cAtmosphere.Color = Color3.fromRGB(15, 10, 30)
+    cAtmosphere.Decay = Color3.fromRGB(255, 0, 128)
+    
+    local cyberConn = nil
+    local origCyberLighting = {}
+
+    Lib.createToggle(UI.Pages.Shaders, "Cyberpunk Neon", 100, false, function(st)
         cyberEnabled = st
         CyberFolder.Parent = st and Services.Lighting or nil
+        local L = Services.Lighting
         if st then
-            cyberConn = Services.Run.RenderStepped:Connect(function() Services.Lighting.ClockTime = 0 end)
+
+            origCyberLighting.Ambient = L.Ambient
+            origCyberLighting.OutdoorAmbient = L.OutdoorAmbient
+            origCyberLighting.ColorShift_Top = L.ColorShift_Top
+            origCyberLighting.ClockTime = L.ClockTime
+            
+            L.Ambient = Color3.fromRGB(35, 15, 60)
+            L.OutdoorAmbient = Color3.fromRGB(10, 25, 45)
+            L.ColorShift_Top = Color3.fromRGB(255, 0, 128)
+            
+            cyberConn = Services.Run.RenderStepped:Connect(function() 
+                L.ClockTime = 0 
+            end)
         else
             if cyberConn then cyberConn:Disconnect(); cyberConn = nil end
-            Services.Lighting.ClockTime = origLighting.ClockTime
+
+            if origCyberLighting.ClockTime then
+                L.Ambient = origCyberLighting.Ambient
+                L.OutdoorAmbient = origCyberLighting.OutdoorAmbient
+                L.ColorShift_Top = origCyberLighting.ColorShift_Top
+                L.ClockTime = origCyberLighting.ClockTime
+            end
         end
     end)
 
@@ -2469,7 +3190,7 @@ do
     local sCC = Instance.new("ColorCorrectionEffect", SilentFolder); sCC.Contrast = 0.1; sCC.Saturation = -0.8; sCC.TintColor = Color3.fromRGB(200, 200, 200)
     Instance.new("BlurEffect", SilentFolder).Size = 4
 
-    createToggle(ShadersTab, "Silent Hill", 145, false, function(st)
+    Lib.createToggle(UI.Pages.Shaders, "Silent Hill", 145, false, function(st)
         silentEnabled = st
         SilentFolder.Parent = st and Services.Lighting or nil
         local L = Services.Lighting
@@ -2484,7 +3205,7 @@ do
     local fCC = Instance.new("ColorCorrectionEffect")
     fCC.Name = "Fried_CC"; fCC.Brightness = 0.2; fCC.Contrast = 2.0; fCC.Saturation = 2.0; fCC.TintColor = Color3.fromRGB(255, 150, 50)
 
-    createToggle(ShadersTab, "Deep Fried", 190, false, function(st)
+    Lib.createToggle(UI.Pages.Shaders, "Deep Fried", 190, false, function(st)
         friedEnabled = st
         fCC.Parent = st and Services.Lighting or nil
     end)
@@ -2495,7 +3216,7 @@ do
     local nvCC = Instance.new("ColorCorrectionEffect", NVFolder); nvCC.Brightness = 0.3; nvCC.Contrast = 0.5; nvCC.Saturation = -0.5; nvCC.TintColor = Color3.fromRGB(50, 255, 50)
     Instance.new("BloomEffect", NVFolder).Intensity = 0.5
 
-    createToggle(ShadersTab, "Night Vision", 235, false, function(st)
+    Lib.createToggle(UI.Pages.Shaders, "Night Vision", 235, false, function(st)
         nvEnabled = st
         NVFolder.Parent = st and Services.Lighting or nil
         local L = Services.Lighting
@@ -2509,11 +3230,11 @@ end
 
 do
     local antiFling, antiSit, antiVoid, antiStun, antiRagdoll = false, false, false, false, false
-    createToggle(ProtectTab, "Anti Fling", 10, false, function(st) antiFling = st end)
-    createToggle(ProtectTab, "Anti Sit", 55, false, function(st) antiSit = st end)
-    createToggle(ProtectTab, "Anti void", 100, false, function(st) antiVoid = st end)
-    createToggle(ProtectTab, "Anti Stun", 145, false, function(st) antiStun = st end)
-    createToggle(ProtectTab, "Anti Ragdoll", 190, false, function(st) antiRagdoll = st end)
+    Lib.createToggle(UI.Pages.Protect, "Anti Fling", 10, false, function(st) antiFling = st end)
+    Lib.createToggle(UI.Pages.Protect, "Anti Sit", 55, false, function(st) antiSit = st end)
+    Lib.createToggle(UI.Pages.Protect, "Anti void", 100, false, function(st) antiVoid = st end)
+    Lib.createToggle(UI.Pages.Protect, "Anti Stun", 145, false, function(st) antiStun = st end)
+    Lib.createToggle(UI.Pages.Protect, "Anti Ragdoll", 190, false, function(st) antiRagdoll = st end)
 
     table.insert(UI.Connections, Services.Run.Stepped:Connect(function()
         if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") and LP.Character:FindFirstChild("Humanoid") then
@@ -2550,31 +3271,31 @@ do
 end
 
 do
-    local DiffBtn, DiffArrow = createMenuBtn(MiscTab, "Different", 10, true)
-    local DiffMenu = Create("Frame", {
-        Parent = MiscTab,
+    local DiffBtn, DiffArrow = Lib.createMenuBtn(UI.Pages.Misc, "Different", 10, true)
+    local DiffMenu = Lib.Create("Frame", {
+        Parent = UI.Pages.Misc,
         Size = UDim2.new(1, -6, 0, 0),
         Position = UDim2.new(0, 3, 0, 50),
         BackgroundTransparency = 1,
         ClipsDescendants = true,
         Visible = false
     })
-    local diffLayout = Create("UIListLayout", { Parent = DiffMenu, Padding = UDim.new(0, 4) })
+    local diffLayout = Lib.Create("UIListLayout", { Parent = DiffMenu, Padding = UDim.new(0, 4) })
 
-    local OtherBtn, OtherArrow = createMenuBtn(MiscTab, "Other", 55, true)
-    local OtherMenu = Create("Frame", {
-        Parent = MiscTab,
+    local OtherBtn, OtherArrow = Lib.createMenuBtn(UI.Pages.Misc, "Other", 55, true)
+    local OtherMenu = Lib.Create("Frame", {
+        Parent = UI.Pages.Misc,
         Size = UDim2.new(1, -6, 0, 0),
         Position = UDim2.new(0, 3, 0, 95),
         BackgroundTransparency = 1,
         ClipsDescendants = true,
         Visible = false
     })
-    local otherLayout = Create("UIListLayout", { Parent = OtherMenu, Padding = UDim.new(0, 4) })
+    local otherLayout = Lib.Create("UIListLayout", { Parent = OtherMenu, Padding = UDim.new(0, 4) })
 
     local diffOpened, otherOpened = false, false
     local function updateMiscPositions()
-        local diffHeight = diffOpened and 264 or 0
+        local diffHeight = diffOpened and 520 or 0
         Services.TS:Create(OtherBtn, TWEEN_INFO_FAST, {Position = UDim2.new(0, 3, 0, 55 + diffHeight)}):Play()
         Services.TS:Create(OtherMenu, TWEEN_INFO_FAST, {Position = UDim2.new(0, 3, 0, 95 + diffHeight)}):Play()
     end
@@ -2583,7 +3304,7 @@ do
         diffOpened = not diffOpened
         DiffMenu.Visible = true
         Services.TS:Create(DiffArrow, TWEEN_INFO_FAST, {Rotation = diffOpened and 180 or 0}):Play()
-        local t = Services.TS:Create(DiffMenu, TWEEN_INFO_FAST, {Size = UDim2.new(1, -6, 0, diffOpened and 352 or 0)})
+        local t = Services.TS:Create(DiffMenu, TWEEN_INFO_FAST, {Size = UDim2.new(1, -6, 0, diffOpened and 520 or 0)})
         t:Play(); t.Completed:Wait(); updateMiscPositions()
     end)
 
@@ -2596,7 +3317,7 @@ do
     end)
 
     local antiAfkEnabled = false
-    createToggle(DiffMenu, "Anti-AFK", 0, false, function(st) antiAfkEnabled = st end)
+    Lib.createToggle(DiffMenu, "Anti-AFK", 0, false, function(st) antiAfkEnabled = st end)
     table.insert(UI.Connections, LP.Idled:Connect(function()
         if antiAfkEnabled then
             Services.VU:CaptureController()
@@ -2605,7 +3326,7 @@ do
     end))
 
     local noclipEnabled = false
-    createToggle(DiffMenu, "Noclip", 44, false, function(st) noclipEnabled = st end)
+    Lib.createToggle(DiffMenu, "Noclip", 44, false, function(st) noclipEnabled = st end)
     table.insert(UI.Connections, Services.Run.Stepped:Connect(function()
         if noclipEnabled and LP.Character then
             for _, part in pairs(LP.Character:GetDescendants()) do
@@ -2617,7 +3338,7 @@ do
     end))
 
     local autoReconEnabled = false
-    createToggle(DiffMenu, "Auto Reconnect", 88, false, function(st) autoReconEnabled = st end)
+    Lib.createToggle(DiffMenu, "Auto Reconnect", 88, false, function(st) autoReconEnabled = st end)
     table.insert(UI.Connections, game:GetService("GuiService").ErrorMessageChanged:Connect(function()
         if autoReconEnabled then
             task.wait(0.5)
@@ -2630,7 +3351,7 @@ do
     local fcSpeed = 2
     local fcKeys = {W = false, A = false, S = false, D = false, Space = false, LeftShift = false}
 
-    createToggle(DiffMenu, "Free camera", 132, false, function(st)
+    Lib.createToggle(DiffMenu, "Free camera", 132, false, function(st)
         freeCamEnabled = st
         if st then
             cam.CameraType = Enum.CameraType.Scriptable
@@ -2685,20 +3406,20 @@ do
     local originalPart1 = nil
     local rootJoint = nil
 
-    createToggle(DiffMenu, "Invisibility", 176, false, function(st)
+    Lib.createToggle(DiffMenu, "Invisibility", 176, false, function(st)
         invisEnabled = st
         local char = LP.Character
         if not char then return end
         
         local hrp = char:FindFirstChild("HumanoidRootPart")
         if not hrp then 
-            showNotification("HumanoidRootPart не найден!")
+            Lib.showNotification("HumanoidRootPart не найден!")
             return 
         end
         
         rootJoint = hrp:FindFirstChild("RootJoint") or char:FindFirstChild("RootJoint", true)
         if not rootJoint then
-            showNotification("RootJoint не найден!")
+            Lib.showNotification("RootJoint не найден!")
             return
         end
 
@@ -2714,7 +3435,7 @@ do
                     v.Transparency = 0.5
                 end
             end
-            showNotification("FE Invisibility включен! Ваш торс остался на месте для других.")
+            Lib.showNotification("FE Invisibility включен! Ваш торс остался на месте для других.")
         else
             if rootJoint and originalPart0 then
                 rootJoint.Part0 = originalPart0
@@ -2731,7 +3452,7 @@ do
             rootJoint = nil
             originalPart0 = nil
             originalPart1 = nil
-            showNotification("FE Invisibility выключен.")
+            Lib.showNotification("FE Invisibility выключен.")
         end
     end)
 
@@ -2742,7 +3463,7 @@ do
     local cinemPart = nil
     local oldMinZoom, oldMaxZoom = 0.5, 400
 
-    createToggle(DiffMenu, "Cinematic Mode", 220, false, function(st)
+    Lib.createToggle(DiffMenu, "Cinematic Mode", 220, false, function(st)
         cinematicEnabled = st
         pcall(function() game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.All, not st) end)
         for _, gui in pairs(LP.PlayerGui:GetChildren()) do
@@ -2792,13 +3513,13 @@ do
         end
     end))
 
-    createToggle(DiffMenu, "BunnyHop", 264, false, function(st)
+    Lib.createToggle(DiffMenu, "BunnyHop", 264, false, function(st)
         _G.BhopEnabled = st
     end)
 
-    local bhSettingsCard = CreateStyledCard(DiffMenu, 40)
+    local bhSettingsCard = Lib.CreateStyledCard(DiffMenu, 40)
     bhSettingsCard.Position = UDim2.new(0, 0, 0, 308)
-    local bhSettingsLbl = Create("TextLabel", {
+    local bhSettingsLbl = Lib.Create("TextLabel", {
         Parent = bhSettingsCard,
         Size = UDim2.new(1, -60, 1, 0),
         Position = UDim2.new(0, 12, 0, 0),
@@ -2809,7 +3530,7 @@ do
         TextSize = 13,
         TextXAlignment = Enum.TextXAlignment.Left
     })
-    local bhOpenBtn = Create("TextButton", {
+    local bhOpenBtn = Lib.Create("TextButton", {
         Parent = bhSettingsCard,
         Size = UDim2.new(0, 60, 0, 24),
         Position = UDim2.new(1, -72, 0.5, -12),
@@ -2820,7 +3541,7 @@ do
         TextSize = 11,
         BorderSizePixel = 0
     })
-    Create("UICorner", { Parent = bhOpenBtn, CornerRadius = UDim.new(0, 4) })
+    Lib.Create("UICorner", { Parent = bhOpenBtn, CornerRadius = UDim.new(0, 4) })
 
     _G.BhopEnabled = false
     _G.BhopAutoJump = true
@@ -2828,24 +3549,24 @@ do
     _G.BhopMaxSpeed = 100
     _G.BhopRealistic = false
 
-    local BhopWin, BhopClose, BhopScroll, BhopLayout, BhopActionBtn, BhopActionLbl = createFloatingMenu("BunnyHop Settings", 280, 280)
+    local BhopWin, BhopClose, BhopScroll, BhopLayout, BhopActionBtn, BhopActionLbl = Lib.createFloatingMenu("BunnyHop Settings", 280, 280)
     BhopActionBtn.Visible = false
     BhopActionLbl.Visible = false
     BhopScroll.Size = UDim2.new(1, -20, 1, -48)
 
-    createToggle(BhopScroll, "Auto Jump", 0, _G.BhopAutoJump, function(st)
+    Lib.createToggle(BhopScroll, "Auto Jump", 0, _G.BhopAutoJump, function(st)
         _G.BhopAutoJump = st
     end)
 
-    createToggle(BhopScroll, "Air Strafe", 0, _G.BhopAirStrafe, function(st)
+    Lib.createToggle(BhopScroll, "Air Strafe", 0, _G.BhopAirStrafe, function(st)
         _G.BhopAirStrafe = st
     end)
 
-    createSlider(BhopScroll, 0, "Max Speed", 16, 300, _G.BhopMaxSpeed, function(val)
+    Lib.createSlider(BhopScroll, 0, "Max Speed", 16, 300, _G.BhopMaxSpeed, function(val)
         _G.BhopMaxSpeed = val
     end)
 
-    createToggle(BhopScroll, "Realistic Bhop", 0, _G.BhopRealistic, function(st)
+    Lib.createToggle(BhopScroll, "Realistic Bhop", 0, _G.BhopRealistic, function(st)
         _G.BhopRealistic = st
     end)
 
@@ -2902,24 +3623,20 @@ do
 
         if onGround then
             if not lastOnGround then
-
                 if spaceHeld and _G.BhopEnabled then
                     if not _G.BhopRealistic then
-
                         local boost = 3
                         speedAccumulator = math.min(speedAccumulator + boost, maxSpeed)
                         local dir = wishDir.Magnitude > 0 and wishDir.Unit or (horizontalVel.Magnitude > 0 and horizontalVel.Unit or root.CFrame.LookVector)
                         horizontalVel = dir * speedAccumulator
                         root.Velocity = Vector3.new(horizontalVel.X, root.Velocity.Y, horizontalVel.Z)
                     else
-
                         speedAccumulator = math.min(speed, maxSpeed)
                     end
                 else
                     speedAccumulator = baseWalkSpeed
                 end
             else
-
                 if wishDir.Magnitude > 0 then
                     speedAccumulator = math.max(baseWalkSpeed, speed)
                 else
@@ -2927,28 +3644,23 @@ do
                 end
             end
         else
-
             if wishDir.Magnitude > 0 then
                 wishDir = wishDir.Unit
                 if _G.BhopAirStrafe then
                     if _G.BhopRealistic then
-
                         local airAccelerate = 150 
                         local wishspeed = 30 
-
-local currentspeed = horizontalVel:Dot(wishDir)
+                        local currentspeed = horizontalVel:Dot(wishDir)
                         local addspeed = wishspeed - currentspeed
                         if addspeed > 0 then
                             local accelspeed = math.min(airAccelerate * wishspeed * dt, addspeed)
                             horizontalVel = horizontalVel + wishDir * accelspeed
                         end
-
                         if horizontalVel.Magnitude > maxSpeed then
                             horizontalVel = horizontalVel.Unit * maxSpeed
                         end
                         root.Velocity = Vector3.new(horizontalVel.X, root.Velocity.Y, horizontalVel.Z)
                     else
-
                         local accel = 4 * dt
                         local targetVel = wishDir * math.max(speed, baseWalkSpeed)
                         horizontalVel = horizontalVel:Lerp(targetVel, accel)
@@ -2970,20 +3682,65 @@ local currentspeed = horizontalVel:Dot(wishDir)
     end)
     table.insert(UI.Connections, bhopConnection)
 
-    local ConsoleWin = Create("Frame", { Parent = UI.Screen, Size = UDim2.new(0, 440, 0, 240), Position = UDim2.new(0.5, -220, 0.5, -120), BackgroundColor3 = Colors.Background, BorderSizePixel = 0, Visible = false, ClipsDescendants = true })
-    Create("UICorner", { Parent = ConsoleWin, CornerRadius = UDim.new(0, 8) })
-    Create("UIStroke", { Parent = ConsoleWin, Color = Colors.Border, Thickness = 1 })
-    local conTopBar = Create("Frame", { Parent = ConsoleWin, Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1 })
-    makeDraggable(ConsoleWin, conTopBar)
-    Create("TextLabel", { Parent = conTopBar, Size = UDim2.new(0.6, 0, 1, 0), Position = UDim2.new(0, 15, 0, 0), BackgroundTransparency = 1, Text = "Developer Console", TextColor3 = Colors.TextMain, Font = Enum.Font.GothamBold, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left })
-    local conCloseBtn = Create("TextButton", { Parent = conTopBar, Size = UDim2.new(0, 24, 0, 24), Position = UDim2.new(1, -30, 0.5, -12), BackgroundTransparency = 1, Text = "×", TextColor3 = Colors.TextDim, Font = Enum.Font.GothamMedium, TextSize = 18 })
+    Lib.createSlider(DiffMenu, 352, "FOV Changer", 30, 120, 70, function(v)
+        pcall(function()
+            workspace.CurrentCamera.FieldOfView = v
+        end)
+    end)
 
-    local conScroll = Create("ScrollingFrame", { Parent = ConsoleWin, Size = UDim2.new(1, -24, 1, -48), Position = UDim2.new(0, 12, 0, 38), BackgroundTransparency = 1, ScrollBarThickness = 2, ScrollBarImageColor3 = Colors.Border, BorderSizePixel = 0 })
-    local conLayout = Create("UIListLayout", { Parent = conScroll, Padding = UDim.new(0, 2) })
+    local hitboxSize = 10
+    local hitboxEnabled = false
+
+    Lib.createToggle(DiffMenu, "Hitbox Expander", 412, false, function(st)
+        hitboxEnabled = st
+    end)
+
+    Lib.createSlider(DiffMenu, 457, "Hitbox Size", 2, 50, 10, function(v)
+        hitboxSize = v
+    end)
+
+    task.spawn(function()
+        while task.wait(0.5) do
+            if hitboxEnabled then
+                for _, plr in ipairs(Services.Players:GetPlayers()) do
+                    if plr ~= LP and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                        local hrp = plr.Character.HumanoidRootPart
+                        hrp.Size = Vector3.new(hitboxSize, hitboxSize, hitboxSize)
+                        hrp.Transparency = 0.7
+                        hrp.BrickColor = BrickColor.new("Really blue")
+                        hrp.Material = Enum.Material.Neon
+                        hrp.CanCollide = false
+                    end
+                end
+            else
+                for _, plr in ipairs(Services.Players:GetPlayers()) do
+                    if plr ~= LP and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                        local hrp = plr.Character.HumanoidRootPart
+                        if hrp.Size ~= Vector3.new(2, 2, 1) then
+                            hrp.Size = Vector3.new(2, 2, 1)
+                            hrp.Transparency = 1
+                            hrp.CanCollide = true
+                        end
+                    end
+                end
+            end
+        end
+    end)
+
+    local ConsoleWin = Lib.Create("Frame", { Parent = UI.Screen, Size = UDim2.new(0, 440, 0, 240), Position = UDim2.new(0.5, -220, 0.5, -120), BackgroundColor3 = Colors.Background, BorderSizePixel = 0, Visible = false, ClipsDescendants = true })
+    Lib.Create("UICorner", { Parent = ConsoleWin, CornerRadius = UDim.new(0, 8) })
+    Lib.Create("UIStroke", { Parent = ConsoleWin, Color = Colors.Border, Thickness = 1 })
+    local conTopBar = Lib.Create("Frame", { Parent = ConsoleWin, Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1 })
+    Lib.makeDraggable(ConsoleWin, conTopBar)
+    Lib.Create("TextLabel", { Parent = conTopBar, Size = UDim2.new(0.6, 0, 1, 0), Position = UDim2.new(0, 15, 0, 0), BackgroundTransparency = 1, Text = "Developer Console", TextColor3 = Colors.TextMain, Font = Enum.Font.GothamBold, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left })
+    local conCloseBtn = Lib.Create("TextButton", { Parent = conTopBar, Size = UDim2.new(0, 24, 0, 24), Position = UDim2.new(1, -30, 0.5, -12), BackgroundTransparency = 1, Text = "×", TextColor3 = Colors.TextDim, Font = Enum.Font.GothamMedium, TextSize = 18 })
+
+    local conScroll = Lib.Create("ScrollingFrame", { Parent = ConsoleWin, Size = UDim2.new(1, -24, 1, -48), Position = UDim2.new(0, 12, 0, 38), BackgroundTransparency = 1, ScrollBarThickness = 2, ScrollBarImageColor3 = Colors.Border, BorderSizePixel = 0 })
+    local conLayout = Lib.Create("UIListLayout", { Parent = conScroll, Padding = UDim.new(0, 2) })
     conLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() conScroll.CanvasSize = UDim2.new(0, 0, 0, conLayout.AbsoluteContentSize.Y + 10) end)
 
     local function addConsoleLine(msg, msgType)
-        local lbl = Create("TextLabel", { Parent = conScroll, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Text = msg, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, Font = Enum.Font.Gotham, TextSize = 11 })
+        local lbl = Lib.Create("TextLabel", { Parent = conScroll, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Text = msg, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, Font = Enum.Font.Gotham, TextSize = 11 })
         if msgType == Enum.MessageType.MessageError then lbl.TextColor3 = Color3.fromRGB(255, 80, 80)
         elseif msgType == Enum.MessageType.MessageWarning then lbl.TextColor3 = Color3.fromRGB(255, 200, 80)
         elseif msgType == Enum.MessageType.MessageInfo then lbl.TextColor3 = Color3.fromRGB(150, 200, 255)
@@ -2994,22 +3751,43 @@ local currentspeed = horizontalVel:Dot(wishDir)
     table.insert(UI.Connections, Services.Log.MessageOut:Connect(addConsoleLine))
     for _, log in ipairs(Services.Log:GetLogHistory()) do addConsoleLine(log.message, log.messageType) end
 
-    local consoleTog, _, setConsoleState = createToggle(OtherMenu, "Developer Console", 0, false, function(st) ConsoleWin.Visible = st end)
+    local consoleTog, _, setConsoleState = Lib.createToggle(OtherMenu, "Developer Console", 0, false, function(st) ConsoleWin.Visible = st end)
     conCloseBtn.MouseButton1Click:Connect(function() setConsoleState(false, true); ConsoleWin.Visible = false end)
 
-local spyEnabled = false
-    local spyTog, _, setSpyState = createToggle(OtherMenu, "Remote Spy", 44, false, function(st)
+    local spyEnabled = false
+    local spyTog, _, setSpyState = Lib.createToggle(OtherMenu, "Remote Spy", 44, false, function(st)
         spyEnabled = st
         if st then
             loadstring(game:HttpGet("https://raw.githubusercontent.com/CherryCalCor/BWSPY.Lua/refs/heads/main/Code.Lua"))()
         end
     end)
-
 end
 
 do
     local stalkMenuEnabled = false
-    local StalkWin, StalkClose, StalkScroll, StalkLayout, StalkActionBtn, StalkActionLbl = createFloatingMenu("Stalk")
+    local StalkWin, StalkClose, StalkScroll, StalkLayout, StalkActionBtn, StalkActionLbl = Lib.createFloatingMenu("Stalk Setup", 460, 320)
+    
+    StalkScroll.Size = UDim2.new(0, 210, 1, -85)
+    StalkActionBtn.Position = UDim2.new(0, 10, 1, -40)
+    StalkActionBtn.Size = UDim2.new(0, 210, 0, 30)
+
+    local StalkSettings = Lib.Create("Frame", {
+        Parent = StalkWin,
+        Size = UDim2.new(0, 215, 1, -85),
+        Position = UDim2.new(0, 235, 0, 40),
+        BackgroundTransparency = 1
+    })
+
+    local stalkOffsetX = 0
+    local stalkOffsetY = 0
+    local stalkOffsetZ = 3
+    local stalkNoMovement = false
+
+    Lib.createSlider(StalkSettings, 0, "Offset X", -30, 30, 0, function(v) stalkOffsetX = v end)
+    Lib.createSlider(StalkSettings, 60, "Offset Y", -30, 30, 0, function(v) stalkOffsetY = v end)
+    Lib.createSlider(StalkSettings, 120, "Offset Z", -30, 30, 3, function(v) stalkOffsetZ = v end)
+    Lib.createToggle(StalkSettings, "Disable Movement", 180, false, function(st) stalkNoMovement = st end)
+
     local currentStalkTarget = nil
     local stalking = false
     local stalkTarget = nil
@@ -3020,7 +3798,7 @@ do
         local myChar = LP.Character
         if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return end
         stalking = true; stalkTarget = targetPlayer
-        myChar.HumanoidRootPart.CFrame = targetPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+        myChar.HumanoidRootPart.CFrame = targetPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(stalkOffsetX, stalkOffsetY, stalkOffsetZ)
 
         if stalkConnection then stalkConnection:Disconnect() end
         stalkConnection = Services.Run.RenderStepped:Connect(function()
@@ -3028,8 +3806,17 @@ do
             local targetChar = stalkTarget.Character
             local myCharacter = LP.Character
             if targetChar and myCharacter and targetChar:FindFirstChild("HumanoidRootPart") and myCharacter:FindFirstChild("HumanoidRootPart") then
-                myCharacter.HumanoidRootPart.CFrame = targetChar.HumanoidRootPart.CFrame * CFrame.new(0,0,3)
-                if targetChar:FindFirstChild("Humanoid") then workspace.CurrentCamera.CameraSubject = targetChar.Humanoid end
+                myCharacter.HumanoidRootPart.CFrame = targetChar.HumanoidRootPart.CFrame * CFrame.new(stalkOffsetX, stalkOffsetY, stalkOffsetZ)
+                
+                if stalkNoMovement then
+                    myCharacter.HumanoidRootPart.Anchored = true
+                else
+                    myCharacter.HumanoidRootPart.Anchored = false
+                end
+
+                if targetChar:FindFirstChild("Humanoid") then 
+                    workspace.CurrentCamera.CameraSubject = targetChar.Humanoid 
+                end
             end
         end)
         table.insert(UI.Connections, stalkConnection)
@@ -3038,28 +3825,44 @@ do
     local function StopStalk()
         stalking = false; stalkTarget = nil
         if stalkConnection then stalkConnection:Disconnect(); stalkConnection = nil end
-        if LP.Character and LP.Character:FindFirstChild("Humanoid") then workspace.CurrentCamera.CameraSubject = LP.Character.Humanoid end
+        if LP.Character then
+            local hum = LP.Character:FindFirstChildOfClass("Humanoid")
+            local hrp = LP.Character:FindFirstChild("HumanoidRootPart")
+            if hum then workspace.CurrentCamera.CameraSubject = hum end
+            if hrp then hrp.Anchored = false end
+        end
     end
 
-    createToggle(FunnyTab, "Stalk Mode", 10, false, function(st)
+    Lib.createToggle(UI.Pages.Funny, "Stalk Mode", 10, false, function(st)
         stalkMenuEnabled = st
         StalkWin.Visible = st
         if st then
-            populatePlayers(StalkScroll, StalkLayout, StalkActionLbl, "Stalk", function(p) currentStalkTarget = p end)
+            Lib.populatePlayers(StalkScroll, StalkLayout, StalkActionLbl, "Stalk", function(p) currentStalkTarget = p end)
         else
             StopStalk(); StalkActionLbl.Text = "Stalk: [None]"
         end
     end)
-    StalkClose.MouseButton1Click:Connect(function() StalkWin.Visible = false; StopStalk(); StalkActionLbl.Text = "Stalk: [None]" end)
-    StalkActionBtn.MouseButton1Click:Connect(function()
-        if not currentStalkTarget then return end
-        if stalking and stalkTarget == currentStalkTarget then StopStalk(); showNotification("Преследование остановлено")
-        else StartStalk(currentStalkTarget); showNotification("Преследование: " .. currentStalkTarget.Name) end
+
+    StalkClose.MouseButton1Click:Connect(function() 
+        StalkWin.Visible = false 
+        StopStalk() 
+        StalkActionLbl.Text = "Stalk: [None]" 
     end)
 
-    local FakeLagBtn, FakeLagArrow = createMenuBtn(FunnyTab, "Fake lag", 55, true)
-    local FakeLagMenu = Create("Frame", { Parent = FunnyTab, Size = UDim2.new(1, -6, 0, 0), Position = UDim2.new(0, 3, 0, 95), BackgroundTransparency = 1, ClipsDescendants = true, Visible = false })
-    Create("UIListLayout", { Parent = FakeLagMenu, Padding = UDim.new(0, 4) })
+    StalkActionBtn.MouseButton1Click:Connect(function()
+        if not currentStalkTarget then return end
+        if stalking and stalkTarget == currentStalkTarget then 
+            StopStalk()
+            Lib.showNotification("Преследование остановлено")
+        else 
+            StartStalk(currentStalkTarget)
+            Lib.showNotification("Преследование: " .. currentStalkTarget.Name) 
+        end
+    end)
+
+    local FakeLagBtn, FakeLagArrow = Lib.createMenuBtn(UI.Pages.Funny, "Fake lag", 55, true)
+    local FakeLagMenu = Lib.Create("Frame", { Parent = UI.Pages.Funny, Size = UDim2.new(1, -6, 0, 0), Position = UDim2.new(0, 3, 0, 95), BackgroundTransparency = 1, ClipsDescendants = true, Visible = false })
+    Lib.Create("UIListLayout", { Parent = FakeLagMenu, Padding = UDim.new(0, 4) })
 
     local fakeLagOpened = false
     FakeLagBtn.MouseButton1Click:Connect(function()
@@ -3070,21 +3873,20 @@ do
     end)
 
     local suspEnabled = false
-    createToggle(FakeLagMenu, "Complete suspension", 0, false, function(st)
+    Lib.createToggle(FakeLagMenu, "Complete suspension", 0, false, function(st)
         suspEnabled = st
         local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
         if hum then
             if st then
                 hum.WalkSpeed = 0.5
             else
-
                 hum.WalkSpeed = _G.ConfigState["Speed"] or 16
             end
         end
     end)
 
     local usualEnabled = false
-    createToggle(FakeLagMenu, "The usual lag", 44, false, function(st)
+    Lib.createToggle(FakeLagMenu, "The usual lag", 44, false, function(st)
         usualEnabled = st
         if not st and LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then LP.Character.HumanoidRootPart.Anchored = false end
     end)
@@ -3102,12 +3904,12 @@ do
 end
 
 do
-    local ConfigsMenu = Create("Frame", { Parent = ConfigTab, Size = UDim2.new(1, -6, 0, 0), Position = UDim2.new(0, 3, 0, 50), BackgroundTransparency = 1, ClipsDescendants = true, Visible = false })
-    local cfgLayout = Create("UIListLayout", { Parent = ConfigsMenu, Padding = UDim.new(0, 4) })
+    local ConfigsMenu = Lib.Create("Frame", { Parent = UI.Pages.Config, Size = UDim2.new(1, -6, 0, 0), Position = UDim2.new(0, 3, 0, 50), BackgroundTransparency = 1, ClipsDescendants = true, Visible = false })
+    local cfgLayout = Lib.Create("UIListLayout", { Parent = ConfigsMenu, Padding = UDim.new(0, 4) })
 
-    local nameCard = CreateStyledCard(ConfigTab, 40)
+    local nameCard = Lib.CreateStyledCard(UI.Pages.Config, 40)
     nameCard.Position = UDim2.new(0, 0, 0, 55)
-    local ConfigNameInput = Create("TextBox", {
+    local ConfigNameInput = Lib.Create("TextBox", {
         Parent = nameCard,
         Size = UDim2.new(1, -24, 1, -12),
         Position = UDim2.new(0, 12, 0, 6),
@@ -3118,11 +3920,11 @@ do
         Font = Enum.Font.Gotham,
         Text = ""
     })
-    Create("UICorner", { Parent = ConfigNameInput, CornerRadius = UDim.new(0, 4) })
-    local cInStroke = Create("UIStroke", { Parent = ConfigNameInput, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = ConfigNameInput, CornerRadius = UDim.new(0, 4) })
+    local cInStroke = Lib.Create("UIStroke", { Parent = ConfigNameInput, Color = Colors.Border, Thickness = 1 })
 
-    local SaveConfigBtn = Create("TextButton", {
-        Parent = ConfigTab,
+    local SaveConfigBtn = Lib.Create("TextButton", {
+        Parent = UI.Pages.Config,
         Size = UDim2.new(1, -6, 0, 32),
         Position = UDim2.new(0, 3, 0, 105),
         BackgroundColor3 = Colors.Surface,
@@ -3132,13 +3934,13 @@ do
         TextSize = 12,
         BorderSizePixel = 0
     })
-    Create("UICorner", { Parent = SaveConfigBtn, CornerRadius = UDim.new(0, 6) })
-    local saveStroke = Create("UIStroke", { Parent = SaveConfigBtn, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = SaveConfigBtn, CornerRadius = UDim.new(0, 6) })
+    local saveStroke = Lib.Create("UIStroke", { Parent = SaveConfigBtn, Color = Colors.Border, Thickness = 1 })
 
     SaveConfigBtn.MouseEnter:Connect(function() Services.TS:Create(saveStroke, TWEEN_INFO_FAST, {Color = Colors.Active}):Play() end)
     SaveConfigBtn.MouseLeave:Connect(function() Services.TS:Create(saveStroke, TWEEN_INFO_FAST, {Color = Colors.Border}):Play() end)
 
-    local AutoUploadToggleCont = Create("Frame", { Parent = ConfigTab, Size = UDim2.new(1, 0, 0, 40), Position = UDim2.new(0, 0, 0, 145), BackgroundTransparency = 1 })
+    local AutoUploadToggleCont = Lib.Create("Frame", { Parent = UI.Pages.Config, Size = UDim2.new(1, 0, 0, 40), Position = UDim2.new(0, 0, 0, 145), BackgroundTransparency = 1 })
 
     local cfgOpened = false
     local function updateConfigPos()
@@ -3162,7 +3964,7 @@ do
                 for _, file in ipairs(files) do
                     if file:match("%.json$") then
                         local confName = file:match("([^/\\]+)%.json$") or "Unknown"
-                        local btn = Create("TextButton", {
+                        local btn = Lib.Create("TextButton", {
                             Parent = ConfigsMenu,
                             Size = UDim2.new(1, -4, 0, 26),
                             BackgroundColor3 = Colors.Surface,
@@ -3172,12 +3974,12 @@ do
                             TextSize = 12,
                             BorderSizePixel = 0
                         })
-                        Create("UICorner", { Parent = btn, CornerRadius = UDim.new(0, 4) })
-                        local bStroke = Create("UIStroke", { Parent = btn, Color = Colors.Border, Thickness = 1 })
+                        Lib.Create("UICorner", { Parent = btn, CornerRadius = UDim.new(0, 4) })
+                        local bStroke = Lib.Create("UIStroke", { Parent = btn, Color = Colors.Border, Thickness = 1 })
 
                         btn.MouseButton1Click:Connect(function()
                             selectedConfigToLoad = confName
-                            showNotification("Загружен конфиг: " .. confName)
+                            Lib.showNotification("Загружен конфиг: " .. confName)
                             local rawData = readfile(file)
                             local decoded = Services.Http:JSONDecode(rawData)
                             if decoded.ThemeC1 and decoded.ThemeC2 then
@@ -3195,7 +3997,7 @@ do
         end)
     end
 
-    local ConfigsBtn, ConfigsArrow = createMenuBtn(ConfigTab, "Configs (Select to load)", 10, true)
+    local ConfigsBtn, ConfigsArrow = Lib.createMenuBtn(UI.Pages.Config, "Configs (Select to load)", 10, true)
     ConfigsBtn.MouseButton1Click:Connect(function()
         cfgOpened = not cfgOpened
         ConfigsMenu.Visible = true
@@ -3215,9 +4017,9 @@ do
                     Settings = _G.ConfigState
                 }
                 writefile(folderName .. "/" .. txt .. ".json", Services.Http:JSONEncode(dataToSave))
-                showNotification("Конфиг '" .. txt .. "' успешно сохранен!")
+                Lib.showNotification("Конфиг '" .. txt .. "' успешно сохранен!")
                 refreshConfigs()
-            else showNotification("Ваш инжектор не поддерживает файлы!") end
+            else Lib.showNotification("Ваш инжектор не поддерживает файлы!") end
         end)
     end)
 
@@ -3229,7 +4031,7 @@ do
                 isAutoUpload = true; selectedConfigToLoad = autoCfg
                 task.spawn(function()
                     task.wait(2)
-                    showNotification("Авто-загрузка конфига: " .. autoCfg)
+                    Lib.showNotification("Авто-загрузка конфига: " .. autoCfg)
                     local cpath = folderName .. "/" .. autoCfg .. ".json"
                     if isfile(cpath) then
                         local decoded = Services.Http:JSONDecode(readfile(cpath))
@@ -3243,26 +4045,26 @@ do
         end
     end)
 
-    createToggle(AutoUploadToggleCont, "Auto upload", 0, isAutoUpload, function(st)
+    Lib.createToggle(AutoUploadToggleCont, "Auto upload", 0, isAutoUpload, function(st)
         isAutoUpload = st
         pcall(function()
             if isAutoUpload and selectedConfigToLoad then
                 if writefile then writefile(autoLoadFile, selectedConfigToLoad) end
-                showNotification("Auto upload установлен на: " .. selectedConfigToLoad)
+                Lib.showNotification("Auto upload установлен на: " .. selectedConfigToLoad)
             else
                 if writefile then writefile(autoLoadFile, "") end
                 if isfile and isfile(autoLoadFile) and delfile then delfile(autoLoadFile) end
-                showNotification("Auto upload отключен.")
+                Lib.showNotification("Auto upload отключен.")
             end
         end)
     end)
 end
 
 do
-    local bindHeader = CreateStyledCard(QoLTab, 90)
-    Create("UIPadding", { Parent = bindHeader, PaddingTop = UDim.new(0, 10), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
+    local bindHeader = Lib.CreateStyledCard(UI.Pages.QoL, 90)
+    Lib.Create("UIPadding", { Parent = bindHeader, PaddingTop = UDim.new(0, 10), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
 
-    Create("TextLabel", {
+    Lib.Create("TextLabel", {
         Parent = bindHeader,
         Size = UDim2.new(1, 0, 0, 20),
         BackgroundTransparency = 1,
@@ -3273,7 +4075,7 @@ do
         TextXAlignment = Enum.TextXAlignment.Left
     })
 
-    local bindKeyInput = Create("TextBox", {
+    local bindKeyInput = Lib.Create("TextBox", {
         Parent = bindHeader,
         Size = UDim2.new(0, 50, 0, 26),
         Position = UDim2.new(0, 0, 0, 28),
@@ -3284,9 +4086,9 @@ do
         TextSize = 12,
         PlaceholderText = "Key"
     })
-    Create("UICorner", { Parent = bindKeyInput, CornerRadius = UDim.new(0, 4) })
+    Lib.Create("UICorner", { Parent = bindKeyInput, CornerRadius = UDim.new(0, 4) })
 
-    local bindFuncInput = Create("TextBox", {
+    local bindFuncInput = Lib.Create("TextBox", {
         Parent = bindHeader,
         Size = UDim2.new(1, -125, 0, 26),
         Position = UDim2.new(0, 56, 0, 28),
@@ -3297,9 +4099,9 @@ do
         TextSize = 12,
         PlaceholderText = "Function Name"
     })
-    Create("UICorner", { Parent = bindFuncInput, CornerRadius = UDim.new(0, 4) })
+    Lib.Create("UICorner", { Parent = bindFuncInput, CornerRadius = UDim.new(0, 4) })
 
-    local addBind = Create("TextButton", {
+    local addBind = Lib.Create("TextButton", {
         Parent = bindHeader,
         Size = UDim2.new(0, 60, 0, 26),
         Position = UDim2.new(1, -60, 0, 28),
@@ -3310,14 +4112,14 @@ do
         TextSize = 11,
         BorderSizePixel = 0
     })
-    Create("UICorner", { Parent = addBind, CornerRadius = UDim.new(0, 4) })
+    Lib.Create("UICorner", { Parent = addBind, CornerRadius = UDim.new(0, 4) })
 
     addBind.MouseButton1Click:Connect(function()
         local k = bindKeyInput.Text:upper()
         local f = bindFuncInput.Text
         if k ~= "" and f ~= "" then
             _G.UserBinds[k] = f
-            showNotification("Байнд установлен: " .. k .. " -> " .. f)
+            Lib.showNotification("Байнд установлен: " .. k .. " -> " .. f)
             bindKeyInput.Text = ""; bindFuncInput.Text = ""
         end
     end)
@@ -3331,19 +4133,19 @@ do
             for name, updater in pairs(_G.ConfigUpdaters) do
                 if name:lower() == fName:lower() then
                     updater(not _G.ConfigState[name])
-                    showNotification(name .. " toggled via Bind!")
+                    Lib.showNotification(name .. " toggled via Bind!")
                     found = true; break
                 end
             end
-            if not found then showNotification("Функция не найдена: " .. fName) end
+            if not found then Lib.showNotification("Функция не найдена: " .. fName) end
         end
     end))
 
-    local macroHeader = CreateStyledCard(QoLTab, 90)
+    local macroHeader = Lib.CreateStyledCard(UI.Pages.QoL, 90)
     macroHeader.Position = UDim2.new(0, 0, 0, 100)
-    Create("UIPadding", { Parent = macroHeader, PaddingTop = UDim.new(0, 10), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
+    Lib.Create("UIPadding", { Parent = macroHeader, PaddingTop = UDim.new(0, 10), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
 
-    Create("TextLabel", {
+    Lib.Create("TextLabel", {
         Parent = macroHeader,
         Size = UDim2.new(1, 0, 0, 20),
         BackgroundTransparency = 1,
@@ -3358,7 +4160,7 @@ do
     local isRecording, isPlaying = false, false
     local recConnection, playConnection
 
-    local recBtn = Create("TextButton", {
+    local recBtn = Lib.Create("TextButton", {
         Parent = macroHeader,
         Size = UDim2.new(0.5, -6, 0, 26),
         Position = UDim2.new(0, 0, 0, 28),
@@ -3369,9 +4171,9 @@ do
         TextSize = 11,
         BorderSizePixel = 0
     })
-    Create("UICorner", { Parent = recBtn, CornerRadius = UDim.new(0, 4) })
+    Lib.Create("UICorner", { Parent = recBtn, CornerRadius = UDim.new(0, 4) })
 
-    local playBtn = Create("TextButton", {
+    local playBtn = Lib.Create("TextButton", {
         Parent = macroHeader,
         Size = UDim2.new(0.5, -6, 0, 26),
         Position = UDim2.new(0.5, 6, 0, 28),
@@ -3382,7 +4184,7 @@ do
         TextSize = 11,
         BorderSizePixel = 0
     })
-    Create("UICorner", { Parent = playBtn, CornerRadius = UDim.new(0, 4) })
+    Lib.Create("UICorner", { Parent = playBtn, CornerRadius = UDim.new(0, 4) })
 
     recBtn.MouseButton1Click:Connect(function()
         if isPlaying then return end
@@ -3391,7 +4193,7 @@ do
             macroFrames = {}
             recBtn.Text = "Stop Record"
             recBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
-            showNotification("Запись макроса началась")
+            Lib.showNotification("Запись макроса началась")
             recConnection = Services.Run.Heartbeat:Connect(function()
                 if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
                     table.insert(macroFrames, LP.Character.HumanoidRootPart.CFrame)
@@ -3401,12 +4203,12 @@ do
             recBtn.Text = "Start Record"
             recBtn.BackgroundColor3 = Color3.fromRGB(200, 80, 80)
             if recConnection then recConnection:Disconnect() end
-            showNotification("Запись сохранена! Фреймов: " .. #macroFrames)
+            Lib.showNotification("Запись сохранена! Фреймов: " .. #macroFrames)
         end
     end)
 
     local macroLoop = false
-    local loopCard, _, setLoop = createToggle(QoLTab, "Loop Macro Playback", 195, false, function(st) macroLoop = st end)
+    local loopCard, _, setLoop = Lib.createToggle(UI.Pages.QoL, "Loop Macro Playback", 195, false, function(st) macroLoop = st end)
 
     playBtn.MouseButton1Click:Connect(function()
         if isRecording or #macroFrames == 0 then return end
@@ -3440,12 +4242,12 @@ end
 
 do
     local function createHelpCard(q, a, btnText, btnLink)
-        local card = CreateStyledCard(HelpTab, 40)
+        local card = Lib.CreateStyledCard(UI.Pages.Help, 40)
         card.AutomaticSize = Enum.AutomaticSize.Y
-        Create("UIPadding", { Parent = card, PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
-        local layout = Create("UIListLayout", { Parent = card, Padding = UDim.new(0, 6) })
+        Lib.Create("UIPadding", { Parent = card, PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
+        local layout = Lib.Create("UIListLayout", { Parent = card, Padding = UDim.new(0, 6) })
 
-        Create("TextLabel", {
+        Lib.Create("TextLabel", {
             Parent = card,
             Size = UDim2.new(1, 0, 0, 0),
             AutomaticSize = Enum.AutomaticSize.Y,
@@ -3459,7 +4261,7 @@ do
         })
 
         if a ~= "" then
-            Create("TextLabel", {
+            Lib.Create("TextLabel", {
                 Parent = card,
                 Size = UDim2.new(1, 0, 0, 0),
                 AutomaticSize = Enum.AutomaticSize.Y,
@@ -3474,7 +4276,7 @@ do
         end
 
         if btnText then
-            local b = Create("TextButton", {
+            local b = Lib.Create("TextButton", {
                 Parent = card,
                 Size = UDim2.new(1, 0, 0, 26),
                 BackgroundColor3 = Colors.Surface,
@@ -3484,8 +4286,8 @@ do
                 TextSize = 11,
                 BorderSizePixel = 0
             })
-            Create("UICorner", { Parent = b, CornerRadius = UDim.new(0, 4) })
-            local bStroke = Create("UIStroke", { Parent = b, Color = Colors.Border, Thickness = 1 })
+            Lib.Create("UICorner", { Parent = b, CornerRadius = UDim.new(0, 4) })
+            local bStroke = Lib.Create("UIStroke", { Parent = b, Color = Colors.Border, Thickness = 1 })
             b.MouseEnter:Connect(function() Services.TS:Create(bStroke, TWEEN_INFO_FAST, {Color = Colors.Active}):Play() end)
             b.MouseLeave:Connect(function() Services.TS:Create(bStroke, TWEEN_INFO_FAST, {Color = Colors.Border}):Play() end)
 
@@ -3493,7 +4295,7 @@ do
                 pcall(function()
                     if setclipboard then setclipboard(btnLink) elseif toclipboard then toclipboard(btnLink) end
                 end)
-                showNotification("Ссылка скопирована!")
+                Lib.showNotification("Ссылка скопирована!")
             end)
         end
     end
@@ -3510,11 +4312,11 @@ do
 end
 
 do
-    local themeMenu = Create("Frame", { Parent = SettingsTab, Size = UDim2.new(1, -6, 0, 0), Position = UDim2.new(0, 3, 0, 50), BackgroundTransparency = 1, ClipsDescendants = true, Visible = false })
-    local themeLayout = Create("UIListLayout", { Parent = themeMenu, Padding = UDim.new(0, 4) })
+    local themeMenu = Lib.Create("Frame", { Parent = UI.Pages.Settings, Size = UDim2.new(1, -6, 0, 0), Position = UDim2.new(0, 3, 0, 50), BackgroundTransparency = 1, ClipsDescendants = true, Visible = false })
+    local themeLayout = Lib.Create("UIListLayout", { Parent = themeMenu, Padding = UDim.new(0, 4) })
 
     local function createThemeOption(name, c1, c2)
-        local btn = Create("TextButton", {
+        local btn = Lib.Create("TextButton", {
             Parent = themeMenu,
             Size = UDim2.new(1, -4, 0, 26),
             BackgroundColor3 = Colors.Surface,
@@ -3524,8 +4326,8 @@ do
             TextSize = 11,
             BorderSizePixel = 0
         })
-        Create("UICorner", { Parent = btn, CornerRadius = UDim.new(0, 4) })
-        local bStroke = Create("UIStroke", { Parent = btn, Color = Colors.Border, Thickness = 1 })
+        Lib.Create("UICorner", { Parent = btn, CornerRadius = UDim.new(0, 4) })
+        local bStroke = Lib.Create("UIStroke", { Parent = btn, Color = Colors.Border, Thickness = 1 })
         
         btn.MouseButton1Click:Connect(function() _G.changeTheme(c1, c2) end)
     end
@@ -3540,7 +4342,7 @@ do
     createThemeOption("Deep Aqua & Mint", Color3.fromRGB(10, 35, 40), Color3.fromRGB(100, 255, 180))
 
     local themeOpened = false
-    local themeBtn, themeArrow = createMenuBtn(SettingsTab, "Themes", 10, true)
+    local themeBtn, themeArrow = Lib.createMenuBtn(UI.Pages.Settings, "Themes", 10, true)
     themeBtn.MouseButton1Click:Connect(function()
         themeOpened = not themeOpened
         themeMenu.Visible = true
@@ -3549,25 +4351,25 @@ do
         t:Play(); t.Completed:Wait()
     end)
 
-    local notifMenu = Create("Frame", { Parent = SettingsTab, Size = UDim2.new(1, -6, 0, 0), BackgroundTransparency = 1, ClipsDescendants = true, Visible = false })
-    local notifLayout = Create("UIListLayout", { Parent = notifMenu, Padding = UDim.new(0, 4) })
+    local notifMenu = Lib.Create("Frame", { Parent = UI.Pages.Settings, Size = UDim2.new(1, -6, 0, 0), BackgroundTransparency = 1, ClipsDescendants = true, Visible = false })
+    local notifLayout = Lib.Create("UIListLayout", { Parent = notifMenu, Padding = UDim.new(0, 4) })
 
-    createToggle(notifMenu, "Enable Notifications", 0, true, function(st) _G.NotificationsEnabled = st end)
-    createToggle(notifMenu, "New notification system", 44, false, function(st) _G.UseNewNotifications = st end)
+    Lib.createToggle(notifMenu, "Enable Notifications", 0, true, function(st) _G.NotificationsEnabled = st end)
+    Lib.createToggle(notifMenu, "New notification system", 44, false, function(st) _G.UseNewNotifications = st end)
 
     local playerNotifsEnabled = false
-    createToggle(notifMenu, "Player Notifications", 88, false, function(st) playerNotifsEnabled = st end)
+    Lib.createToggle(notifMenu, "Player Notifications", 88, false, function(st) playerNotifsEnabled = st end)
 
     table.insert(UI.Connections, Services.Players.PlayerAdded:Connect(function(p)
-        if playerNotifsEnabled then showNotification(p.Name .. " зашёл на сервер") end
+        if playerNotifsEnabled then Lib.showNotification(p.Name .. " зашёл на сервер") end
     end))
     table.insert(UI.Connections, Services.Players.PlayerRemoving:Connect(function(p)
-        if playerNotifsEnabled then showNotification(p.Name .. " вышел с сервера") end
+        if playerNotifsEnabled then Lib.showNotification(p.Name .. " вышел с сервера") end
     end))
 
-    local mascotCard = CreateStyledCard(notifMenu, 40)
+    local mascotCard = Lib.CreateStyledCard(notifMenu, 40)
     mascotCard.Position = UDim2.new(0, 0, 0, 132)
-    local mascotInput = Create("TextBox", {
+    local mascotInput = Lib.Create("TextBox", {
         Parent = mascotCard,
         Size = UDim2.new(1, -24, 1, -12),
         Position = UDim2.new(0, 12, 0, 6),
@@ -3578,8 +4380,8 @@ do
         TextSize = 12,
         PlaceholderText = "Paste Character Asset ID..."
     })
-    Create("UICorner", { Parent = mascotInput, CornerRadius = UDim.new(0, 4) })
-    local mInStroke = Create("UIStroke", { Parent = mascotInput, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = mascotInput, CornerRadius = UDim.new(0, 4) })
+    local mInStroke = Lib.Create("UIStroke", { Parent = mascotInput, Color = Colors.Border, Thickness = 1 })
     mascotInput:GetPropertyChangedSignal("Text"):Connect(function()
         local v = mascotInput.Text
         if v ~= "" then
@@ -3587,7 +4389,7 @@ do
         end
     end)
 
-    local notifBtn, notifArrow = createMenuBtn(SettingsTab, "Notifications Management", 55, true)
+    local notifBtn, notifArrow = Lib.createMenuBtn(UI.Pages.Settings, "Notifications Management", 55, true)
     local notifOpened = false
     notifBtn.MouseButton1Click:Connect(function()
         notifOpened = not notifOpened
@@ -3597,17 +4399,17 @@ do
         t:Play(); t.Completed:Wait()
     end)
 
-    local renderCard = CreateStyledCard(SettingsTab, 55)
+    local renderCard = Lib.CreateStyledCard(UI.Pages.Settings, 55)
     renderCard.Position = UDim2.new(0, 0, 0, 100)
-    createSlider(renderCard, 0, "Map render distance", 10, 5000, 1000, function(val)
+    Lib.createSlider(renderCard, 0, "Map render distance", 10, 5000, 1000, function(val)
         Services.Lighting.FogEnd = val
         Services.Lighting.FogStart = val * 0.5
     end)
 
-    local renderMenu = Create("Frame", { Parent = SettingsTab, Size = UDim2.new(1, -6, 0, 0), BackgroundTransparency = 1, ClipsDescendants = true, Visible = false })
-    local renderLayout = Create("UIListLayout", { Parent = renderMenu, Padding = UDim.new(0, 4) })
+    local renderMenu = Lib.Create("Frame", { Parent = UI.Pages.Settings, Size = UDim2.new(1, -6, 0, 0), BackgroundTransparency = 1, ClipsDescendants = true, Visible = false })
+    local renderLayout = Lib.Create("UIListLayout", { Parent = renderMenu, Padding = UDim.new(0, 4) })
 
-    createToggle(renderMenu, "Drawing characters", 0, true, function(st)
+    Lib.createToggle(renderMenu, "Drawing characters", 0, true, function(st)
         for _, plr in ipairs(Services.Players:GetPlayers()) do
             if plr ~= LP and plr.Character then
                 for _, v in ipairs(plr.Character:GetDescendants()) do
@@ -3616,7 +4418,7 @@ do
             end
         end
     end)
-    createToggle(renderMenu, "Drawing accessories", 44, true, function(st)
+    Lib.createToggle(renderMenu, "Drawing accessories", 44, true, function(st)
         for _, plr in ipairs(Services.Players:GetPlayers()) do
             if plr.Character then
                 for _, v in ipairs(plr.Character:GetChildren()) do
@@ -3625,17 +4427,17 @@ do
             end
         end
     end)
-    createToggle(renderMenu, "Ray drawing", 88, true, function(st)
+    Lib.createToggle(renderMenu, "Ray drawing", 88, true, function(st)
         for _, v in pairs(Services.Lighting:GetChildren()) do
             if v:IsA("SunRaysEffect") then v.Enabled = st end
         end
     end)
-    createToggle(renderMenu, "Drawing shadows", 132, true, function(st)
+    Lib.createToggle(renderMenu, "Drawing shadows", 132, true, function(st)
         Services.Lighting.GlobalShadows = st
     end)
 
     local renderOpened = false
-    local renderBtn, renderArrow = createMenuBtn(SettingsTab, "Graphic Optimizations", 160, true)
+    local renderBtn, renderArrow = Lib.createMenuBtn(UI.Pages.Settings, "Graphic Optimizations", 160, true)
     renderBtn.MouseButton1Click:Connect(function()
         renderOpened = not renderOpened
         renderMenu.Visible = true
@@ -3644,38 +4446,35 @@ do
         t:Play(); t.Completed:Wait()
     end)
 
-    createToggle(SettingsTab, "Watermark", 205, true, function(st)
+    Lib.createToggle(UI.Pages.Settings, "Watermark", 205, true, function(st)
         if Watermark then Watermark.Visible = st end
     end)
 
-    local oldDesignEnabled = false
-    local savedColors = {}
-    createToggle(SettingsTab, "Old design", 250, false, function(st)
-        oldDesignEnabled = st
+    Lib.createToggle(UI.Pages.Settings, "Old design", 250, false, function(st)
+        UI.State.oldDesignEnabled = st
         for _, obj in pairs(UI.Screen:GetDescendants()) do
             if obj:IsA("Frame") or obj:IsA("TextButton") or obj:IsA("TextBox") then
                 if obj.BackgroundTransparency < 1 then
                     if st then
-                        if not savedColors[obj] then savedColors[obj] = obj.BackgroundColor3 end
+                        if not UI.State.savedColors[obj] then UI.State.savedColors[obj] = obj.BackgroundColor3 end
                         obj.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
                     else
-                        if savedColors[obj] then obj.BackgroundColor3 = savedColors[obj] end
+                        if UI.State.savedColors[obj] then obj.BackgroundColor3 = UI.State.savedColors[obj] end
                     end
                 end
             end
         end
-        if not st then savedColors = {} end
+        if not st then UI.State.savedColors = {} end
     end)
 end
 
-local ScriptBloxPage = Create("Frame", {
+UI.Pages["ScriptBlox"] = Lib.Create("Frame", {
     Name = "ScriptBloxTab",
     Parent = TabContainer,
     Size = UDim2.new(1, 0, 1, 0),
     BackgroundTransparency = 1,
     Visible = false
 })
-UI.Pages["ScriptBlox"] = ScriptBloxPage
 
 CreateTabButton("ScriptBlox", 14)
 
@@ -3716,10 +4515,10 @@ function CacheManager.ToggleFavorite(scriptData)
     local id = scriptData._id
     if CacheManager.Favorites[id] then
         CacheManager.Favorites[id] = nil
-        showNotification("Removed from favorites!")
+        Lib.showNotification("Removed from favorites!")
     else
         CacheManager.Favorites[id] = scriptData
-        showNotification("Added to favorites!")
+        Lib.showNotification("Added to favorites!")
     end
     CacheManager.SaveFavorites()
 end
@@ -3818,23 +4617,23 @@ function APIModule.FetchRawScript(scriptId)
     return body, err
 end
 
-local TopSearchBar = Create("Frame", {
-    Parent = ScriptBloxPage,
+local TopSearchBar = Lib.Create("Frame", {
+    Parent = UI.Pages.ScriptBlox,
     Size = UDim2.new(1, 0, 0, 40),
     Position = UDim2.new(0, 0, 0, 0),
     BackgroundTransparency = 1
 })
 
-local SearchBoxCard = Create("Frame", {
+local SearchBoxCard = Lib.Create("Frame", {
     Parent = TopSearchBar,
     Size = UDim2.new(1, -120, 1, 0),
     BackgroundColor3 = Colors.Surface,
     BorderSizePixel = 0
 })
-Create("UICorner", { Parent = SearchBoxCard, CornerRadius = UDim.new(0, 6) })
-local searchStroke = Create("UIStroke", { Parent = SearchBoxCard, Color = Colors.Border, Thickness = 1 })
+Lib.Create("UICorner", { Parent = SearchBoxCard, CornerRadius = UDim.new(0, 6) })
+local searchStroke = Lib.Create("UIStroke", { Parent = SearchBoxCard, Color = Colors.Border, Thickness = 1 })
 
-local SearchInput = Create("TextBox", {
+local SearchInput = Lib.Create("TextBox", {
     Parent = SearchBoxCard,
     Size = UDim2.new(1, -20, 1, 0),
     Position = UDim2.new(0, 10, 0, 0),
@@ -3847,7 +4646,7 @@ local SearchInput = Create("TextBox", {
     ClearTextOnFocus = false
 })
 
-local SearchBtn = Create("TextButton", {
+local SearchBtn = Lib.Create("TextButton", {
     Parent = TopSearchBar,
     Size = UDim2.new(0, 75, 1, 0),
     Position = UDim2.new(1, -115, 0, 0),
@@ -3858,9 +4657,9 @@ local SearchBtn = Create("TextButton", {
     TextSize = 12,
     BorderSizePixel = 0
 })
-Create("UICorner", { Parent = SearchBtn, CornerRadius = UDim.new(0, 6) })
+Lib.Create("UICorner", { Parent = SearchBtn, CornerRadius = UDim.new(0, 6) })
 
-local RefreshBtn = Create("TextButton", {
+local RefreshBtn = Lib.Create("TextButton", {
     Parent = TopSearchBar,
     Size = UDim2.new(0, 35, 1, 0),
     Position = UDim2.new(1, -35, 0, 0),
@@ -3871,17 +4670,17 @@ local RefreshBtn = Create("TextButton", {
     TextSize = 14,
     BorderSizePixel = 0
 })
-Create("UICorner", { Parent = RefreshBtn, CornerRadius = UDim.new(0, 6) })
-local refreshStroke = Create("UIStroke", { Parent = RefreshBtn, Color = Colors.Border, Thickness = 1 })
+Lib.Create("UICorner", { Parent = RefreshBtn, CornerRadius = UDim.new(0, 6) })
+local refreshStroke = Lib.Create("UIStroke", { Parent = RefreshBtn, Color = Colors.Border, Thickness = 1 })
 
-local FilterBar = Create("Frame", {
-    Parent = ScriptBloxPage,
+local FilterBar = Lib.Create("Frame", {
+    Parent = UI.Pages.ScriptBlox,
     Size = UDim2.new(1, 0, 0, 30),
     Position = UDim2.new(0, 0, 0, 45),
     BackgroundTransparency = 1
 })
 
-local FiltersToggleBtn = Create("TextButton", {
+local FiltersToggleBtn = Lib.Create("TextButton", {
     Parent = FilterBar,
     Size = UDim2.new(0, 80, 1, 0),
     BackgroundColor3 = Colors.Surface,
@@ -3891,10 +4690,10 @@ local FiltersToggleBtn = Create("TextButton", {
     TextSize = 11,
     BorderSizePixel = 0
 })
-Create("UICorner", { Parent = FiltersToggleBtn, CornerRadius = UDim.new(0, 6) })
-local filtersStroke = Create("UIStroke", { Parent = FiltersToggleBtn, Color = Colors.Border, Thickness = 1 })
+Lib.Create("UICorner", { Parent = FiltersToggleBtn, CornerRadius = UDim.new(0, 6) })
+local filtersStroke = Lib.Create("UIStroke", { Parent = FiltersToggleBtn, Color = Colors.Border, Thickness = 1 })
 
-local FavToggleBtn = Create("TextButton", {
+local FavToggleBtn = Lib.Create("TextButton", {
     Parent = FilterBar,
     Size = UDim2.new(0, 90, 1, 0),
     Position = UDim2.new(0, 85, 0, 0),
@@ -3905,10 +4704,10 @@ local FavToggleBtn = Create("TextButton", {
     TextSize = 11,
     BorderSizePixel = 0
 })
-Create("UICorner", { Parent = FavToggleBtn, CornerRadius = UDim.new(0, 6) })
-local favToggleStroke = Create("UIStroke", { Parent = FavToggleBtn, Color = Colors.Border, Thickness = 1 })
+Lib.Create("UICorner", { Parent = FavToggleBtn, CornerRadius = UDim.new(0, 6) })
+local favToggleStroke = Lib.Create("UIStroke", { Parent = FavToggleBtn, Color = Colors.Border, Thickness = 1 })
 
-local HistoryToggleBtn = Create("TextButton", {
+local HistoryToggleBtn = Lib.Create("TextButton", {
     Parent = FilterBar,
     Size = UDim2.new(0, 80, 1, 0),
     Position = UDim2.new(0, 180, 0, 0),
@@ -3919,10 +4718,10 @@ local HistoryToggleBtn = Create("TextButton", {
     TextSize = 11,
     BorderSizePixel = 0
 })
-Create("UICorner", { Parent = HistoryToggleBtn, CornerRadius = UDim.new(0, 6) })
-local historyToggleStroke = Create("UIStroke", { Parent = HistoryToggleBtn, Color = Colors.Border, Thickness = 1 })
+Lib.Create("UICorner", { Parent = HistoryToggleBtn, CornerRadius = UDim.new(0, 6) })
+local historyToggleStroke = Lib.Create("UIStroke", { Parent = HistoryToggleBtn, Color = Colors.Border, Thickness = 1 })
 
-local SortDisplay = Create("TextLabel", {
+local SortDisplay = Lib.Create("TextLabel", {
     Parent = FilterBar,
     Size = UDim2.new(1, -270, 1, 0),
     Position = UDim2.new(0, 265, 0, 0),
@@ -3934,8 +4733,8 @@ local SortDisplay = Create("TextLabel", {
     TextXAlignment = Enum.TextXAlignment.Right
 })
 
-local FiltersPanel = Create("Frame", {
-    Parent = ScriptBloxPage,
+local FiltersPanel = Lib.Create("Frame", {
+    Parent = UI.Pages.ScriptBlox,
     Size = UDim2.new(1, 0, 0, 160),
     Position = UDim2.new(0, 0, 0, 80),
     BackgroundColor3 = Colors.Background,
@@ -3943,8 +4742,84 @@ local FiltersPanel = Create("Frame", {
     Visible = false,
     ZIndex = 50
 })
-Create("UICorner", { Parent = FiltersPanel, CornerRadius = UDim.new(0, 8) })
-local filtersPanelStroke = Create("UIStroke", { Parent = FiltersPanel, Color = Colors.Active, Thickness = 1 })
+Lib.Create("UICorner", { Parent = FiltersPanel, CornerRadius = UDim.new(0, 8) })
+local filtersPanelStroke = Lib.Create("UIStroke", { Parent = FiltersPanel, Color = Colors.Active, Thickness = 1 })
+
+local function createFilterRow(parent, labelText, yPos, options, filterKey, defaultValue)
+    local row = Lib.Create("Frame", {
+        Parent = parent,
+        Size = UDim2.new(1, -20, 0, 26),
+        Position = UDim2.new(0, 10, 0, yPos),
+        BackgroundTransparency = 1
+    })
+
+    local lbl = Lib.Create("TextLabel", {
+        Parent = row,
+        Size = UDim2.new(0, 100, 1, 0),
+        BackgroundTransparency = 1,
+        Text = labelText,
+        TextColor3 = Colors.TextDim,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 11,
+        TextXAlignment = Enum.TextXAlignment.Left
+    })
+
+    local buttonContainer = Lib.Create("Frame", {
+        Parent = row,
+        Size = UDim2.new(1, -100, 1, 0),
+        Position = UDim2.new(0, 100, 0, 0),
+        BackgroundTransparency = 1
+    })
+
+    local layout = Lib.Create("UIListLayout", {
+        Parent = buttonContainer,
+        FillDirection = Enum.FillDirection.Horizontal,
+        Padding = UDim.new(0, 6)
+    })
+
+    local activeButtons = {}
+
+    local function updateSelection(selectedVal)
+        for _, btnData in pairs(activeButtons) do
+            if btnData.value == selectedVal then
+                Services.TS:Create(btnData.btn, TWEEN_INFO_FAST, { BackgroundColor3 = Colors.Active, TextColor3 = Colors.Background }):Play()
+                Services.TS:Create(btnData.stroke, TWEEN_INFO_FAST, { Color = Colors.Active }):Play()
+            else
+                Services.TS:Create(btnData.btn, TWEEN_INFO_FAST, { BackgroundColor3 = Colors.Surface, TextColor3 = Colors.TextMain }):Play()
+                Services.TS:Create(btnData.stroke, TWEEN_INFO_FAST, { Color = Colors.Border }):Play()
+            end
+        end
+    end
+
+    for _, opt in ipairs(options) do
+        local optBtn = Lib.Create("TextButton", {
+            Parent = buttonContainer,
+            Size = UDim2.new(0, 0, 1, 0),
+            AutomaticSize = Enum.AutomaticSize.X,
+            BackgroundColor3 = Colors.Surface,
+            Text = "  " .. opt.display .. "  ",
+            TextColor3 = Colors.TextMain,
+            Font = Enum.Font.GothamBold,
+            TextSize = 10,
+            BorderSizePixel = 0,
+            AutoButtonColor = false
+        })
+        Lib.Create("UICorner", { Parent = optBtn, CornerRadius = UDim.new(0, 4) })
+        local btnStroke = Lib.Create("UIStroke", { Parent = optBtn, Color = Colors.Border, Thickness = 1 })
+
+        table.insert(activeButtons, { btn = optBtn, stroke = btnStroke, value = opt.value })
+
+        optBtn.MouseButton1Click:Connect(function()
+            activeFilters[filterKey] = opt.value
+            updateSelection(opt.value)
+            if filterKey == "sortBy" then
+                SortDisplay.Text = "Sort: " .. opt.display
+            end
+        end)
+    end
+
+    updateSelection(defaultValue)
+end
 
 local activeFilters = {
     mode = "all",
@@ -3953,64 +4828,6 @@ local activeFilters = {
     isUniversal = nil,
     sortBy = "views"
 }
-
-local function createFilterRow(parent, labelText, posY, options, filterKey, defaultValue)
-    Create("TextLabel", {
-        Parent = parent,
-        Size = UDim2.new(0, 80, 0, 22),
-        Position = UDim2.new(0, 10, 0, posY),
-        BackgroundTransparency = 1,
-        Text = labelText,
-        TextColor3 = Colors.TextDim,
-        Font = Enum.Font.GothamSemibold,
-        TextSize = 11,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 51
-    })
-
-    local optionButtons = {}
-    local startX = 90
-    for _, opt in ipairs(options) do
-        local btn = Create("TextButton", {
-            Parent = parent,
-            Size = UDim2.new(0, opt.width or 65, 0, 22),
-            Position = UDim2.new(0, startX, 0, posY),
-            BackgroundColor3 = Colors.Surface,
-            Text = opt.display,
-            TextColor3 = Colors.TextDim,
-            Font = Enum.Font.GothamMedium,
-            TextSize = 10,
-            BorderSizePixel = 0,
-            ZIndex = 51
-        })
-        Create("UICorner", { Parent = btn, CornerRadius = UDim.new(0, 4) })
-        local bStroke = Create("UIStroke", { Parent = btn, Color = Colors.Border, Thickness = 1 })
-
-        local function selectOption()
-            for _, otherBtn in ipairs(optionButtons) do
-                otherBtn.btn.BackgroundColor3 = Colors.Surface
-                otherBtn.btn.TextColor3 = Colors.TextDim
-                otherBtn.stroke.Color = Colors.Border
-            end
-            btn.BackgroundColor3 = Colors.Active
-            btn.TextColor3 = Colors.Background
-            bStroke.Color = Colors.Active
-            activeFilters[filterKey] = opt.value
-            
-            if filterKey == "sortBy" then
-                SortDisplay.Text = "Sort: " .. opt.display
-            end
-        end
-
-        if opt.value == defaultValue then
-            selectOption()
-        end
-
-        btn.MouseButton1Click:Connect(selectOption)
-        table.insert(optionButtons, { btn = btn, stroke = bStroke })
-        startX = startX + (opt.width or 65) + 6
-    end
-end
 
 createFilterRow(FiltersPanel, "Cost", 10, {
     { display = "All", value = "all" },
@@ -4042,8 +4859,8 @@ createFilterRow(FiltersPanel, "Universal", 130, {
     { display = "No", value = false }
 }, "isUniversal", nil)
 
-local ResultsScroll = Create("ScrollingFrame", {
-    Parent = ScriptBloxPage,
+local ResultsScroll = Lib.Create("ScrollingFrame", {
+    Parent = UI.Pages.ScriptBlox,
     Size = UDim2.new(1, 0, 1, -115),
     Position = UDim2.new(0, 0, 0, 80),
     BackgroundTransparency = 1,
@@ -4052,7 +4869,7 @@ local ResultsScroll = Create("ScrollingFrame", {
     BorderSizePixel = 0,
     ClipsDescendants = true
 })
-local resultsLayout = Create("UIListLayout", {
+local resultsLayout = Lib.Create("UIListLayout", {
     Parent = ResultsScroll,
     SortOrder = Enum.SortOrder.LayoutOrder,
     Padding = UDim.new(0, 8)
@@ -4062,14 +4879,14 @@ resultsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     ResultsScroll.CanvasSize = UDim2.new(0, 0, 0, resultsLayout.AbsoluteContentSize.Y + 10)
 end)
 
-local PaginationBar = Create("Frame", {
-    Parent = ScriptBloxPage,
+local PaginationBar = Lib.Create("Frame", {
+    Parent = UI.Pages.ScriptBlox,
     Size = UDim2.new(1, 0, 0, 30),
     Position = UDim2.new(0, 0, 1, -30),
     BackgroundTransparency = 1
 })
 
-local PrevBtn = Create("TextButton", {
+local PrevBtn = Lib.Create("TextButton", {
     Parent = PaginationBar,
     Size = UDim2.new(0, 60, 1, 0),
     BackgroundColor3 = Colors.Surface,
@@ -4079,10 +4896,10 @@ local PrevBtn = Create("TextButton", {
     TextSize = 11,
     BorderSizePixel = 0
 })
-Create("UICorner", { Parent = PrevBtn, CornerRadius = UDim.new(0, 6) })
-local prevStroke = Create("UIStroke", { Parent = PrevBtn, Color = Colors.Border, Thickness = 1 })
+Lib.Create("UICorner", { Parent = PrevBtn, CornerRadius = UDim.new(0, 6) })
+local prevStroke = Lib.Create("UIStroke", { Parent = PrevBtn, Color = Colors.Border, Thickness = 1 })
 
-local NextBtn = Create("TextButton", {
+local NextBtn = Lib.Create("TextButton", {
     Parent = PaginationBar,
     Size = UDim2.new(0, 60, 1, 0),
     Position = UDim2.new(1, -60, 0, 0),
@@ -4093,10 +4910,10 @@ local NextBtn = Create("TextButton", {
     TextSize = 11,
     BorderSizePixel = 0
 })
-Create("UICorner", { Parent = NextBtn, CornerRadius = UDim.new(0, 6) })
-local nextStroke = Create("UIStroke", { Parent = NextBtn, Color = Colors.Border, Thickness = 1 })
+Lib.Create("UICorner", { Parent = NextBtn, CornerRadius = UDim.new(0, 6) })
+local nextStroke = Lib.Create("UIStroke", { Parent = NextBtn, Color = Colors.Border, Thickness = 1 })
 
-local PageLabel = Create("TextLabel", {
+local PageLabel = Lib.Create("TextLabel", {
     Parent = PaginationBar,
     Size = UDim2.new(1, -130, 1, 0),
     Position = UDim2.new(0, 65, 0, 0),
@@ -4107,8 +4924,8 @@ local PageLabel = Create("TextLabel", {
     TextSize = 12
 })
 
-local HistoryPanel = Create("Frame", {
-    Parent = ScriptBloxPage,
+local HistoryPanel = Lib.Create("Frame", {
+    Parent = UI.Pages.ScriptBlox,
     Size = UDim2.new(1, 0, 1, -80),
     Position = UDim2.new(0, 0, 0, 80),
     BackgroundColor3 = Colors.Background,
@@ -4116,9 +4933,9 @@ local HistoryPanel = Create("Frame", {
     Visible = false,
     ZIndex = 40
 })
-Create("UICorner", { Parent = HistoryPanel, CornerRadius = UDim.new(0, 8) })
+Lib.Create("UICorner", { Parent = HistoryPanel, CornerRadius = UDim.new(0, 8) })
 
-local historyScroll = Create("ScrollingFrame", {
+local historyScroll = Lib.Create("ScrollingFrame", {
     Parent = HistoryPanel,
     Size = UDim2.new(1, -20, 1, -20),
     Position = UDim2.new(0, 10, 0, 10),
@@ -4127,14 +4944,14 @@ local historyScroll = Create("ScrollingFrame", {
     ScrollBarImageColor3 = Colors.Border,
     BorderSizePixel = 0
 })
-local historyLayout = Create("UIListLayout", { Parent = historyScroll, Padding = UDim.new(0, 6) })
+local historyLayout = Lib.Create("UIListLayout", { Parent = historyScroll, Padding = UDim.new(0, 6) })
 
 local function refreshHistoryUI()
     for _, child in ipairs(historyScroll:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
     end
     if #CacheManager.History == 0 then
-        local emptyLbl = Create("TextLabel", {
+        local emptyLbl = Lib.Create("TextLabel", {
             Parent = historyScroll,
             Size = UDim2.new(1, 0, 0, 30),
             BackgroundTransparency = 1,
@@ -4145,7 +4962,7 @@ local function refreshHistoryUI()
         })
     else
         for _, q in ipairs(CacheManager.History) do
-            local btn = Create("TextButton", {
+            local btn = Lib.Create("TextButton", {
                 Parent = historyScroll,
                 Size = UDim2.new(1, -6, 0, 30),
                 BackgroundColor3 = Colors.Surface,
@@ -4155,8 +4972,8 @@ local function refreshHistoryUI()
                 TextSize = 12,
                 BorderSizePixel = 0
             })
-            Create("UICorner", { Parent = btn, CornerRadius = UDim.new(0, 4) })
-            local bStroke = Create("UIStroke", { Parent = btn, Color = Colors.Border, Thickness = 1 })
+            Lib.Create("UICorner", { Parent = btn, CornerRadius = UDim.new(0, 4) })
+            local bStroke = Lib.Create("UIStroke", { Parent = btn, Color = Colors.Border, Thickness = 1 })
 
             btn.MouseButton1Click:Connect(function()
                 SearchInput.Text = q
@@ -4179,7 +4996,7 @@ local function renderFavorites()
         _G.CreateScriptCard(scriptData)
     end
     if count == 0 then
-        local emptyLbl = Create("TextLabel", {
+        local emptyLbl = Lib.Create("TextLabel", {
             Parent = ResultsScroll,
             Size = UDim2.new(1, 0, 0, 50),
             BackgroundTransparency = 1,
@@ -4194,8 +5011,8 @@ local function renderFavorites()
     NextBtn.Visible = false
 end
 
-local LoaderLabel = Create("TextLabel", {
-    Parent = ScriptBloxPage,
+local LoaderLabel = Lib.Create("TextLabel", {
+    Parent = UI.Pages.ScriptBlox,
     Size = UDim2.new(1, 0, 0, 40),
     Position = UDim2.new(0, 0, 0.5, -20),
     BackgroundTransparency = 1,
@@ -4214,12 +5031,12 @@ end
 
 local function openScriptDetails(scriptData)
     local title = scriptData.title or "Script Details"
-    local win, closeBtn, scroll, layout, actionBtn, actionLbl = createFloatingMenu(title, 380, 360)
+    local win, closeBtn, scroll, layout, actionBtn, actionLbl = Lib.createFloatingMenu(title, 380, 360)
     win.Visible = true
     win.Position = UDim2.new(0.5, -190, 0.5, -180)
 
     local function addDetailLine(key, val)
-        local l = Create("TextLabel", {
+        local l = Lib.Create("TextLabel", {
             Parent = scroll,
             Size = UDim2.new(1, -6, 0, 18),
             BackgroundTransparency = 1,
@@ -4240,7 +5057,7 @@ local function openScriptDetails(scriptData)
     addDetailLine("Created", tostring(scriptData.createdAt):sub(1, 10))
 
     if scriptData.features and scriptData.features ~= "" then
-        local descHeader = Create("TextLabel", {
+        local descHeader = Lib.Create("TextLabel", {
             Parent = scroll,
             Size = UDim2.new(1, -6, 0, 20),
             BackgroundTransparency = 1,
@@ -4252,7 +5069,7 @@ local function openScriptDetails(scriptData)
             TextXAlignment = Enum.TextXAlignment.Left
         })
         
-        local descBox = Create("TextLabel", {
+        local descBox = Lib.Create("TextLabel", {
             Parent = scroll,
             Size = UDim2.new(1, -6, 0, 0),
             AutomaticSize = Enum.AutomaticSize.Y,
@@ -4266,7 +5083,7 @@ local function openScriptDetails(scriptData)
         })
     end
 
-    local codeHeader = Create("TextLabel", {
+    local codeHeader = Lib.Create("TextLabel", {
         Parent = scroll,
         Size = UDim2.new(1, -6, 0, 20),
         BackgroundTransparency = 1,
@@ -4278,16 +5095,16 @@ local function openScriptDetails(scriptData)
         TextXAlignment = Enum.TextXAlignment.Left
     })
 
-    local codeContainer = Create("Frame", {
+    local codeContainer = Lib.Create("Frame", {
         Parent = scroll,
         Size = UDim2.new(1, -6, 0, 120),
         BackgroundColor3 = Colors.ToggleShell,
         BorderSizePixel = 0
     })
-    Create("UICorner", { Parent = codeContainer, CornerRadius = UDim.new(0, 6) })
-    Create("UIStroke", { Parent = codeContainer, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = codeContainer, CornerRadius = UDim.new(0, 6) })
+    Lib.Create("UIStroke", { Parent = codeContainer, Color = Colors.Border, Thickness = 1 })
 
-    local codeScroll = Create("ScrollingFrame", {
+    local codeScroll = Lib.Create("ScrollingFrame", {
         Parent = codeContainer,
         Size = UDim2.new(1, -12, 1, -12),
         Position = UDim2.new(0, 6, 0, 6),
@@ -4309,7 +5126,7 @@ local function openScriptDetails(scriptData)
         end)
     end
 
-    local codeBox = Create("TextBox", {
+    local codeBox = Lib.Create("TextBox", {
         Parent = codeScroll,
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
@@ -4333,16 +5150,16 @@ local function openScriptDetails(scriptData)
             local func, err = loadstring(codeText)
             if func then
                 task.spawn(func)
-                showNotification("Script executed!")
+                Lib.showNotification("Script executed!")
             else
-                showNotification("Syntax error: " .. tostring(err))
+                Lib.showNotification("Syntax error: " .. tostring(err))
             end
         else
-            showNotification("Loading script code...")
+            Lib.showNotification("Loading script code...")
         end
     end)
 
-    local copyBtn = Create("TextButton", {
+    local copyBtn = Lib.Create("TextButton", {
         Parent = win,
         Size = UDim2.new(0, 100, 0, 30),
         Position = UDim2.new(1, -110, 1, -40),
@@ -4354,15 +5171,15 @@ local function openScriptDetails(scriptData)
         BorderSizePixel = 0,
         ZIndex = 10
     })
-    Create("UICorner", { Parent = copyBtn, CornerRadius = UDim.new(0, 6) })
-    local copyStroke = Create("UIStroke", { Parent = copyBtn, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = copyBtn, CornerRadius = UDim.new(0, 6) })
+    local copyStroke = Lib.Create("UIStroke", { Parent = copyBtn, Color = Colors.Border, Thickness = 1 })
 
     copyBtn.MouseButton1Click:Connect(function()
         if codeText ~= "" then
             pcall(function()
                 if setclipboard then setclipboard(codeText) elseif toclipboard then toclipboard(codeText) end
             end)
-            showNotification("Code copied to clipboard!")
+            Lib.showNotification("Code copied to clipboard!")
         end
     end)
 
@@ -4373,10 +5190,10 @@ end
 
 _G.CreateScriptCard = function(scriptData)
     local cardHeight = 115
-    local card = CreateStyledCard(ResultsScroll, cardHeight)
+    local card = Lib.CreateStyledCard(ResultsScroll, cardHeight)
     card.Size = UDim2.new(1, -6, 0, cardHeight)
 
-    local titleLbl = Create("TextLabel", {
+    local titleLbl = Lib.Create("TextLabel", {
         Parent = card,
         Size = UDim2.new(1, -40, 0, 20),
         Position = UDim2.new(0, 10, 0, 8),
@@ -4390,7 +5207,7 @@ _G.CreateScriptCard = function(scriptData)
     })
 
     local isFav = CacheManager.IsFavorite(scriptData._id)
-    local favBtn = Create("TextButton", {
+    local favBtn = Lib.Create("TextButton", {
         Parent = card,
         Size = UDim2.new(0, 24, 0, 24),
         Position = UDim2.new(1, -30, 0, 6),
@@ -4408,7 +5225,7 @@ _G.CreateScriptCard = function(scriptData)
     local gameName = scriptData.game and scriptData.game.name or "Universal"
     local authorName = scriptData.owner and scriptData.owner.username or "Anonymous"
     
-    local metaLbl = Create("TextLabel", {
+    local metaLbl = Lib.Create("TextLabel", {
         Parent = card,
         Size = UDim2.new(1, -20, 0, 16),
         Position = UDim2.new(0, 10, 0, 28),
@@ -4421,18 +5238,18 @@ _G.CreateScriptCard = function(scriptData)
         ClipsDescendants = true
     })
 
-    local badgeLayout = Create("Frame", {
+    local badgeLayout = Lib.Create("Frame", {
         Parent = card,
         Size = UDim2.new(1, -20, 0, 18),
         Position = UDim2.new(0, 10, 0, 48),
         BackgroundTransparency = 1
     })
-    local bList = Create("UIListLayout", { Parent = badgeLayout, FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4) })
+    local bList = Lib.Create("UIListLayout", { Parent = badgeLayout, FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4) })
 
     local function addBadge(text, color)
-        local b = Create("Frame", { Parent = badgeLayout, Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = color })
-        Create("UICorner", { Parent = b, CornerRadius = UDim.new(0, 4) })
-        local t = Create("TextLabel", { Parent = b, Size = UDim2.new(1, 0, 1, 0), Position = UDim2.new(0,0,0,0), BackgroundTransparency = 1, Text = " " .. text .. " ", TextColor3 = Colors.Background, Font = Enum.Font.GothamBold, TextSize = 8 })
+        local b = Lib.Create("Frame", { Parent = badgeLayout, Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = color })
+        Lib.Create("UICorner", { Parent = b, CornerRadius = UDim.new(0, 4) })
+        local t = Lib.Create("TextLabel", { Parent = b, Size = UDim2.new(1, 0, 1, 0), Position = UDim2.new(0,0,0,0), BackgroundTransparency = 1, Text = " " .. text .. " ", TextColor3 = Colors.Background, Font = Enum.Font.GothamBold, TextSize = 8 })
     end
 
     if scriptData.verified then addBadge("Verified", Color3.fromRGB(80, 200, 80)) end
@@ -4442,7 +5259,7 @@ _G.CreateScriptCard = function(scriptData)
 
     local views = scriptData.views or 0
     local likes = scriptData.likeCount or 0
-    local statsLbl = Create("TextLabel", {
+    local statsLbl = Lib.Create("TextLabel", {
         Parent = card,
         Size = UDim2.new(0.4, 0, 0, 16),
         Position = UDim2.new(0, 10, 1, -24),
@@ -4455,7 +5272,7 @@ _G.CreateScriptCard = function(scriptData)
     })
 
     local function makeCardBtn(text, posX, width, color, callback)
-        local btn = Create("TextButton", {
+        local btn = Lib.Create("TextButton", {
             Parent = card,
             Size = UDim2.new(0, width, 0, 22),
             Position = UDim2.new(1, posX, 1, -26),
@@ -4466,8 +5283,8 @@ _G.CreateScriptCard = function(scriptData)
             TextSize = 9,
             BorderSizePixel = 0
         })
-        Create("UICorner", { Parent = btn, CornerRadius = UDim.new(0, 4) })
-        local bStroke = Create("UIStroke", { Parent = btn, Color = Colors.Border, Thickness = 1 })
+        Lib.Create("UICorner", { Parent = btn, CornerRadius = UDim.new(0, 4) })
+        local bStroke = Lib.Create("UIStroke", { Parent = btn, Color = Colors.Border, Thickness = 1 })
 
         btn.MouseButton1Click:Connect(callback)
         return btn
@@ -4485,7 +5302,7 @@ _G.CreateScriptCard = function(scriptData)
                     scriptData.script = raw
                     cb(raw)
                 else
-                    showNotification("Failed to fetch script source")
+                    Lib.showNotification("Failed to fetch script source")
                 end
             end)
         end
@@ -4500,7 +5317,7 @@ _G.CreateScriptCard = function(scriptData)
             pcall(function()
                 if setclipboard then setclipboard(code) elseif toclipboard then toclipboard(code) end
             end)
-            showNotification("Code copied to clipboard!")
+            Lib.showNotification("Code copied to clipboard!")
         end)
     end)
 
@@ -4509,9 +5326,9 @@ _G.CreateScriptCard = function(scriptData)
             local func, err = loadstring(code)
             if func then
                 task.spawn(func)
-                showNotification("Executing script...")
+                Lib.showNotification("Executing script...")
             else
-                showNotification("Execution error: " .. tostring(err))
+                Lib.showNotification("Execution error: " .. tostring(err))
             end
         end)
     end)
@@ -4535,7 +5352,7 @@ function SearchController.Search(query, page)
     
     local now = os.clock()
     if now - SearchController.LastSearchTime < SearchController.DebounceTime then
-        showNotification("Please wait before searching again")
+        Lib.showNotification("Please wait before searching again")
         return
     end
     SearchController.LastSearchTime = now
@@ -4553,7 +5370,7 @@ function SearchController.Search(query, page)
         setLoaderState(false)
 
         if not results then
-            local errLbl = Create("TextLabel", {
+            local errLbl = Lib.Create("TextLabel", {
                 Parent = ResultsScroll,
                 Size = UDim2.new(1, 0, 0, 50),
                 BackgroundTransparency = 1,
@@ -4569,7 +5386,7 @@ function SearchController.Search(query, page)
         PageLabel.Text = "Page " .. SearchController.CurrentPage .. " of " .. SearchController.TotalPages
 
         if not results.scripts or #results.scripts == 0 then
-            local emptyLbl = Create("TextLabel", {
+            local emptyLbl = Lib.Create("TextLabel", {
                 Parent = ResultsScroll,
                 Size = UDim2.new(1, 0, 0, 50),
                 BackgroundTransparency = 1,
@@ -4678,8 +5495,8 @@ end)
 
 CacheManager.LoadFavorites()
 
-local SuggestionContainer = Create("Frame", {
-    Parent = ScriptBloxPage,
+local SuggestionContainer = Lib.Create("Frame", {
+    Parent = UI.Pages.ScriptBlox,
     Size = UDim2.new(1, -120, 0, 0),
     Position = UDim2.new(0, 0, 0, 42),
     BackgroundColor3 = Colors.Surface,
@@ -4687,10 +5504,10 @@ local SuggestionContainer = Create("Frame", {
     Visible = false,
     ZIndex = 100
 })
-Create("UICorner", { Parent = SuggestionContainer, CornerRadius = UDim.new(0, 6) })
-local suggStroke = Create("UIStroke", { Parent = SuggestionContainer, Color = Colors.Border, Thickness = 1 })
+Lib.Create("UICorner", { Parent = SuggestionContainer, CornerRadius = UDim.new(0, 6) })
+local suggStroke = Lib.Create("UIStroke", { Parent = SuggestionContainer, Color = Colors.Border, Thickness = 1 })
 
-local suggLayout = Create("UIListLayout", { Parent = SuggestionContainer, Padding = UDim.new(0, 2) })
+local suggLayout = Lib.Create("UIListLayout", { Parent = SuggestionContainer, Padding = UDim.new(0, 2) })
 
 local suggestionsPool = { "Blox Fruits", "Arsenal", "Doors", "Brookhaven", "Adopt Me", "Infinite Yield", "Fly", "Aimbot", "ESP", "Murder Mystery 2" }
 
@@ -4712,7 +5529,7 @@ local function showSuggestions(text)
         if count >= 5 or added[sugg] then return end
         added[sugg] = true
         count = count + 1
-        local btn = Create("TextButton", {
+        local btn = Lib.Create("TextButton", {
             Parent = SuggestionContainer,
             Size = UDim2.new(1, 0, 0, 24),
             BackgroundTransparency = 1,
@@ -4760,7 +5577,7 @@ SearchInput.FocusLost:Connect(function()
     end)
 end)
 
-local EmotesTab = CreatePage("Emotes")
+CreatePage("Emotes")
 CreateTabButton("Emotes", 15)
 
 local EmoteFavorites = {}
@@ -4788,10 +5605,10 @@ local function ToggleEmoteFavorite(emoteData)
     local id = tostring(emoteData.id)
     if EmoteFavorites[id] then
         EmoteFavorites[id] = nil
-        showNotification("Эмоция удалена из избранного")
+        Lib.showNotification("Эмоция удалена из избранного")
     else
         EmoteFavorites[id] = emoteData
-        showNotification("Эмоция добавлена в избранное")
+        Lib.showNotification("Эмоция добавлена в избранное")
     end
     SaveEmoteFavorites()
 end
@@ -4881,14 +5698,14 @@ local function PlayEmoteById(id)
 
     if success and track then
         CurrentTrack = track
-        track.Priority = Enum.AnimationPriority.Action4 -- Приоритет выше базовых движений
+        track.Priority = Enum.AnimationPriority.Action4
         track.Looped = true
-        track:Play(0.3) -- Плавный переход (fade-in) за 0.3 секунды
+        track:Play(0.3)
         currentPlayingEmoteId = id
         UpdatePlayButtonsVisuals()
-        showNotification("Воспроизведение эмоции запущено")
+        Lib.showNotification("Воспроизведение эмоции запущено")
     else
-        showNotification("Ошибка загрузки анимации")
+        Lib.showNotification("Ошибка загрузки анимации")
     end
 end
 
@@ -4897,29 +5714,29 @@ table.insert(UI.Connections, Services.Run.Heartbeat:Connect(function()
         local hum = LP.Character:FindFirstChildOfClass("Humanoid")
         if hum and hum.MoveDirection.Magnitude > 0.1 then
             StopCurrentEmote()
-            showNotification("Воспроизведение прервано движением")
+            Lib.showNotification("Воспроизведение прервано движением")
         end
     end
 end))
 
-local EmotesSearchBar = Create("Frame", {
-    Parent = EmotesTab,
+local EmotesSearchBar = Lib.Create("Frame", {
+    Parent = UI.Pages.Emotes,
     Size = UDim2.new(1, -6, 0, 40),
     Position = UDim2.new(0, 3, 0, 10),
     BackgroundTransparency = 1,
     LayoutOrder = 1
 })
 
-local EmoteSearchBoxCard = Create("Frame", {
+local EmoteSearchBoxCard = Lib.Create("Frame", {
     Parent = EmotesSearchBar,
     Size = UDim2.new(1, -120, 1, 0),
     BackgroundColor3 = Colors.Surface,
     BorderSizePixel = 0
 })
-Create("UICorner", { Parent = EmoteSearchBoxCard, CornerRadius = UDim.new(0, 6) })
-local emoteSearchStroke = Create("UIStroke", { Parent = EmoteSearchBoxCard, Color = Colors.Border, Thickness = 1 })
+Lib.Create("UICorner", { Parent = EmoteSearchBoxCard, CornerRadius = UDim.new(0, 6) })
+local emoteSearchStroke = Lib.Create("UIStroke", { Parent = EmoteSearchBoxCard, Color = Colors.Border, Thickness = 1 })
 
-local EmoteSearchInput = Create("TextBox", {
+local EmoteSearchInput = Lib.Create("TextBox", {
     Parent = EmoteSearchBoxCard,
     Size = UDim2.new(1, -20, 1, 0),
     Position = UDim2.new(0, 10, 0, 0),
@@ -4932,7 +5749,7 @@ local EmoteSearchInput = Create("TextBox", {
     ClearTextOnFocus = false
 })
 
-local EmoteSearchBtn = Create("TextButton", {
+local EmoteSearchBtn = Lib.Create("TextButton", {
     Parent = EmotesSearchBar,
     Size = UDim2.new(0, 75, 1, 0),
     Position = UDim2.new(1, -115, 0, 0),
@@ -4943,9 +5760,9 @@ local EmoteSearchBtn = Create("TextButton", {
     TextSize = 12,
     BorderSizePixel = 0
 })
-Create("UICorner", { Parent = EmoteSearchBtn, CornerRadius = UDim.new(0, 6) })
+Lib.Create("UICorner", { Parent = EmoteSearchBtn, CornerRadius = UDim.new(0, 6) })
 
-local EmoteRefreshBtn = Create("TextButton", {
+local EmoteRefreshBtn = Lib.Create("TextButton", {
     Parent = EmotesSearchBar,
     Size = UDim2.new(0, 35, 1, 0),
     Position = UDim2.new(1, -35, 0, 0),
@@ -4956,22 +5773,22 @@ local EmoteRefreshBtn = Create("TextButton", {
     TextSize = 14,
     BorderSizePixel = 0
 })
-Create("UICorner", { Parent = EmoteRefreshBtn, CornerRadius = UDim.new(0, 6) })
-local emoteRefreshStroke = Create("UIStroke", { Parent = EmoteRefreshBtn, Color = Colors.Border, Thickness = 1 })
+Lib.Create("UICorner", { Parent = EmoteRefreshBtn, CornerRadius = UDim.new(0, 6) })
+local emoteRefreshStroke = Lib.Create("UIStroke", { Parent = EmoteRefreshBtn, Color = Colors.Border, Thickness = 1 })
 
-local EmotesSortBar = Create("Frame", {
-    Parent = EmotesTab,
+local EmotesSortBar = Lib.Create("Frame", {
+    Parent = UI.Pages.Emotes,
     Size = UDim2.new(1, -6, 0, 30),
     Position = UDim2.new(0, 3, 0, 55),
     BackgroundTransparency = 1,
     LayoutOrder = 2
 })
 
-local currentSortType = 2 -- Default: Sales (Most Popular)
+local currentSortType = 2
 local showingEmoteFavorites = false
 
 local function createSortBtn(text, sortVal, posX, width)
-    local btn = Create("TextButton", {
+    local btn = Lib.Create("TextButton", {
         Parent = EmotesSortBar,
         Size = UDim2.new(0, width, 1, 0),
         Position = UDim2.new(0, posX, 0, 0),
@@ -4982,8 +5799,8 @@ local function createSortBtn(text, sortVal, posX, width)
         TextSize = 10,
         BorderSizePixel = 0
     })
-    Create("UICorner", { Parent = btn, CornerRadius = UDim.new(0, 6) })
-    local stroke = Create("UIStroke", { Parent = btn, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = btn, CornerRadius = UDim.new(0, 6) })
+    local stroke = Lib.Create("UIStroke", { Parent = btn, Color = Colors.Border, Thickness = 1 })
     return btn, stroke
 end
 
@@ -5019,8 +5836,8 @@ local FavEmotesToggleBtn, favEmotesStroke = createSortBtn("⭐ Favorites", -1, 2
 
 updateSortSelection(btnPopular)
 
-local EmotesScroll = Create("ScrollingFrame", {
-    Parent = EmotesTab,
+local EmotesScroll = Lib.Create("ScrollingFrame", {
+    Parent = UI.Pages.Emotes,
     Size = UDim2.new(1, -6, 1, -100),
     Position = UDim2.new(0, 3, 0, 95),
     BackgroundTransparency = 1,
@@ -5029,7 +5846,7 @@ local EmotesScroll = Create("ScrollingFrame", {
     BorderSizePixel = 0,
     LayoutOrder = 3
 })
-local emotesLayout = Create("UIListLayout", {
+local emotesLayout = Lib.Create("UIListLayout", {
     Parent = EmotesScroll,
     SortOrder = Enum.SortOrder.LayoutOrder,
     Padding = UDim.new(0, 8)
@@ -5041,20 +5858,20 @@ end)
 _G.CreateEmoteCard = function(emoteData)
     local id = emoteData.id
     local cardHeight = 115
-    local card = CreateStyledCard(EmotesScroll, cardHeight)
+    local card = Lib.CreateStyledCard(EmotesScroll, cardHeight)
     card.Size = UDim2.new(1, -6, 0, cardHeight)
 
-    local icon = Create("ImageLabel", {
+    local icon = Lib.Create("ImageLabel", {
         Parent = card,
         Size = UDim2.new(0, 95, 0, 95),
         Position = UDim2.new(0, 10, 0.5, -47.5),
         BackgroundTransparency = 1,
         Image = "rbxthumb://type=Asset&id=" .. tostring(id) .. "&w=150&h=150"
     })
-    Create("UICorner", { Parent = icon, CornerRadius = UDim.new(0, 6) })
-    local iconStroke = Create("UIStroke", { Parent = icon, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = icon, CornerRadius = UDim.new(0, 6) })
+    local iconStroke = Lib.Create("UIStroke", { Parent = icon, Color = Colors.Border, Thickness = 1 })
 
-    local titleLbl = Create("TextLabel", {
+    local titleLbl = Lib.Create("TextLabel", {
         Parent = card,
         Size = UDim2.new(1, -150, 0, 20),
         Position = UDim2.new(0, 115, 0, 8),
@@ -5068,7 +5885,7 @@ _G.CreateEmoteCard = function(emoteData)
     })
 
     local isFav = IsEmoteFavorite(id)
-    local favBtn = Create("TextButton", {
+    local favBtn = Lib.Create("TextButton", {
         Parent = card,
         Size = UDim2.new(0, 24, 0, 24),
         Position = UDim2.new(1, -30, 0, 6),
@@ -5086,7 +5903,7 @@ _G.CreateEmoteCard = function(emoteData)
     local creatorName = emoteData.creatorName or "Roblox"
     local priceText = emoteData.price and (tostring(emoteData.price) .. " R$") or "Free / Offsale"
     
-    local metaLbl = Create("TextLabel", {
+    local metaLbl = Lib.Create("TextLabel", {
         Parent = card,
         Size = UDim2.new(1, -150, 0, 16),
         Position = UDim2.new(0, 115, 0, 28),
@@ -5102,7 +5919,7 @@ _G.CreateEmoteCard = function(emoteData)
     local views = emoteData.purchaseCount or math.random(1500, 8000)
     local likes = emoteData.favoriteCount or math.random(200, 1100)
     
-    local statsLbl = Create("TextLabel", {
+    local statsLbl = Lib.Create("TextLabel", {
         Parent = card,
         Size = UDim2.new(0.4, 0, 0, 16),
         Position = UDim2.new(0, 115, 1, -24),
@@ -5114,7 +5931,7 @@ _G.CreateEmoteCard = function(emoteData)
         TextXAlignment = Enum.TextXAlignment.Left
     })
 
-    local playBtn = Create("TextButton", {
+    local playBtn = Lib.Create("TextButton", {
         Parent = card,
         Size = UDim2.new(0, 90, 0, 26),
         Position = UDim2.new(1, -100, 1, -30),
@@ -5125,8 +5942,8 @@ _G.CreateEmoteCard = function(emoteData)
         TextSize = 11,
         BorderSizePixel = 0
     })
-    Create("UICorner", { Parent = playBtn, CornerRadius = UDim.new(0, 4) })
-    local playStroke = Create("UIStroke", { Parent = playBtn, Color = Colors.Border, Thickness = 1 })
+    Lib.Create("UICorner", { Parent = playBtn, CornerRadius = UDim.new(0, 4) })
+    local playStroke = Lib.Create("UIStroke", { Parent = playBtn, Color = Colors.Border, Thickness = 1 })
 
     activePlayButtons[tostring(id)] = playBtn
 
@@ -5153,7 +5970,7 @@ _G.RenderFavoriteEmotes = function()
         _G.CreateEmoteCard(emoteData)
     end
     if count == 0 then
-        Create("TextLabel", {
+        Lib.Create("TextLabel", {
             Parent = EmotesScroll,
             Size = UDim2.new(1, 0, 0, 50),
             BackgroundTransparency = 1,
@@ -5173,7 +5990,7 @@ _G.SearchEmotes = function(query)
 
     EmotesScroll:ClearAllChildren()
 
-    local loader = Create("TextLabel", {
+    local loader = Lib.Create("TextLabel", {
         Parent = EmotesScroll,
         Size = UDim2.new(1, 0, 0, 50),
         BackgroundTransparency = 1,
@@ -5184,7 +6001,6 @@ _G.SearchEmotes = function(query)
     })
 
     task.spawn(function()
-
         local httpReq = request or http_request or (syn and syn.request)
 
         local domain = httpReq and "catalog.roblox.com" or "catalog.roproxy.com"
@@ -5200,14 +6016,11 @@ _G.SearchEmotes = function(query)
 
         local success, response = pcall(function()
             if httpReq then
-
                 local res = httpReq({ 
                     Url = url, 
                     Method = "GET",
                     Headers = {
                         ["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                        ["Roblox-Place-Id"] = nil,
-                        ["Roblox-Universe-Id"] = nil
                     }
                 })
                 return res.Body
@@ -5220,7 +6033,7 @@ _G.SearchEmotes = function(query)
         loader:Destroy()
 
         if not success or not response then
-            Create("TextLabel", {
+            Lib.Create("TextLabel", {
                 Parent = EmotesScroll,
                 Size = UDim2.new(1, 0, 0, 50),
                 BackgroundTransparency = 1,
@@ -5241,7 +6054,7 @@ _G.SearchEmotes = function(query)
             if decoded and decoded.errors and decoded.errors[1] then
                 errMsg = errMsg .. " (" .. tostring(decoded.errors[1].message) .. ")"
             end
-            Create("TextLabel", {
+            Lib.Create("TextLabel", {
                 Parent = EmotesScroll,
                 Size = UDim2.new(1, 0, 0, 50),
                 BackgroundTransparency = 1,
@@ -5254,7 +6067,7 @@ _G.SearchEmotes = function(query)
         end
 
         if #decoded.data == 0 then
-            Create("TextLabel", {
+            Lib.Create("TextLabel", {
                 Parent = EmotesScroll,
                 Size = UDim2.new(1, 0, 0, 50),
                 BackgroundTransparency = 1,
@@ -5317,18 +6130,25 @@ _G.SearchEmotes("")
 
 local isFlinging = false
 local currentFlingTarget = nil
-local FlingWin, FlingClose, FlingScroll, FlingLayout, FlingActionBtn, FlingActionLbl = createFloatingMenu("Fling")
-createToggle(FunnyTab, "Fling Target", 145, false, function(st)
-    FlingWin.Visible = st
-    if st then populatePlayers(FlingScroll, FlingLayout, FlingActionLbl, "Fling", function(p) currentFlingTarget = p end) end
+
+local FlingWin, FlingClose, FlingScroll, FlingLayout, FlingActionBtn, FlingActionLbl = Lib.createFloatingMenu("Fling", 380, 380)
+
+addRefreshBtn(FlingWin, function()
+    Lib.populatePlayersAdvanced(FlingScroll, FlingLayout, FlingActionLbl, "Fling", function(p) currentFlingTarget = p end)
 end)
 
+Lib.createToggle(UI.Pages.Funny, "Fling Target", 145, false, function(st)
+    FlingWin.Visible = st
+    if st then 
+        Lib.populatePlayersAdvanced(FlingScroll, FlingLayout, FlingActionLbl, "Fling", function(p) currentFlingTarget = p end) 
+    end
+end)
 
 FlingClose.MouseButton1Click:Connect(function() FlingWin.Visible = false end)
 FlingActionBtn.MouseButton1Click:Connect(function()
     if not currentFlingTarget or not currentFlingTarget.Character or isFlinging then return end
     if not LP.Character or not LP.Character:FindFirstChild("HumanoidRootPart") then return end
-    isFlinging = true; showNotification("Fling применяется к " .. currentFlingTarget.Name)
+    isFlinging = true; Lib.showNotification("Fling применяется к " .. currentFlingTarget.Name)
     local hrp = LP.Character.HumanoidRootPart; local oldPos = hrp.CFrame
     local bv = Instance.new("BodyAngularVelocity", hrp); bv.AngularVelocity = Vector3.new(0, 99999, 0); bv.MaxTorque = Vector3.new(math.huge, math.huge, math.huge); bv.P = math.huge
     local bt = Instance.new("BodyThrust", hrp); bt.Force = Vector3.new(9999, 9999, 9999); LP.Character.Humanoid.Sit = true
@@ -5347,10 +6167,18 @@ end)
 
 local isBringing = false
 local currentBringTarget = nil
-local BringWin, BringClose, BringScroll, BringLayout, BringActionBtn, BringActionLbl = createFloatingMenu("Bring Parts")
-createToggle(FunnyTab, "Bring Parts", 190, false, function(st)
+
+local BringWin, BringClose, BringScroll, BringLayout, BringActionBtn, BringActionLbl = Lib.createFloatingMenu("Bring Parts", 380, 380)
+
+addRefreshBtn(BringWin, function()
+    Lib.populatePlayersAdvanced(BringScroll, BringLayout, BringActionLbl, "Bring", function(p) currentBringTarget = p end)
+end)
+
+Lib.createToggle(UI.Pages.Funny, "Bring Parts", 190, false, function(st)
     BringWin.Visible = st
-    if st then populatePlayers(BringScroll, BringLayout, BringActionLbl, "Bring", function(p) currentBringTarget = p end) end
+    if st then 
+        Lib.populatePlayersAdvanced(BringScroll, BringLayout, BringActionLbl, "Bring", function(p) currentBringTarget = p end) 
+    end
 end)
 BringClose.MouseButton1Click:Connect(function() BringWin.Visible = false end)
 
@@ -5364,16 +6192,16 @@ BringActionBtn.MouseButton1Click:Connect(function()
         if bringConnection then bringConnection:Disconnect(); bringConnection = nil end
         if BringFolder then BringFolder:Destroy(); BringFolder = nil end
         if descConn then descConn:Disconnect(); descConn = nil end
-        showNotification("Притяжение деталей остановлено")
+        Lib.showNotification("Притяжение деталей остановлено")
         return
     end
-    isBringing = true; showNotification("Сбор физических объектов к " .. currentBringTarget.Name)
+    isBringing = true; Lib.showNotification("Сбор физических объектов к " .. currentBringTarget.Name)
 
     if not _G.SeptusNetwork then
         _G.SeptusNetwork = { BaseParts = {}, Velocity = Vector3.new(14.46262424, 14.46262424, 14.46262424) }
         _G.SeptusNetwork.RetainPart = function(Part)
             if Part:IsA("BasePart") and Part:IsDescendantOf(workspace) then
-                table.insert(_G.SeptusNetwork.BaseParts, Part)
+            table.insert(_G.SeptusNetwork.BaseParts, Part)
                 Part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
                 Part.CanCollide = false
             end
@@ -5428,16 +6256,16 @@ BringActionBtn.MouseButton1Click:Connect(function()
     table.insert(UI.Connections, bringConnection)
 end)
 
-local ConfirmCloseWin = Create("Frame", { Parent = UI.Screen, Size = UDim2.new(0, 260, 0, 110), Position = UDim2.new(0.5, -130, 0.5, -55), BackgroundColor3 = Colors.Background, Visible = false, ZIndex = 99999 })
-Create("UICorner", { Parent = ConfirmCloseWin, CornerRadius = UDim.new(0, 10) })
-Create("UIStroke", { Parent = ConfirmCloseWin, Color = Colors.Border, Thickness = 1 })
+local ConfirmCloseWin = Lib.Create("Frame", { Parent = UI.Screen, Size = UDim2.new(0, 260, 0, 110), Position = UDim2.new(0.5, -130, 0.5, -55), BackgroundColor3 = Colors.Background, Visible = false, ZIndex = 99999 })
+Lib.Create("UICorner", { Parent = ConfirmCloseWin, CornerRadius = UDim.new(0, 10) })
+Lib.Create("UIStroke", { Parent = ConfirmCloseWin, Color = Colors.Border, Thickness = 1 })
 
-local confLbl = Create("TextLabel", { Parent = ConfirmCloseWin, Size = UDim2.new(1, 0, 0, 40), Position = UDim2.new(0, 0, 0, 15), BackgroundTransparency = 1, Text = "Close the script?", TextColor3 = Colors.TextMain, Font = Enum.Font.GothamBold, TextSize = 14, ZIndex = 100000 })
-local btnYes = Create("TextButton", { Parent = ConfirmCloseWin, Size = UDim2.new(0, 95, 0, 30), Position = UDim2.new(0, 25, 0, 60), BackgroundColor3 = Colors.Active, Text = "Yes", TextColor3 = Colors.Background, Font = Enum.Font.GothamBold, TextSize = 12, ZIndex = 100000 })
-Create("UICorner", { Parent = btnYes, CornerRadius = UDim.new(0, 4) })
-local btnNo = Create("TextButton", { Parent = ConfirmCloseWin, Size = UDim2.new(0, 95, 0, 30), Position = UDim2.new(1, -120, 0, 60), BackgroundColor3 = Colors.Surface, Text = "No", TextColor3 = Colors.TextMain, Font = Enum.Font.GothamBold, TextSize = 12, ZIndex = 100000 })
-Create("UICorner", { Parent = btnNo, CornerRadius = UDim.new(0, 4) })
-local noStroke = Create("UIStroke", { Parent = btnNo, Color = Colors.Border, Thickness = 1 })
+local confLbl = Lib.Create("TextLabel", { Parent = ConfirmCloseWin, Size = UDim2.new(1, 0, 0, 40), Position = UDim2.new(0, 0, 0, 15), BackgroundTransparency = 1, Text = "Close the script?", TextColor3 = Colors.TextMain, Font = Enum.Font.GothamBold, TextSize = 14, ZIndex = 100000 })
+local btnYes = Lib.Create("TextButton", { Parent = ConfirmCloseWin, Size = UDim2.new(0, 95, 0, 30), Position = UDim2.new(0, 25, 0, 60), BackgroundColor3 = Colors.Active, Text = "Yes", TextColor3 = Colors.Background, Font = Enum.Font.GothamBold, TextSize = 12, ZIndex = 100000 })
+Lib.Create("UICorner", { Parent = btnYes, CornerRadius = UDim.new(0, 4) })
+local btnNo = Lib.Create("TextButton", { Parent = ConfirmCloseWin, Size = UDim2.new(0, 95, 0, 30), Position = UDim2.new(1, -120, 0, 60), BackgroundColor3 = Colors.Surface, Text = "No", TextColor3 = Colors.TextMain, Font = Enum.Font.GothamBold, TextSize = 12, ZIndex = 100000 })
+Lib.Create("UICorner", { Parent = btnNo, CornerRadius = UDim.new(0, 4) })
+local noStroke = Lib.Create("UIStroke", { Parent = btnNo, Color = Colors.Border, Thickness = 1 })
 
 btnNo.MouseButton1Click:Connect(function() ConfirmCloseWin.Visible = false end)
 btnYes.MouseButton1Click:Connect(function()
@@ -5467,7 +6295,7 @@ end)
 
 CloseBtn.MouseButton1Click:Connect(function() ConfirmCloseWin.Visible = true end)
 
-local ToggleBtn = Create("TextButton", {
+local ToggleBtn = Lib.Create("TextButton", {
     Parent = UI.Screen,
     Size = UDim2.new(0, 44, 0, 44),
     Position = UDim2.new(0, 20, 0.5, -22),
@@ -5476,10 +6304,10 @@ local ToggleBtn = Create("TextButton", {
     Visible = false,
     BorderSizePixel = 0
 })
-Create("UICorner", { Parent = ToggleBtn, CornerRadius = UDim.new(0, 10) })
-local toggleStroke = Create("UIStroke", { Parent = ToggleBtn, Color = Colors.Active, Thickness = 1 })
+Lib.Create("UICorner", { Parent = ToggleBtn, CornerRadius = UDim.new(0, 10) })
+local toggleStroke = Lib.Create("UIStroke", { Parent = ToggleBtn, Color = Colors.Active, Thickness = 1 })
 
-local toggleIcon = Create("ImageLabel", {
+local toggleIcon = Lib.Create("ImageLabel", {
     Parent = ToggleBtn,
     Size = UDim2.new(1, -12, 1, -12),
     Position = UDim2.new(0, 6, 0, 6),
@@ -5488,44 +6316,39 @@ local toggleIcon = Create("ImageLabel", {
 })
 
 _G.UpdateToggleIcon = function(id) if toggleIcon then toggleIcon.Image = id end end
-makeDraggable(ToggleBtn)
+Lib.makeDraggable(ToggleBtn)
 
 local blurEffect = Instance.new("BlurEffect", Services.Lighting)
 blurEffect.Size = 0
 blurEffect.Name = "SeptusBlur"
 
-local isGuiVisible = false
-local isMinimized = false
-
 ToggleBtn.MouseButton1Click:Connect(function()
-    isGuiVisible = not isGuiVisible
-    if isGuiVisible then
+    UI.State.isGuiVisible = not UI.State.isGuiVisible
+    if UI.State.isGuiVisible then
         UI.Frame.Visible = true
 
-        local targetSize = isMinimized and UDim2.new(0, 520, 0, 38) or UDim2.new(0, 520, 0, 340)
-        local targetBlur = isMinimized and 0 or 15
+        local targetSize = UI.State.isMinimized and UDim2.new(0, 520, 0, 38) or UDim2.new(0, 520, 0, 340)
+        local targetBlur = UI.State.isMinimized and 0 or 15
         
         Services.TS:Create(UI.Frame, TWEEN_INFO_SMOOTH, { Size = targetSize, Position = UDim2.new(0.5, -260, 0.5, -170), BackgroundTransparency = 0 }):Play()
         Services.TS:Create(blurEffect, TWEEN_INFO_SMOOTH, { Size = targetBlur }):Play()
-        ContentFrame.Visible = not isMinimized
+        ContentFrame.Visible = not UI.State.isMinimized
     else
         local shrink = Services.TS:Create(UI.Frame, TWEEN_INFO_SMOOTH, { Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0) })
         Services.TS:Create(blurEffect, TWEEN_INFO_SMOOTH, { Size = 0 }):Play()
         shrink:Play()
         shrink.Completed:Wait()
-        if not isGuiVisible then UI.Frame.Visible = false end
+        if not UI.State.isGuiVisible then UI.Frame.Visible = false end
     end
 end)
 
 MinBtn.MouseButton1Click:Connect(function()
-    isMinimized = not isMinimized
-    if isMinimized then
-
+    UI.State.isMinimized = not UI.State.isMinimized
+    if UI.State.isMinimized then
         Services.TS:Create(UI.Frame, TWEEN_INFO_SMOOTH, { Size = UDim2.new(0, 520, 0, 38) }):Play()
         Services.TS:Create(blurEffect, TWEEN_INFO_SMOOTH, { Size = 0 }):Play()
         ContentFrame.Visible = false
     else
-
         Services.TS:Create(UI.Frame, TWEEN_INFO_SMOOTH, { Size = UDim2.new(0, 520, 0, 340) }):Play()
         Services.TS:Create(blurEffect, TWEEN_INFO_SMOOTH, { Size = 15 }):Play()
         ContentFrame.Visible = true
@@ -5535,7 +6358,7 @@ end)
 task.spawn(function()
     repeat task.wait() until _G.MainMenuLoaded == true
     ToggleBtn.Visible = true
-    showNotification("SEPTUS HUB успешно загружен!")
+    Lib.showNotification("SEPTUS HUB успешно загружен!")
     
     local HomeBtn = Sidebar:FindFirstChild("HomeBtn")
     if HomeBtn then
@@ -5549,21 +6372,4 @@ end)
 
 local executor = "Unknown"
 pcall(function() if identifyexecutor then executor = identifyexecutor() elseif getexecutorname then executor = getexecutorname() end end)
-local execLabel = Create("TextLabel", { Parent = UI.Frame, Size = UDim2.new(0, 100, 0, 20), Position = UDim2.new(1, -235, 0, 8), BackgroundTransparency = 1, Text = "Executor: " .. executor, TextColor3 = Colors.TextDim, Font = Enum.Font.GothamBold, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Right })
-
-local AntiAfk = Networking and Networking.AntiAfk and Networking.AntiAfk.RequestHop
-if AntiAfk then
-    local origHop = AntiAfk.RequestHop.Fire
-    AntiAfk.RequestHop.Fire = function() return end
-    LP:SetAttribute("AntiAfkIdleOverride", 999999)
-end
-
-local function typeWrite(textLabel, fullText, delayTime)
-    textLabel.Text = "" 
-    
-    for first, last in utf8.graphemes(fullText) do
-        local currentText = string.sub(fullText, 1, last)
-        textLabel.Text = currentText
-        task.wait(delayTime or 0.03) 
-    end
-end
+local execLabel = Lib.Create("TextLabel", { Parent = UI.Frame, Size = UDim2.new(0, 100, 0, 20), Position = UDim2.new(1, -235, 0, 8), BackgroundTransparency = 1, Text = "Executor: " .. executor, TextColor3 = Colors.TextDim, Font = Enum.Font.GothamBold, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Right })
