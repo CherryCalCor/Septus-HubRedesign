@@ -28,7 +28,8 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/CherryCalCor/Septus-H
 # 📚 Documentation
 
 - [Functions](Functions.md)
-- [Roadmap](Roadmap.md)
+- [ChangelogEN](ChangelogEN.md)
+- [ChangelogRU](ChangelogRU.md)
 - [FAQ](FAQ.md)
 
 
