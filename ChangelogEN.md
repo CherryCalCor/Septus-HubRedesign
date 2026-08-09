@@ -2,7 +2,7 @@
 
 <div align="center">
 
-## 🗺️ Roadmap
+## Changelog
 
 ### v2.32 Fix Update
 - [ ] Bug fixes with settings
