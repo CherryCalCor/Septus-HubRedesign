@@ -12,4 +12,6 @@
 
  Finally added Drag system
 
+Complete menu overhaul
+
 #### This is not the complete list; the full list will be available after the update!
