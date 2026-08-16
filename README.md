@@ -8,6 +8,8 @@
 
 [ ![Version](https://img.shields.io/badge/Version-2.4-000000?style=for-the-badge) ](ССЫЛКА)
 
+By RAVENSCALL Team
+
 ---
 
 </div>
@@ -32,4 +34,3 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/CherryCalCor/Septus-H
 - [ChangelogRU](ChangelogRU.md)
 - [FAQ](FAQ.md)
 
-Мы в курсе некоторых багов мы уже работаем над их исправлениями фикс патч выйдет в ближайшие 3-4 дня.
