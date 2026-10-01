@@ -5764,7 +5764,7 @@ local function StartLoadingSequence(Blur)
 		Position = UDim2.new(0.5, 0, 0.46, 0),
 		AnchorPoint = Vector2.new(0.5, 0),
 		BackgroundTransparency = 1,
-		Text = "—  C Y B E R N E T I C  I N T E R F A C E  —",
+		Text = "—  M I N I M A L I S T I C  I N T E R F A C E  —",
 		TextColor3 = Color3.fromRGB(160, 160, 160),
 		TextSize = 11,
 		Font = Enum.Font.RobotoMono,
@@ -5772,6 +5772,64 @@ local function StartLoadingSequence(Blur)
 		ZIndex = 56,
 		Parent = TextGlitchContainer
 	})
+
+	local isMobileVersion = false
+
+	local MobileToggleContainer = Lib.Create("TextButton", {
+		Size = UDim2.fromOffset(180, 24),
+		Position = UDim2.new(0.5, 0, 0.75, 0),
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundTransparency = 1,
+		Text = "",
+		AutoButtonColor = false,
+		ZIndex = 56,
+		Parent = CenterBox
+	})
+
+	local MobileCheckbox = Lib.Create("Frame", {
+		Size = UDim2.fromOffset(18, 18),
+		Position = UDim2.new(0, 0, 0.5, -9),
+		BackgroundColor3 = Color3.fromRGB(18, 18, 22),
+		ZIndex = 57,
+		Parent = MobileToggleContainer,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 4) }),
+		Lib.Create("UIStroke", { Color = Color3.fromRGB(100, 100, 100), Thickness = 1.2 })
+	})
+
+	local MobileCheckMark = Lib.Create("TextLabel", {
+		Size = UDim2.new(1, 0, 1, 0),
+		BackgroundTransparency = 1,
+		Text = "✓",
+		TextColor3 = Color3.fromRGB(0, 0, 0),
+		TextSize = 12,
+		Font = Enum.Font.GothamBold,
+		Visible = false,
+		ZIndex = 58,
+		Parent = MobileCheckbox
+	})
+
+	local MobileToggleText = Lib.Create("TextLabel", {
+		Size = UDim2.new(1, -26, 1, 0),
+		Position = UDim2.new(0, 26, 0, 0),
+		BackgroundTransparency = 1,
+		Text = "Mobile Version (1.5x Smaller)",
+		TextColor3 = Color3.fromRGB(190, 190, 190),
+		TextSize = 11,
+		Font = Enum.Font.RobotoMono,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		ZIndex = 57,
+		Parent = MobileToggleContainer
+	})
+
+	MobileToggleContainer.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		isMobileVersion = not isMobileVersion
+		MobileCheckMark.Visible = isMobileVersion
+		Lib.Tween(MobileCheckbox, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, {
+			BackgroundColor3 = isMobileVersion and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(18, 18, 22)
+		})
+		MobileToggleText.TextColor3 = isMobileVersion and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(190, 190, 190)
+	end)
 
 	local ButtonsRow = Lib.Create("Frame", {
 		Size = UDim2.new(1, -40, 0, 44),
@@ -6011,14 +6069,22 @@ local function StartLoadingSequence(Blur)
 			SplashModal:Destroy()
 			Blur:Destroy()
 
+			local scaleObj = UI.Main:FindFirstChild("SeptusScale") or Instance.new("UIScale")
+			scaleObj.Name = "SeptusScale"
+			scaleObj.Scale = isMobileVersion and (1 / 1.5) or 1
+			scaleObj.Parent = UI.Main
+
 			UI.Main.Size = UDim2.fromOffset(760, 510)
 			UI.Main.Visible = true
 			Lib.Tween(UI.Main, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out, {
 				Size = State.OriginalSize
 			})
+
+			if UI.SHToggleButton then
+				UI.SHToggleButton.Visible = true
+			end
 		end)
 	end)
-end
 
 local function PlayCinematicIntro(onComplete)
 	local IntroBlur = Lib.Create("BlurEffect", { Name = "RavenScall_IntroBlur", Size = 0, Parent = Services.Lighting })
@@ -6177,6 +6243,88 @@ do
 			PushGraph("Players", plrs, plrs .. " Players", UI.Graphs.Players, 100)
 
 			frames, lastT = 0, curT
+		end
+	end)
+end
+
+do
+	local SHButton = Lib.Create("TextButton", {
+		Name = "SH_FloatingToggle",
+		Size = UDim2.fromOffset(46, 46),
+		Position = UDim2.new(0, 20, 0.5, -23),
+		BackgroundColor3 = Color3.fromRGB(18, 18, 18),
+		Text = "SH",
+		TextColor3 = Color3.fromRGB(245, 245, 245),
+		TextSize = 16,
+		Font = Enum.Font.GothamBold,
+		AutoButtonColor = false,
+		Visible = false,
+		ZIndex = 120,
+		Parent = UI.Screen,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 10) }),
+		Lib.Create("UIStroke", {
+			Color = Color3.fromRGB(60, 60, 60),
+			Thickness = 1.5,
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		})
+	})
+	Lib.RegisterThemeElement(SHButton, "BackgroundColor3", 0.5)
+	Lib.RegisterThemeText(SHButton, "Primary")
+	UI.SHToggleButton = SHButton
+
+	local dragging = false
+	local dragStart = nil
+	local startPos = nil
+	local hasMoved = false
+
+	SHButton.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			hasMoved = false
+			dragStart = input.Position
+			startPos = SHButton.Position
+
+			Lib.Tween(SHButton, 0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, {
+				Size = UDim2.fromOffset(40, 40)
+			})
+		end
+	end)
+
+	Services.UserInputService.InputChanged:Connect(function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			local delta = input.Position - dragStart
+			if delta.Magnitude > 4 then
+				hasMoved = true
+			end
+			SHButton.Position = UDim2.new(
+				startPos.X.Scale,
+				startPos.X.Offset + delta.X,
+				startPos.Y.Scale,
+				startPos.Y.Offset + delta.Y
+			)
+		end
+	end)
+
+	local function OnRelease()
+		if dragging then
+			dragging = false
+
+			Lib.Tween(SHButton, 0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out, {
+				Size = UDim2.fromOffset(46, 46)
+			})
+
+			if not hasMoved then
+				Lib.PlayClick()
+				if UI.Main then
+					UI.Main.Visible = not UI.Main.Visible
+				end
+			end
+		end
+	end
+
+	SHButton.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			OnRelease()
 		end
 	end)
 end
