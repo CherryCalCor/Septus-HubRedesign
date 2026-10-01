@@ -842,7 +842,7 @@ LaunchBtn.MouseButton1Click:Connect(function()
     if v3ToggleEnabled then
 
         UI.Screen:Destroy()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/CherryCalCor/Septus-HubRedesign/refs/heads/main/V3.Luau"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/CherryCalCor/Septus-HubRedesign/refs/heads/main/V3.Lua"))()
         return
     end
 
