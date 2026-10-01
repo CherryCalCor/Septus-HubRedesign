@@ -699,8 +699,8 @@ UI.Screen = Lib.Create("ScreenGui", {
 
 local WelcomeGui = Lib.Create("Frame", {
     Parent = UI.Screen,
-    Size = UDim2.new(0, 400, 0, 180),
-    Position = UDim2.new(0.5, -200, 0.5, -90),
+    Size = UDim2.new(0, 400, 0, 210),
+    Position = UDim2.new(0.5, -200, 0.5, -105),
     BackgroundColor3 = Colors.Background,
     BorderSizePixel = 0,
     ZIndex = 50000
@@ -729,8 +729,8 @@ end)
 
 local wTxt = Lib.Create("TextLabel", {
     Parent = WelcomeGui,
-    Size = UDim2.new(1, -40, 0, 60),
-    Position = UDim2.new(0, 20, 0, 25),
+    Size = UDim2.new(1, -40, 0, 50),
+    Position = UDim2.new(0, 20, 0, 18),
     BackgroundTransparency = 1,
     Text = "",
     FontFace = Font.fromId(12187375422),
@@ -746,10 +746,69 @@ task.spawn(function()
     Lib.typeWrite(wTxt, message, 0.04)
 end)
 
+local v3ToggleEnabled = false
+
+local V3Card = Lib.Create("Frame", {
+    Parent = WelcomeGui,
+    Size = UDim2.new(1, -40, 0, 32),
+    Position = UDim2.new(0, 20, 0, 80),
+    BackgroundColor3 = Colors.Surface,
+    BorderSizePixel = 0,
+    ZIndex = 1
+})
+Lib.Create("UICorner", { Parent = V3Card, CornerRadius = UDim.new(0, 6) })
+local v3CardStroke = Lib.Create("UIStroke", { Parent = V3Card, Color = Colors.Border, Thickness = 1 })
+
+local V3Title = Lib.Create("TextLabel", {
+    Parent = V3Card,
+    Size = UDim2.new(1, -50, 1, 0),
+    Position = UDim2.new(0, 12, 0, 0),
+    BackgroundTransparency = 1,
+    Text = "V3 New UI",
+    TextColor3 = Colors.TextMain,
+    Font = Enum.Font.GothamBold,
+    TextSize = 12,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = 2
+})
+
+local CheckboxBtn = Lib.Create("TextButton", {
+    Parent = V3Card,
+    Size = UDim2.new(0, 20, 0, 20),
+    Position = UDim2.new(1, -30, 0.5, -10),
+    BackgroundColor3 = Colors.ToggleShell,
+    Text = "",
+    TextColor3 = Colors.Background,
+    Font = Enum.Font.GothamBold,
+    TextSize = 13,
+    BorderSizePixel = 0,
+    AutoButtonColor = false,
+    ZIndex = 2
+})
+Lib.Create("UICorner", { Parent = CheckboxBtn, CornerRadius = UDim.new(0, 4) })
+local cbStroke = Lib.Create("UIStroke", { Parent = CheckboxBtn, Color = Colors.Border, Thickness = 1 })
+
+local function updateCheckbox()
+    if v3ToggleEnabled then
+        Services.TS:Create(CheckboxBtn, TWEEN_INFO_FAST, {BackgroundColor3 = Colors.Active}):Play()
+        Services.TS:Create(cbStroke, TWEEN_INFO_FAST, {Color = Colors.Active}):Play()
+        CheckboxBtn.Text = "✓"
+    else
+        Services.TS:Create(CheckboxBtn, TWEEN_INFO_FAST, {BackgroundColor3 = Colors.ToggleShell}):Play()
+        Services.TS:Create(cbStroke, TWEEN_INFO_FAST, {Color = Colors.Border}):Play()
+        CheckboxBtn.Text = ""
+    end
+end
+
+CheckboxBtn.MouseButton1Click:Connect(function()
+    v3ToggleEnabled = not v3ToggleEnabled
+    updateCheckbox()
+end)
+
 local GithubBtn = Lib.Create("TextButton", {
     Parent = WelcomeGui,
     Size = UDim2.new(0, 170, 0, 36),
-    Position = UDim2.new(0, 20, 0, 110),
+    Position = UDim2.new(0, 20, 0, 130),
     BackgroundColor3 = Colors.Surface,
     Text = "Наш GitHub",
     TextColor3 = Colors.TextMain,
@@ -767,7 +826,7 @@ end)
 local LaunchBtn = Lib.Create("TextButton", {
     Parent = WelcomeGui,
     Size = UDim2.new(0, 170, 0, 36),
-    Position = UDim2.new(1, -190, 0, 110),
+    Position = UDim2.new(1, -190, 0, 130),
     BackgroundColor3 = Colors.Active,
     Text = "Запустить меню",
     TextColor3 = Colors.Background,
@@ -778,12 +837,25 @@ local LaunchBtn = Lib.Create("TextButton", {
 Lib.Create("UICorner", { Parent = LaunchBtn, CornerRadius = UDim.new(0, 6) })
 
 local welcomeDone = false
-LaunchBtn.MouseButton1Click:Connect(function() 
+LaunchBtn.MouseButton1Click:Connect(function()
+    if v3ToggleEnabled then
+
+        UI.Screen:Destroy()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/CherryCalCor/Septus-HubRedesign/refs/heads/main/V3.Luau"))()
+        return
+    end
+
     welcomeDone = true 
     WelcomeGui:Destroy() 
 end)
+
 Lib.makeDraggable(WelcomeGui)
-repeat task.wait() until welcomeDone
+repeat 
+    task.wait() 
+    if v3ToggleEnabled and not WelcomeGui.Parent then 
+        return 
+    end
+until welcomeDone
 
 local TweenService = Services.TS
 local ScreenGui = UI.Screen
