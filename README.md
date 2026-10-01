@@ -6,7 +6,7 @@
 
 **"Precision in every line."**
 
-[ ![Version](https://img.shields.io/badge/Version-2.4-000000?style=for-the-badge) ](ССЫЛКА)
+[ ![Version](https://img.shields.io/badge/Version-V3-000000?style=for-the-badge) ](ССЫЛКА)
 
 By RS Project x Catalyst Team
 
