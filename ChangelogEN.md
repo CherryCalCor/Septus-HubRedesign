@@ -34,6 +34,22 @@
 - [ ] RTX shader changes
 - [ ] 
 
+##### V3 [Catalyst x RS Project]
+- [ ] Completely redesigned loading screen.
+- [ ] Completely redesigned Appearance system.
+- [ ] Completely redesigned interface.
+- [ ] Completely redesigned Home section.
+- [ ] Full interface optimization.
+- [ ] Fixed all memory leaks.
+- [ ] Completely redesigned Scripts/Emotes sections and their configuration.
+- [ ] Ability to change Animation Packs.
+- [ ] Modified and smoother animations.
+- [ ] Redesigned Config system.
+- [ ] Create and save custom themes.
+- [ ] Added descriptions for every feature.
+- [ ] Removed all unnecessary separate menus and redesigned the remaining ones.
+- [ ] Modified color editor for themes.
+
 We apologize for the delay in the update; we had to rewrite the script from scratch to rework the functions using libraries.
 
 ## 💬 Telegram
