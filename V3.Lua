@@ -6219,35 +6219,6 @@ end
 PlayCinematicIntro(StartLoadingSequence)
 
 do
-	local history = { FPS = {}, Ping = {}, Players = {} }
-	for i = 1, 15 do history.FPS[i], history.Ping[i], history.Players[i] = 0.1, 0.1, 0.1 end
-
-	local function PushGraph(key, val, text, barsData, divider)
-		UI.Labels[key].Text = text
-		table.remove(history[key], 1)
-		table.insert(history[key], math.clamp(val / divider, 0.05, 1))
-		for i, bar in ipairs(barsData) do bar.Size = UDim2.new(1/15, -3, history[key][i], 0) end
-	end
-
-	local lastT, frames = tick(), 0
-	Services.Run.RenderStepped:Connect(function()
-		frames = frames + 1
-		local curT = tick()
-		if curT - lastT >= 1 then
-			local fps = math.floor(frames / (curT - lastT))
-			local ping = pcall(function() return math.floor(Services.Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end) and math.floor(Services.Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) or 0
-			local plrs = #Services.Players:GetPlayers()
-
-			PushGraph("FPS", fps, fps .. " FPS", UI.Graphs.FPS, 120)
-			PushGraph("Ping", ping, ping .. " ms", UI.Graphs.Ping, 300)
-			PushGraph("Players", plrs, plrs .. " Players", UI.Graphs.Players, 100)
-
-			frames, lastT = 0, curT
-		end
-	end)
-end
-
-do
 	local SHButton = Lib.Create("TextButton", {
 		Name = "SH_FloatingToggle",
 		Size = UDim2.fromOffset(46, 46),
@@ -6328,3 +6299,34 @@ do
 		end
 	end)
 end
+
+do
+	local history = { FPS = {}, Ping = {}, Players = {} }
+	for i = 1, 15 do history.FPS[i], history.Ping[i], history.Players[i] = 0.1, 0.1, 0.1 end
+
+	local function PushGraph(key, val, text, barsData, divider)
+		UI.Labels[key].Text = text
+		table.remove(history[key], 1)
+		table.insert(history[key], math.clamp(val / divider, 0.05, 1))
+		for i, bar in ipairs(barsData) do bar.Size = UDim2.new(1/15, -3, history[key][i], 0) end
+	end
+
+	local lastT, frames = tick(), 0
+	Services.Run.RenderStepped:Connect(function()
+		frames = frames + 1
+		local curT = tick()
+		if curT - lastT >= 1 then
+			local fps = math.floor(frames / (curT - lastT))
+			local ping = pcall(function() return math.floor(Services.Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end) and math.floor(Services.Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) or 0
+			local plrs = #Services.Players:GetPlayers()
+
+			PushGraph("FPS", fps, fps .. " FPS", UI.Graphs.FPS, 120)
+			PushGraph("Ping", ping, ping .. " ms", UI.Graphs.Ping, 300)
+			PushGraph("Players", plrs, plrs .. " Players", UI.Graphs.Players, 100)
+
+			frames, lastT = 0, curT
+		end
+	end)
+end
+
+
