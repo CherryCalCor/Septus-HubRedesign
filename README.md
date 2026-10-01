@@ -2,13 +2,13 @@
 <div align="center">
 
 # SEPTUS HUB
-### REDESIGN V2.4
+### REDESIGN V3
 
 **"Precision in every line."**
 
 [ ![Version](https://img.shields.io/badge/Version-2.4-000000?style=for-the-badge) ](ССЫЛКА)
 
-By RAVENSCALL Team
+By RS Project x Catalyst Team
 
 ---
 
