@@ -4,14 +4,9 @@
 
   ## Further Updates
 
-  ### V2.41
+  ### V3.01
 
- Fixed bugs with certain menus and functions.
+  Fixed all menu-related bugs.
+  Fixed all bugs related to certain functions.
+  Transfer of certain functions
 
- Completely redesigned Home section
-
- Finally added Drag system
-
-Complete menu overhaul
-
-#### This is not the complete list; the full list will be available after the update!
