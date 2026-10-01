@@ -6327,6 +6327,5 @@ do
 			frames, lastT = 0, curT
 		end
 	end)
-end
 
 
