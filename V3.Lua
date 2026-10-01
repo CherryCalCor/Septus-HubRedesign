@@ -6246,5 +6246,85 @@ do
 		end
 	end)
 end
-end
 
+do
+	local SHButton = Lib.Create("TextButton", {
+		Name = "SH_FloatingToggle",
+		Size = UDim2.fromOffset(46, 46),
+		Position = UDim2.new(0, 20, 0.5, -23),
+		BackgroundColor3 = Color3.fromRGB(18, 18, 18),
+		Text = "SH",
+		TextColor3 = Color3.fromRGB(245, 245, 245),
+		TextSize = 16,
+		Font = Enum.Font.GothamBold,
+		AutoButtonColor = false,
+		Visible = false,
+		ZIndex = 120,
+		Parent = UI.Screen,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 10) }),
+		Lib.Create("UIStroke", {
+			Color = Color3.fromRGB(60, 60, 60),
+			Thickness = 1.5,
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		})
+	})
+	Lib.RegisterThemeElement(SHButton, "BackgroundColor3", 0.5)
+	Lib.RegisterThemeText(SHButton, "Primary")
+	UI.SHToggleButton = SHButton
+
+	local dragging = false
+	local dragStart = nil
+	local startPos = nil
+	local hasMoved = false
+
+	SHButton.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			hasMoved = false
+			dragStart = input.Position
+			startPos = SHButton.Position
+
+			Lib.Tween(SHButton, 0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, {
+				Size = UDim2.fromOffset(40, 40)
+			})
+		end
+	end)
+
+	Services.UserInputService.InputChanged:Connect(function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			local delta = input.Position - dragStart
+			if delta.Magnitude > 4 then
+				hasMoved = true
+			end
+			SHButton.Position = UDim2.new(
+				startPos.X.Scale,
+				startPos.X.Offset + delta.X,
+				startPos.Y.Scale,
+				startPos.Y.Offset + delta.Y
+			)
+		end
+	end)
+
+	local function OnRelease()
+		if dragging then
+			dragging = false
+
+			Lib.Tween(SHButton, 0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out, {
+				Size = UDim2.fromOffset(46, 46)
+			})
+
+			if not hasMoved then
+				Lib.PlayClick()
+				if UI.Main then
+					UI.Main.Visible = not UI.Main.Visible
+				end
+			end
+		end
+	end
+
+	SHButton.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			OnRelease()
+		end
+	end)
+end
