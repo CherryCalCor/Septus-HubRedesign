@@ -6085,6 +6085,7 @@ local function StartLoadingSequence(Blur)
 			end
 		end)
 	end)
+end
 
 local function PlayCinematicIntro(onComplete)
 	local IntroBlur = Lib.Create("BlurEffect", { Name = "RavenScall_IntroBlur", Size = 0, Parent = Services.Lighting })
