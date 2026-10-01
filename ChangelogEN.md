@@ -50,8 +50,6 @@
 - [ ] Removed all unnecessary separate menus and redesigned the remaining ones.
 - [ ] Modified color editor for themes.
 
-We apologize for the delay in the update; we had to rewrite the script from scratch to rework the functions using libraries.
-
 ## 💬 Telegram
 
 <a href="https://telegram.me/RezinovieTapochkl">
