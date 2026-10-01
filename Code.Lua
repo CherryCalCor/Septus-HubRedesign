@@ -688,6 +688,8 @@ _G.changeTheme = function(c1, c2)
     end
 end
 
+local wRNG = Random.new()
+do
 local GuiParent = Services.Run:IsStudio() and LP.PlayerGui or Services.Core:FindFirstChild("RobloxGui") or LP:WaitForChild("PlayerGui")
 UI.Screen = Lib.Create("ScreenGui", {
     Name = "SeptusHub_VactoryUI",
@@ -709,7 +711,6 @@ Lib.Create("UICorner", { Parent = WelcomeGui, CornerRadius = UDim.new(0, 8) })
 Lib.Create("UIStroke", { Parent = WelcomeGui, Color = Colors.Border, Thickness = 1 })
 
 local welcomeSnow = Lib.Create("Frame", { Parent = WelcomeGui, Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, ZIndex = 0 })
-local wRNG = Random.new()
 task.spawn(function()
     while WelcomeGui and WelcomeGui.Parent do
         local size = wRNG:NextNumber(2, 4)
@@ -856,11 +857,12 @@ repeat
         return 
     end
 until welcomeDone
+end
 
+do
 local TweenService = Services.TS
 local ScreenGui = UI.Screen
 local Lighting = Services.Lighting
-local wRNG = wRNG or Random.new() 
 
 local Blur = Instance.new("BlurEffect")
 Blur.Size = 0
@@ -1033,6 +1035,7 @@ fadeTween.Completed:Wait()
 
 LoadingFrame:Destroy()
 Blur:Destroy()
+end
 
 _G.MainMenuLoaded = true
 
@@ -1103,6 +1106,8 @@ local Watermark = Lib.Create("ImageLabel", {
     ZIndex = 0
 })
 
+local MinBtn, CloseBtn
+do
 local TopBar = Lib.Create("Frame", { Parent = UI.Frame, Size = UDim2.new(1, 0, 0, 38), BackgroundTransparency = 1 })
 local TitleContainer = Lib.Create("Frame", { Parent = TopBar, Position = UDim2.new(0, 15, 0, 0), Size = UDim2.new(0.5, 0, 1, 0), BackgroundTransparency = 1 })
 Lib.Create("UIListLayout", { Parent = TitleContainer, FillDirection = Enum.FillDirection.Horizontal, SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 8) })
@@ -1156,8 +1161,9 @@ local function CreateCtrlBtn(text, order)
     return b
 end
 
-local MinBtn = CreateCtrlBtn("—", 1)
-local CloseBtn = CreateCtrlBtn("×", 2)
+MinBtn = CreateCtrlBtn("—", 1)
+CloseBtn = CreateCtrlBtn("×", 2)
+end
 
 local ContentFrame = Lib.Create("Frame", { Parent = UI.Frame, Position = UDim2.new(0, 0, 0, 38), Size = UDim2.new(1, 0, 1, -38), BackgroundTransparency = 1 })
 
@@ -1931,6 +1937,7 @@ local ServerMenu = Lib.Create("Frame", {
     end)
 end    
 
+do
     local IdMenu = Lib.Create("Frame", {
         Parent = UI.Screen,
         Size = UDim2.new(0, 300, 0, 165),
@@ -2017,6 +2024,7 @@ end
     Lib.createToggle(UI.Pages.Server, "Using the ID", 150, false, function(st)
         IdMenu.Visible = st
     end)
+end
 
 do
     local TPCard = Lib.CreateStyledCard(UI.Pages.Teleport, 85)
@@ -2295,6 +2303,7 @@ do
     end))
 end
 
+do
     local flightAnimButton = Lib.createMenuBtn(UI.Pages.Movement, "List of flight animations", 310, false)
 
     local AnimWin, AnimClose, AnimScroll, AnimLayout, AnimActionBtn, AnimActionLbl = Lib.createFloatingMenu("Flight Animations", 260, 240)
@@ -2429,6 +2438,7 @@ end
     AnimClose.MouseButton1Click:Connect(function()
         AnimWin.Visible = false
     end)
+end
 
 do
     local ESPBtn, Arrow = Lib.createMenuBtn(UI.Pages.Visuals, "ESP", 10, true)
@@ -6200,6 +6210,7 @@ end)
 
 _G.SearchEmotes("")
 
+do
 local isFlinging = false
 local currentFlingTarget = nil
 
@@ -6236,6 +6247,7 @@ FlingActionBtn.MouseButton1Click:Connect(function()
     end)
     table.insert(UI.Connections, flingCon)
 end)
+end
 
 local isBringing = false
 local currentBringTarget = nil
