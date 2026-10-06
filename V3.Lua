@@ -63,6 +63,10 @@ local App = {
 		BgOpacity = 85,
 		AnimatedBgEnabled = false,
 		BgZoom = 100,
+		BgSaturation = 100,
+		MusicVolume = 50,
+		MusicFocus = false,
+		MusicVisualizer = true,
 
 		NotificationsEnabled = true,
 		PlayerNotifsEnabled = true,
@@ -181,6 +185,15 @@ local State = App.State
 local UI = App.UI
 local Refs = App.Refs
 
+Lib.Conns = {}
+Refs.OrigFOV = App.Camera and App.Camera.FieldOfView or 70
+
+function Lib.C(signal, callback)
+	local connection = signal:Connect(callback)
+	Lib.Conns[#Lib.Conns + 1] = connection
+	return connection
+end
+
 local ClickSound = Instance.new("Sound")
 ClickSound.SoundId = "rbxassetid://6895079853"
 ClickSound.Volume = 0.5
@@ -193,8 +206,10 @@ function Lib.PlayClick()
 end
 
 Lib.ToggleControls = {}
-Lib.BoundCorners = setmetatable({}, { __mode = "k" })
-Lib.ImageTheme = setmetatable({}, { __mode = "k" })
+Lib.SliderControls = {}
+Lib.FontSelectors = {}
+Lib.BoundCorners = {}
+Lib.ImageTheme = {}
 
 function Lib.BindCorner(parent, name)
 	local corner = Instance.new("UICorner")
@@ -210,7 +225,11 @@ function Lib.SetCornerRadius(radius)
 	local value = UDim.new(0, radius)
 	UI.MainCorner.CornerRadius = value
 	for corner in pairs(Lib.BoundCorners) do
-		corner.CornerRadius = value
+		if corner.Parent then
+			corner.CornerRadius = value
+		else
+			Lib.BoundCorners[corner] = nil
+		end
 	end
 end
 
@@ -225,7 +244,7 @@ function Lib.ResolveImage(value)
 end
 
 do
-	local FontRoles = setmetatable({}, { __mode = "k" })
+	local FontRoles = {}
 	local BoldFonts = {
 		[Enum.Font.GothamBold] = true,
 		[Enum.Font.SourceSansBold] = true,
@@ -868,8 +887,8 @@ do
 		State.LastActivityTick = os.clock()
 	end
 
-	Services.UserInputService.InputBegan:Connect(RegisterUserActivity)
-	Services.UserInputService.InputChanged:Connect(function(input)
+	Lib.C(Services.UserInputService.InputBegan, RegisterUserActivity)
+	Lib.C(Services.UserInputService.InputChanged, function(input)
 		if input.UserInputType == Enum.UserInputType.MouseMovement then
 			RegisterUserActivity()
 		end
@@ -877,7 +896,7 @@ do
 
 	task.spawn(function()
 		local saveTimer = 0
-		while true do
+		while not State.Unloaded do
 			task.wait(1)
 			if (os.clock() - State.LastActivityTick) <= 1800 then
 				State.TotalPlaytimeSeconds = State.TotalPlaytimeSeconds + 1
@@ -1349,7 +1368,7 @@ function Lib.PlayEmote(assetId, itemType, triggerBtn)
 	end)
 end
 
-App.Player.CharacterAdded:Connect(function(newChar)
+Lib.C(App.Player.CharacterAdded, function(newChar)
 	Refs.OriginalAnims = nil
 	Lib.StopCurrentEmote()
 end)
@@ -1359,6 +1378,7 @@ UI.Screen = Lib.Create("ScreenGui", {
 	ResetOnSpawn = false,
 	IgnoreGuiInset = true,
 	ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+	DisplayOrder = 2147483647,
 	Parent = App.Player:WaitForChild("PlayerGui")
 })
 
@@ -1368,16 +1388,17 @@ UI.NotifContainer = Lib.Create("Frame", {
 	Position = UDim2.new(1, -290, 0, 0),
 	BackgroundTransparency = 1,
 	ClipsDescendants = false,
+	ZIndex = 150,
 	Parent = UI.Screen
 })
 
-Services.Players.PlayerAdded:Connect(function(p)
+Lib.C(Services.Players.PlayerAdded, function(p)
 	if State.PlayerNotifsEnabled and State.NotificationsEnabled then
 		Lib.Notify({ Title = "Player Joined", Text = p.DisplayName .. " (@" .. p.Name .. ")", UserId = p.UserId })
 	end
 end)
 
-Services.Players.PlayerRemoving:Connect(function(p)
+Lib.C(Services.Players.PlayerRemoving, function(p)
 	if State.PlayerNotifsEnabled and State.NotificationsEnabled then
 		Lib.Notify({ Title = "Player Left", Text = p.DisplayName .. " (@" .. p.Name .. ")", UserId = p.UserId })
 	end
@@ -1429,6 +1450,7 @@ Lib.BindCorner(UI.CustomBgImage, "ImageCorner")
 UI.Main = Lib.Create("Frame", {
 	Name = "Main",
 	Size = State.OriginalSize,
+	ZIndex = 5,
 	Position = UDim2.new(0.5, 0, 0.5, 0),
 	AnchorPoint = Vector2.new(0.5, 0.5),
 	BackgroundColor3 = Color3.fromRGB(0, 0, 0),
@@ -1515,6 +1537,7 @@ do
 	end)
 
 	MakeWinBtn("Close", "×", UDim2.fromOffset(80, 0), function()
+		Lib.Unload()
 		Lib.StopCurrentEmote()
 		Lib.SavePlaytimeData()
 		if Refs.IntroBlur then Refs.IntroBlur:Destroy() end
@@ -1640,7 +1663,7 @@ do
 		end
 	end)
 
-	UIS.InputChanged:Connect(function(input)
+	Lib.C(UIS.InputChanged, function(input)
 		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
 			local delta = input.Position - origin
 			goal = Clamp(startOffset + Vector2.new(delta.X, delta.Y))
@@ -2177,7 +2200,7 @@ do
 		return Item
 	end
 
-	function Lib.CreateSettingSliderItem(parentCard, title, desc, minVal, maxVal, defaultVal, onChange, isLast)
+	function Lib.CreateSettingSliderItem(parentCard, title, desc, minVal, maxVal, defaultVal, onChange, isLast, suffix)
 		local Item = Lib.Create("Frame", {
 			Size = UDim2.new(1, 0, 0, 50),
 			BackgroundTransparency = 1,
@@ -2201,7 +2224,7 @@ do
 			Size = UDim2.new(1, -190, 0, 16),
 			Position = UDim2.new(0, 14, 0, 26),
 			BackgroundTransparency = 1,
-			Text = desc .. " (" .. tostring(math.floor(defaultVal)) .. ")",
+			Text = desc .. " (" .. math.floor(defaultVal) .. (suffix or "") .. ")",
 			TextColor3 = Color3.fromRGB(130, 130, 130),
 			TextSize = 11,
 			Font = Enum.Font.GothamMedium,
@@ -2267,13 +2290,22 @@ do
 
 			SliderKnob.Position = UDim2.new(relX, 0, 0.5, 0)
 			SliderFill.Size = UDim2.new(relX, 0, 1, 0)
-			DescLabel.Text = desc .. " (" .. tostring(currentVal) .. ")"
+			DescLabel.Text = desc .. " (" .. currentVal .. (suffix or "") .. ")"
 			onChange(currentVal)
 		end
 
-		local initPercent = math.clamp((defaultVal - minVal) / (maxVal - minVal), 0, 1)
-		SliderKnob.Position = UDim2.new(initPercent, 0, 0.5, 0)
-		SliderFill.Size = UDim2.new(initPercent, 0, 1, 0)
+		local function Display(value)
+			local percent = math.clamp((value - minVal) / (maxVal - minVal), 0, 1)
+			SliderKnob.Position = UDim2.new(percent, 0, 0.5, 0)
+			SliderFill.Size = UDim2.new(percent, 0, 1, 0)
+			DescLabel.Text = desc .. " (" .. math.floor(value) .. (suffix or "") .. ")"
+		end
+
+		Display(defaultVal)
+		Lib.SliderControls[title] = function(value)
+			Display(value)
+			onChange(value)
+		end
 
 		local TriggerBtn = Lib.Create("TextButton", {
 			Size = UDim2.new(1, 0, 1, 0),
@@ -2289,13 +2321,13 @@ do
 			end
 		end)
 
-		Services.UserInputService.InputChanged:Connect(function(input)
+		Lib.C(Services.UserInputService.InputChanged, function(input)
 			if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
 				UpdateSlider(input.Position)
 			end
 		end)
 
-		Services.UserInputService.InputEnded:Connect(function(input)
+		Lib.C(Services.UserInputService.InputEnded, function(input)
 			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 				dragging = false
 			end
@@ -2380,6 +2412,10 @@ do
 		end
 	end
 
+	function Lib.ClearAllESP()
+		for plr in pairs(Refs.ESP) do ClearPlayerESP(plr) end
+	end
+
 	local function InitPlayerESP(plr)
 		if plr == App.Player then return end
 		ClearPlayerESP(plr)
@@ -2417,10 +2453,10 @@ do
 	for _, p in ipairs(Services.Players:GetPlayers()) do
 		if p ~= App.Player then InitPlayerESP(p) end
 	end
-	Services.Players.PlayerAdded:Connect(InitPlayerESP)
-	Services.Players.PlayerRemoving:Connect(ClearPlayerESP)
+	Lib.C(Services.Players.PlayerAdded, InitPlayerESP)
+	Lib.C(Services.Players.PlayerRemoving, ClearPlayerESP)
 
-	Services.Run.RenderStepped:Connect(function()
+	Lib.C(Services.Run.RenderStepped, function()
 		if not (State.ESP_Name or State.ESP_Outline or State.ESP_Box or State.ESP_Tracers) then
 			if Refs.ESPActive then
 				Refs.ESPActive = false
@@ -2557,19 +2593,52 @@ do
 	}
 
 	function Lib.ApplyBoostFPS()
-		pcall(function() sethiddenproperty(Services.Lighting, "Technology", 2) end)
-		Services.Lighting.GlobalShadows = false
-		Services.Lighting.FogEnd = 9e9
+		local lighting = Services.Lighting
+		pcall(function() Refs.BoostTech = gethiddenproperty(lighting, "Technology") end)
+		pcall(function() sethiddenproperty(lighting, "Technology", 2) end)
+		lighting.GlobalShadows = false
+		lighting.FogEnd = 9e9
+
+		local parts, materials, reflectances, decals, transparencies, effects = {}, {}, {}, {}, {}, {}
+		Refs.BoostSaved = { parts, materials, reflectances, decals, transparencies, effects }
 
 		for _, v in ipairs(Services.Workspace:GetDescendants()) do
 			if v:IsA("BasePart") and not v:IsA("MeshPart") then
+				local n = #parts + 1
+				parts[n], materials[n], reflectances[n] = v, v.Material, v.Reflectance
 				v.Material = Enum.Material.SmoothPlastic
 				v.Reflectance = 0
 			elseif v:IsA("Decal") or v:IsA("Texture") then
+				local n = #decals + 1
+				decals[n], transparencies[n] = v, v.Transparency
 				v.Transparency = 1
 			elseif v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") then
+				if v.Enabled then effects[#effects + 1] = v end
 				v.Enabled = false
 			end
+		end
+	end
+
+	function Lib.RevertBoostFPS()
+		local saved = Refs.BoostSaved
+		if not saved then return end
+		Refs.BoostSaved = nil
+		local lighting = Services.Lighting
+		if Refs.BoostTech then pcall(sethiddenproperty, lighting, "Technology", Refs.BoostTech) end
+		lighting.GlobalShadows = Refs.OrigLighting.GlobalShadows
+		lighting.FogEnd = Refs.OrigLighting.FogEnd
+		local parts, materials, reflectances, decals, transparencies, effects = table.unpack(saved)
+		for i = 1, #parts do
+			local part = parts[i]
+			if part.Parent then part.Material, part.Reflectance = materials[i], reflectances[i] end
+		end
+		for i = 1, #decals do
+			local decal = decals[i]
+			if decal.Parent then decal.Transparency = transparencies[i] end
+		end
+		for i = 1, #effects do
+			local effect = effects[i]
+			if effect.Parent then effect.Enabled = true end
 		end
 	end
 
@@ -2634,7 +2703,7 @@ do
 		TeleportTool = TeleportTool
 	}
 
-	Services.Run.RenderStepped:Connect(function()
+	Lib.C(Services.Run.RenderStepped, function()
 		local cam = App.Camera
 		if cam.FieldOfView ~= State.FOV then cam.FieldOfView = State.FOV end
 
@@ -2711,7 +2780,7 @@ do
 		end
 	end
 
-	App.Player.CharacterAdded:Connect(function()
+	Lib.C(App.Player.CharacterAdded, function()
 		if State.Fly then
 			task.wait(0.3)
 			Lib.UpdateFly(true)
@@ -2720,11 +2789,14 @@ do
 
 	local flingParts, flingClock = {}, 0
 
-	Services.Run.Heartbeat:Connect(function()
+	Lib.C(Services.Run.Heartbeat, function()
 		local char = App.Player.Character
 		local hum = char and char:FindFirstChildOfClass("Humanoid")
 		if not hum then return end
 
+		if Refs.OrigHum ~= hum then
+			Refs.OrigHum, Refs.OrigWS, Refs.OrigJP, Refs.OrigUJP = hum, hum.WalkSpeed, hum.JumpPower, hum.UseJumpPower
+		end
 		if hum.WalkSpeed ~= State.WalkSpeed and not State.FakeLagSuspension then hum.WalkSpeed = State.WalkSpeed end
 		if not hum.UseJumpPower then hum.UseJumpPower = true end
 		if hum.JumpPower ~= State.JumpPower then hum.JumpPower = State.JumpPower end
@@ -2812,7 +2884,7 @@ do
 	end
 
 	for _, prop in ipairs(LightProps) do
-		Services.Lighting:GetPropertyChangedSignal(prop):Connect(Lib.SyncLighting)
+		Lib.C(Services.Lighting:GetPropertyChangedSignal(prop), Lib.SyncLighting)
 	end
 
 	local function SetShader(props, effects)
@@ -2884,7 +2956,7 @@ do
 		})
 	end
 
-	App.Player.Idled:Connect(function()
+	Lib.C(App.Player.Idled, function()
 		if State.AntiAFK then
 			pcall(function()
 				Services.VirtualUser:CaptureController()
@@ -2895,7 +2967,7 @@ do
 
 	local noclipParts, noclipChar, noclipClock = {}, nil, 0
 
-	Services.Run.Stepped:Connect(function()
+	Lib.C(Services.Run.Stepped, function()
 		if not State.Noclip then return end
 		local char = App.Player.Character
 		if not char then return end
@@ -2915,7 +2987,7 @@ do
 		end
 	end)
 
-	Services.GuiService.ErrorMessageChanged:Connect(function()
+	Lib.C(Services.GuiService.ErrorMessageChanged, function()
 		if State.AutoReconnect then
 			task.wait(0.5)
 			pcall(function() Services.Teleport:Teleport(game.PlaceId, App.Player) end)
@@ -2958,7 +3030,7 @@ do
 		end
 	end
 
-	App.Player.CharacterAdded:Connect(function()
+	Lib.C(App.Player.CharacterAdded, function()
 		if State.InvisFE then
 			task.wait(0.3)
 			Lib.SetFEInvis(true)
@@ -3178,7 +3250,7 @@ do
 			end
 		end)
 
-		UIS.InputChanged:Connect(function(input)
+		Lib.C(UIS.InputChanged, function(input)
 			if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
 				local delta = input.Position - origin
 				goal = Clamp(startPos + Vector2.new(delta.X, delta.Y))
@@ -3227,7 +3299,7 @@ function Lib.BuildBunnyHop(group)
 	local UIS = Services.UserInputService
 	local momentum = 0
 
-	Services.Run.Heartbeat:Connect(function(dt)
+	Lib.C(Services.Run.Heartbeat, function(dt)
 		if not State.BunnyHop then
 			momentum = 0
 			return
@@ -3979,7 +4051,7 @@ end))
 			local ok, id, event = pcall(create_comm_channel)
 			if not ok or not event then return end
 			actorId, actorChannel = id, event
-			event.Event:Connect(function(remote, method, packed, trace)
+			Lib.C(event.Event, function(remote, method, packed, trace)
 				if typeof(remote) ~= "Instance" or type(packed) ~= "table" then return end
 				Record(remote, remote.ClassName, "OUT", tostring(method), packed, true, nil, trace)
 			end)
@@ -4012,7 +4084,7 @@ end))
 				if count % 2500 == 0 then task.wait() end
 			end
 		end)
-		game.DescendantAdded:Connect(Track)
+		Lib.C(game.DescendantAdded, Track)
 
 		task.spawn(function()
 			while UI.Screen.Parent do
@@ -4024,7 +4096,7 @@ end))
 			end
 		end)
 
-		Run.Heartbeat:Connect(function()
+		Lib.C(Run.Heartbeat, function()
 			local budget = 20
 			while head <= tail and budget > 0 do
 				local entry = queue[head]
@@ -4493,6 +4565,11 @@ function Lib.BuildQoL(scroll)
 		if Macro.Playing then StopPlayback() else StartPlayback() end
 	end
 
+	function Lib.StopMacro()
+		StopRecording(true)
+		StopPlayback(true)
+	end
+
 	local function SwitchAction(key)
 		return function()
 			local control = Lib.ToggleControls[key]
@@ -4581,7 +4658,7 @@ function Lib.BuildQoL(scroll)
 		end)
 	end
 
-	local inputConn = UIS.InputBegan:Connect(function(input, processed)
+	local inputConn = Lib.C(UIS.InputBegan, function(input, processed)
 		if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
 		local key = input.KeyCode
 		if capturing then
@@ -4980,7 +5057,7 @@ do
 	local BoostGroup = Lib.CreateFeatureGroup(VisualsScroll, "Boost FPS & World", 2)
 	Lib.CreateSettingToggleItem(BoostGroup, "Boost FPS", "Very strong texture compression & maximum performance boost", State.BoostFPS, function(val)
 		State.BoostFPS = val
-		if val then Lib.ApplyBoostFPS() end
+		if val then Lib.ApplyBoostFPS() else Lib.RevertBoostFPS() end
 	end)
 	Lib.CreateSettingToggleItem(BoostGroup, "FullBright", "Disable darkness, shadows and set maximum ambient brightness", State.FullBright, function(val)
 		State.FullBright = val
@@ -5271,7 +5348,7 @@ do
 	end, true)
 
 	task.spawn(function()
-		while true do
+		while not State.Unloaded do
 			task.wait(math.random(1, 3))
 			if State.FakeLagUsual and App.Player.Character and App.Player.Character:FindFirstChild("HumanoidRootPart") then
 				App.Player.Character.HumanoidRootPart.Anchored = true
@@ -5333,12 +5410,21 @@ do
 			titleLbl.Text = "Target: " .. p.DisplayName
 		end)
 	end)
+	Refs.BringObjs = {}
+
+	function Lib.StopBring()
+		State.IsBringing = false
+		if Refs.BringConn then Refs.BringConn:Disconnect() Refs.BringConn = nil end
+		if Refs.DescConn then Refs.DescConn:Disconnect() Refs.DescConn = nil end
+		if Refs.BringFolder then Refs.BringFolder:Destroy() Refs.BringFolder = nil end
+		local objs = Refs.BringObjs
+		for i = 1, #objs do objs[i]:Destroy() end
+		table.clear(objs)
+	end
+
 	Lib.CreateSettingButtonItem(BringGroup, "Toggle Bring Parts", "Attaches physics parts to target", function(titleLbl)
 		if State.IsBringing then
-			State.IsBringing = false
-			if Refs.BringConn then Refs.BringConn:Disconnect() Refs.BringConn = nil end
-			if Refs.DescConn then Refs.DescConn:Disconnect() Refs.DescConn = nil end
-			if Refs.BringFolder then Refs.BringFolder:Destroy() Refs.BringFolder = nil end
+			Lib.StopBring()
 			Lib.Notify({ Title = "Bring Parts", Text = "Stopped bringing parts" })
 			return
 		end
@@ -5370,6 +5456,9 @@ do
 				AlignPos.Responsiveness = 200
 				AlignPos.Attachment0 = Attachment2
 				AlignPos.Attachment1 = Attachment1
+				local objs = Refs.BringObjs
+				local n = #objs
+				objs[n + 1], objs[n + 2], objs[n + 3] = Torque, AlignPos, Attachment2
 			end
 		end
 
@@ -5378,9 +5467,7 @@ do
 
 		Refs.BringConn = Services.Run.RenderStepped:Connect(function()
 			if not State.IsBringing or not State.BringTarget or not State.BringTarget.Character then
-				if Refs.BringConn then Refs.BringConn:Disconnect() Refs.BringConn = nil end
-				if Refs.DescConn then Refs.DescConn:Disconnect() Refs.DescConn = nil end
-				if Refs.BringFolder then Refs.BringFolder:Destroy() Refs.BringFolder = nil end
+				Lib.StopBring()
 				return
 			end
 			local hrp = State.BringTarget.Character:FindFirstChild("HumanoidRootPart")
@@ -5571,8 +5658,8 @@ do
 		if isPlayerListOpen then RefreshPlayerDropdownList() end
 	end)
 
-	Services.Players.PlayerAdded:Connect(function() if isPlayerListOpen then RefreshPlayerDropdownList() end end)
-	Services.Players.PlayerRemoving:Connect(function(leavingPlr)
+	Lib.C(Services.Players.PlayerAdded, function() if isPlayerListOpen then RefreshPlayerDropdownList() end end)
+	Lib.C(Services.Players.PlayerRemoving, function(leavingPlr)
 		if State.TeleportTarget == leavingPlr then SetSelectedPlayer(nil) end
 		if isPlayerListOpen then RefreshPlayerDropdownList() end
 	end)
@@ -6473,6 +6560,549 @@ do
 		Lib.PlayClick()
 		Lib.LoadEmotesPage(State.EmotesPage)
 	end)
+end
+
+do
+	local Asset = game:GetService("AssetService")
+	local token, pending, failedId = 0, 0, nil
+	local dst, source, current
+
+	local function Free()
+		token = token + 1
+		if dst then pcall(dst.Destroy, dst) end
+		dst, source, current = nil, nil, nil
+	end
+
+	Lib.ReleaseBgSaturation = Free
+
+	function Lib.RefreshBgSaturation()
+		token = token + 1
+		local mine, image, id = token, UI.CustomBgImage, Lib.BgAssetId
+		if State.BgSaturation == 100 or not id or not image.Visible then
+			if dst then
+				if image.Visible and Lib.BgResolved then image.Image = Lib.BgResolved end
+				Free()
+			end
+			return
+		end
+		if failedId == id then return end
+
+		task.spawn(function()
+			local ok = pcall(function()
+				if current ~= id then
+					if dst then pcall(dst.Destroy, dst) dst = nil end
+					local editable = Asset:CreateEditableImageAsync(Content.fromAssetId(tonumber(id)))
+					dst, current = editable, id
+					source = editable:ReadPixelsBuffer(Vector2.zero, editable.Size)
+				end
+				local size = dst.Size
+				local width, height, saturation = size.X, size.Y, State.BgSaturation / 100
+				local out = buffer.create(buffer.len(source))
+				local readu8, writeu8 = buffer.readu8, buffer.writeu8
+				for y = 0, height - 1 do
+					for offset = y * width * 4, (y + 1) * width * 4 - 4, 4 do
+						local r, g, b = readu8(source, offset), readu8(source, offset + 1), readu8(source, offset + 2)
+						local luma = r * 0.299 + g * 0.587 + b * 0.114
+						writeu8(out, offset, math.clamp(luma + (r - luma) * saturation, 0, 255) // 1)
+						writeu8(out, offset + 1, math.clamp(luma + (g - luma) * saturation, 0, 255) // 1)
+						writeu8(out, offset + 2, math.clamp(luma + (b - luma) * saturation, 0, 255) // 1)
+						writeu8(out, offset + 3, readu8(source, offset + 3))
+					end
+					if y % 48 == 47 then
+						task.wait()
+						if mine ~= token then return end
+					end
+				end
+				dst:WritePixelsBuffer(Vector2.zero, size, out)
+				image.ImageContent = Content.fromObject(dst)
+			end)
+			if not ok and mine == token then
+				failedId = id
+				Lib.Notify({ Title = "Background", Text = "Saturation is not supported for this image or executor" })
+			end
+		end)
+	end
+
+	function Lib.QueueBgSaturation()
+		pending = pending + 1
+		local mine = pending
+		task.delay(0.35, function()
+			if mine == pending and not State.Unloaded then Lib.RefreshBgSaturation() end
+		end)
+	end
+end
+
+function Lib.BuildMusic(group)
+	local Http, Run, UIS = Services.HttpService, Services.Run, Services.UserInputService
+	local Market = game:GetService("MarketplaceService")
+	local FILE, FOLDER, BARS = "SeptusHub_Music.json", "SeptusHub_Music", 14
+	local WHITE, BLACK = Color3.fromRGB(255, 255, 255), Color3.fromRGB(0, 0, 0)
+	local request = request or http_request or (syn and syn.request)
+	local list, order, rows = {}, {}, {}
+	local mode, cur, loading, failed, autoPaused, token = "Asset ID", nil, false, false, false, 0
+	local Refresh, Play, Toggle, Step, Rebuild
+
+	local sound = Lib.Create("Sound", { Name = "SeptusMusic", Volume = State.MusicVolume / 100, Parent = Services.SoundService })
+
+	if isfile and readfile then
+		pcall(function()
+			if not isfile(FILE) then return end
+			for _, entry in ipairs(Http:JSONDecode(readfile(FILE))) do
+				if type(entry) == "table" and type(entry.value) == "string" and (entry.kind == "id" or entry.kind == "url") then
+					list[#list + 1] = { kind = entry.kind, value = entry.value, name = tostring(entry.name or entry.value), fav = entry.fav == true }
+				end
+			end
+		end)
+	end
+	pcall(function()
+		if makefolder and not isfolder(FOLDER) then makefolder(FOLDER) end
+	end)
+
+	local function Save()
+		if not writefile then return end
+		local out = {}
+		for i, entry in ipairs(list) do
+			out[i] = { kind = entry.kind, value = entry.value, name = entry.name, fav = entry.fav }
+		end
+		pcall(writefile, FILE, Http:JSONEncode(out))
+	end
+
+	local function Hash(text)
+		local h = 5381
+		for i = 1, #text do h = (h * 33 + text:byte(i)) % 4294967296 end
+		return h
+	end
+
+	local function Resolve(entry)
+		if entry.kind == "id" then return "rbxassetid://" .. entry.value end
+		if not (request and writefile and isfile and getcustomasset) then return nil end
+		local ext = entry.value:gsub("[?#].*$", ""):match("%.(%a%w?%w?%w?)$") or "mp3"
+		local path = FOLDER .. "/m_" .. Hash(entry.value) .. "." .. ext
+		if not isfile(path) then
+			local response = request({ Url = entry.value, Method = "GET" })
+			if not response or (response.StatusCode or 200) >= 400 or not response.Body or #response.Body == 0 then return nil end
+			writefile(path, response.Body)
+		end
+		return getcustomasset(path)
+	end
+
+	local function Row(height)
+		return Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, height), BackgroundTransparency = 1, Parent = group })
+	end
+
+	local top = Row(58)
+	top.ZIndex = 5
+
+	local modeBtn = Lib.Create("TextButton", {
+		Size = UDim2.fromOffset(96, 36), Position = UDim2.fromOffset(12, 11), BackgroundColor3 = Color3.fromRGB(22, 22, 22),
+		Text = "Asset ID", TextColor3 = Color3.fromRGB(240, 240, 240), TextSize = 12, Font = Enum.Font.GothamMedium,
+		TextXAlignment = Enum.TextXAlignment.Left, AutoButtonColor = false, Parent = top,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
+		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10) })
+	})
+	Lib.RegisterThemeElement(modeBtn, "BackgroundColor3", 0.7)
+	Lib.RegisterThemeText(modeBtn, "Primary")
+
+	local chevron = Lib.Create("TextLabel", {
+		Size = UDim2.fromOffset(16, 36), Position = UDim2.new(1, -20, 0, 0), BackgroundTransparency = 1, Text = "▾",
+		TextColor3 = Color3.fromRGB(150, 150, 150), TextSize = 12, Font = Enum.Font.GothamBold, Parent = modeBtn
+	})
+	Lib.RegisterThemeText(chevron, "Secondary")
+
+	local input = Lib.Create("TextBox", {
+		Size = UDim2.new(1, -188, 0, 36), Position = UDim2.fromOffset(116, 11), BackgroundColor3 = Color3.fromRGB(22, 22, 22),
+		PlaceholderText = "Paste an Asset ID...", PlaceholderColor3 = Color3.fromRGB(110, 110, 110), TextColor3 = Color3.fromRGB(240, 240, 240),
+		TextSize = 12, Font = Enum.Font.GothamMedium, Text = "", ClearTextOnFocus = false, TextXAlignment = Enum.TextXAlignment.Left, Parent = top,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
+		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
+	})
+	Lib.RegisterThemeElement(input, "BackgroundColor3", 0.7)
+	Lib.RegisterThemeText(input, "Primary")
+
+	local addBtn = Lib.Create("TextButton", {
+		Size = UDim2.fromOffset(56, 36), Position = UDim2.new(1, -68, 0, 11), BackgroundColor3 = WHITE,
+		Text = "Add", TextColor3 = BLACK, TextSize = 12, Font = Enum.Font.GothamBold, AutoButtonColor = false, Parent = top,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
+	})
+
+	local popup = Lib.Create("Frame", {
+		Size = UDim2.fromOffset(96, 66), Position = UDim2.fromOffset(12, 50), BackgroundColor3 = Color3.fromRGB(22, 22, 22),
+		Visible = false, ZIndex = 10, Parent = top,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
+		Lib.Create("UIStroke", { Color = Color3.fromRGB(60, 60, 60), Thickness = 1, Transparency = 0.4 })
+	})
+	Lib.RegisterThemeElement(popup, "BackgroundColor3", 0.7)
+
+	local function SetMode(value)
+		mode = value
+		modeBtn.Text = value
+		input.PlaceholderText = value == "URL" and "Paste an audio URL..." or "Paste an Asset ID..."
+		popup.Visible = false
+	end
+
+	for i, label in ipairs({ "Asset ID", "URL" }) do
+		local option = Lib.Create("TextButton", {
+			Size = UDim2.new(1, -8, 0, 28), Position = UDim2.fromOffset(4, 3 + (i - 1) * 30), BackgroundTransparency = 1,
+			Text = label, TextColor3 = Color3.fromRGB(240, 240, 240), TextSize = 12, Font = Enum.Font.GothamMedium,
+			TextXAlignment = Enum.TextXAlignment.Left, AutoButtonColor = false, ZIndex = 11, Parent = popup,
+			Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 6) })
+		})
+		Lib.RegisterThemeText(option, "Primary")
+		option.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			SetMode(label)
+		end)
+	end
+
+	modeBtn.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		popup.Visible = not popup.Visible
+	end)
+
+	local playerRow = Row(66)
+	local box = Lib.Create("Frame", {
+		Size = UDim2.new(1, -24, 0, 56), Position = UDim2.fromOffset(12, 0), BackgroundColor3 = Color3.fromRGB(22, 22, 22), Parent = playerRow,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
+	})
+	Lib.RegisterThemeElement(box, "BackgroundColor3", 0.7)
+
+	local function IconButton(text, x)
+		return Lib.Create("TextButton", {
+			Size = UDim2.fromOffset(28, 28), Position = UDim2.new(0, x, 0.5, -14), BackgroundTransparency = 1, Text = text,
+			TextColor3 = Color3.fromRGB(150, 150, 150), TextSize = 10, Font = Enum.Font.GothamBold, AutoButtonColor = false, Parent = box
+		})
+	end
+
+	local prevBtn = IconButton("◀◀", 10)
+	local nextBtn = IconButton("▶▶", 86)
+	local playBtn = Lib.Create("TextButton", {
+		Size = UDim2.fromOffset(36, 36), Position = UDim2.new(0, 42, 0.5, -18), BackgroundColor3 = WHITE, Text = "▶", TextColor3 = BLACK,
+		TextSize = 14, Font = Enum.Font.GothamBold, AutoButtonColor = false, Parent = box,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
+	})
+
+	local titleLabel = Lib.Create("TextLabel", {
+		Size = UDim2.new(1, -140, 0, 18), Position = UDim2.fromOffset(126, 11), BackgroundTransparency = 1, Text = "Nothing playing",
+		TextColor3 = Color3.fromRGB(240, 240, 240), TextSize = 13, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd, Parent = box
+	})
+	Lib.RegisterThemeText(titleLabel, "Primary")
+
+	local statusLabel = Lib.Create("TextLabel", {
+		Size = UDim2.new(1, -140, 0, 14), Position = UDim2.fromOffset(126, 31), BackgroundTransparency = 1, Text = "NO TRACK",
+		TextColor3 = Color3.fromRGB(130, 130, 130), TextSize = 10, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, Parent = box
+	})
+	Lib.RegisterThemeText(statusLabel, "Secondary")
+
+	local listFrame = Lib.Create("Frame", {
+		Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = group,
+		Lib.Create("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }),
+		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12), PaddingBottom = UDim.new(0, 8) })
+	})
+
+	function Refresh()
+		local status
+		if loading then
+			status = "LOADING"
+		elseif failed then
+			status = "ERROR"
+		elseif not cur then
+			status = "NO TRACK"
+		elseif sound.IsPlaying then
+			status = "PLAYING"
+		else
+			status = "PAUSED"
+		end
+		local playing = status == "PLAYING"
+		titleLabel.Text = cur and cur.name or "Nothing playing"
+		statusLabel.Text = status
+		playBtn.Text = playing and "II" or "▶"
+		for entry, button in pairs(rows) do
+			local active = entry == cur
+			button.Text = (active and playing) and "II" or "▶"
+			button.TextColor3 = active and Lib.Palette.Primary or Lib.Palette.Secondary
+		end
+	end
+
+	function Play(entry)
+		cur, loading, failed, autoPaused = entry, true, false, false
+		token = token + 1
+		local mine = token
+		sound:Stop()
+		Refresh()
+		task.spawn(function()
+			local ok, src = pcall(Resolve, entry)
+			if mine ~= token then return end
+			loading = false
+			if not ok or not src then
+				failed = true
+				Refresh()
+				Lib.Notify({ Title = "Music", Text = "Failed to load the track" })
+				return
+			end
+			sound.SoundId = src
+			sound.TimePosition = 0
+			sound:Play()
+			Refresh()
+			task.delay(10, function()
+				if mine == token and not sound.IsLoaded then
+					failed = true
+					Refresh()
+				end
+			end)
+		end)
+	end
+
+	function Toggle()
+		if not cur then
+			if order[1] then Play(order[1]) end
+		elseif loading then
+			return
+		elseif failed then
+			Play(cur)
+		elseif sound.IsPlaying then
+			sound:Pause()
+		elseif sound.IsPaused then
+			sound:Resume()
+		else
+			sound:Play()
+		end
+		Refresh()
+	end
+
+	function Step(direction)
+		local count = #order
+		if count == 0 then return end
+		local position = cur and table.find(order, cur) or (direction > 0 and 0 or count + 1)
+		Play(order[(position - 1 + direction) % count + 1])
+	end
+
+	local function Remove(entry)
+		if cur == entry then
+			token = token + 1
+			cur, loading, failed = nil, false, false
+			sound:Stop()
+		end
+		local position = table.find(list, entry)
+		if position then table.remove(list, position) end
+		Save()
+		Rebuild()
+	end
+
+	function Rebuild()
+		for _, child in ipairs(listFrame:GetChildren()) do
+			if child:IsA("GuiObject") then child:Destroy() end
+		end
+		table.clear(rows)
+		table.clear(order)
+		for _, entry in ipairs(list) do
+			if entry.fav then order[#order + 1] = entry end
+		end
+		for _, entry in ipairs(list) do
+			if not entry.fav then order[#order + 1] = entry end
+		end
+
+		if #order == 0 then
+			local empty = Lib.Create("TextLabel", {
+				Size = UDim2.new(1, 0, 0, 24), BackgroundTransparency = 1, Text = "Playlist is empty", TextColor3 = Color3.fromRGB(120, 120, 120),
+				TextSize = 12, Font = Enum.Font.GothamMedium, Parent = listFrame
+			})
+			Lib.RegisterThemeText(empty, "Secondary")
+			Refresh()
+			return
+		end
+
+		for i, entry in ipairs(order) do
+			local item = Lib.Create("Frame", {
+				Size = UDim2.new(1, 0, 0, 40), BackgroundColor3 = Color3.fromRGB(22, 22, 22), LayoutOrder = i, Parent = listFrame,
+				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
+			})
+			Lib.RegisterThemeElement(item, "BackgroundColor3", 0.7)
+
+			local play = Lib.Create("TextButton", {
+				Size = UDim2.fromOffset(28, 28), Position = UDim2.new(0, 8, 0.5, -14), BackgroundTransparency = 1, Text = "▶",
+				TextColor3 = Lib.Palette.Secondary, TextSize = 11, Font = Enum.Font.GothamBold, AutoButtonColor = false, Parent = item
+			})
+			local name = Lib.Create("TextLabel", {
+				Size = UDim2.new(1, -112, 1, 0), Position = UDim2.fromOffset(42, 0), BackgroundTransparency = 1, Text = entry.name,
+				TextColor3 = Color3.fromRGB(240, 240, 240), TextSize = 12, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left,
+				TextTruncate = Enum.TextTruncate.AtEnd, Parent = item
+			})
+			Lib.RegisterThemeText(name, "Primary")
+			local star = Lib.Create("TextButton", {
+				Size = UDim2.fromOffset(24, 24), Position = UDim2.new(1, -64, 0.5, -12), BackgroundTransparency = 1,
+				Text = entry.fav and "★" or "☆", TextColor3 = entry.fav and Color3.fromRGB(255, 205, 50) or Color3.fromRGB(150, 150, 150),
+				TextSize = 14, Font = Enum.Font.GothamBold, AutoButtonColor = false, Parent = item
+			})
+			local remove = Lib.Create("TextButton", {
+				Size = UDim2.fromOffset(24, 24), Position = UDim2.new(1, -34, 0.5, -12), BackgroundTransparency = 1, Text = "×",
+				TextColor3 = Color3.fromRGB(150, 150, 150), TextSize = 16, Font = Enum.Font.GothamBold, AutoButtonColor = false, Parent = item
+			})
+
+			rows[entry] = play
+			play.MouseButton1Click:Connect(function()
+				Lib.PlayClick()
+				if cur == entry then Toggle() else Play(entry) end
+			end)
+			star.MouseButton1Click:Connect(function()
+				Lib.PlayClick()
+				entry.fav = not entry.fav
+				Save()
+				Rebuild()
+			end)
+			remove.MouseButton1Click:Connect(function()
+				Lib.PlayClick()
+				Remove(entry)
+			end)
+		end
+		Refresh()
+	end
+
+	local function Add()
+		local text = input.Text:match("^%s*(.-)%s*$")
+		if text == "" then return end
+		local entry
+		if mode == "Asset ID" then
+			local id = tonumber(text) and text or text:match("rbxassetid://(%d+)") or text:match("[?&]id=(%d+)") or text:match("/library/(%d+)") or text:match("(%d%d%d%d+)")
+			if not id then
+				Lib.Notify({ Title = "Music", Text = "Invalid Asset ID" })
+				return
+			end
+			entry = { kind = "id", value = id, name = "Asset " .. id, fav = false }
+		else
+			if not text:match("^https?://") then
+				Lib.Notify({ Title = "Music", Text = "Enter a valid http(s) URL" })
+				return
+			end
+			if not (request and writefile and getcustomasset) then
+				Lib.Notify({ Title = "Music", Text = "This executor cannot play audio from URLs" })
+				return
+			end
+			local base = text:gsub("[?#].*$", ""):match("([^/]+)$") or text
+			base = base:gsub("%.%w+$", "")
+			base = base:gsub("%%(%x%x)", function(hex) return string.char(tonumber(hex, 16)) end)
+			entry = { kind = "url", value = text, name = base ~= "" and base or text, fav = false }
+		end
+		for _, other in ipairs(list) do
+			if other.kind == entry.kind and other.value == entry.value then
+				Lib.Notify({ Title = "Music", Text = "Already in the playlist" })
+				return
+			end
+		end
+		if #list >= 100 then
+			Lib.Notify({ Title = "Music", Text = "Playlist is full" })
+			return
+		end
+		list[#list + 1] = entry
+		input.Text = ""
+		popup.Visible = false
+		Save()
+		Rebuild()
+		if entry.kind == "id" then
+			task.spawn(function()
+				local ok, info = pcall(Market.GetProductInfo, Market, tonumber(entry.value))
+				if ok and type(info) == "table" and info.Name and info.Name ~= "" and table.find(list, entry) then
+					entry.name = info.Name
+					Save()
+					Rebuild()
+				end
+			end)
+		end
+	end
+
+	addBtn.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		Add()
+	end)
+	input.FocusLost:Connect(function(enter)
+		if enter then Add() end
+	end)
+	prevBtn.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		Step(-1)
+	end)
+	nextBtn.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		Step(1)
+	end)
+	playBtn.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		Toggle()
+	end)
+
+	sound.Ended:Connect(function()
+		if #order > 1 then Step(1) else Refresh() end
+	end)
+	sound.Loaded:Connect(function()
+		failed = false
+		Refresh()
+	end)
+	for _, signal in ipairs({ sound.Played, sound.Paused, sound.Resumed, sound.Stopped }) do
+		signal:Connect(Refresh)
+	end
+
+	Lib.CreateSettingSliderItem(group, "Volume", "Adjust the music volume", 0, 100, State.MusicVolume, function(value)
+		State.MusicVolume = value
+		sound.Volume = value / 100
+	end, false, "%")
+	Lib.CreateSettingToggleItem(group, "Only When Focused", "Pause the music when the window loses focus", State.MusicFocus, function(value)
+		State.MusicFocus = value
+	end)
+	Lib.CreateSettingToggleItem(group, "Titlebar Visualizer", "Show bars for the playing track in the title bar", State.MusicVisualizer, function(value)
+		State.MusicVisualizer = value
+	end, true)
+
+	Lib.C(UIS.WindowFocusReleased, function()
+		if State.MusicFocus and sound.IsPlaying then
+			autoPaused = true
+			sound:Pause()
+		end
+	end)
+	Lib.C(UIS.WindowFocused, function()
+		if autoPaused then
+			autoPaused = false
+			sound:Resume()
+		end
+	end)
+
+	local holder = Lib.Create("Frame", {
+		Name = "MusicVisualizer", Size = UDim2.fromOffset(BARS * 6, 28), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -140, 0, 29),
+		BackgroundTransparency = 1, Visible = false, ZIndex = 3, Parent = UI.Main
+	})
+	local bars, levels = {}, {}
+	for i = 1, BARS do
+		levels[i] = 0.1
+		bars[i] = Lib.Create("Frame", {
+			Size = UDim2.new(0, 4, 0.1, 0), AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, (i - 1) * 6, 1, 0),
+			BackgroundColor3 = Lib.Palette.Primary, BorderSizePixel = 0, ZIndex = 3, Parent = holder,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) })
+		})
+	end
+
+	local accumulator = 0
+	Lib.C(Run.RenderStepped, function(dt)
+		local want = State.MusicVisualizer and sound.IsPlaying
+		if holder.Visible ~= want then holder.Visible = want end
+		if not want then return end
+		accumulator = accumulator + dt
+		if accumulator < 0.033 then return end
+		accumulator = 0
+		table.remove(levels, 1)
+		levels[BARS] = math.clamp(sound.PlaybackLoudness / 400, 0.08, 1)
+		local phase, color = os.clock() * 8, Lib.Palette.Primary
+		for i = 1, BARS do
+			local bar = bars[i]
+			bar.Size = UDim2.new(0, 4, math.clamp(levels[i] * (0.7 + 0.3 * math.sin(phase + i * 1.3)), 0.08, 1), 0)
+			bar.BackgroundColor3 = color
+		end
+	end)
+
+	function Lib.StopMusic()
+		token = token + 1
+		sound:Destroy()
+	end
+
+	Rebuild()
 end
 
 do
@@ -7404,8 +8034,7 @@ do
 
 			fontBtns[i] = { Item = Item, Stroke = Stroke, Badge = CheckBadge, Data = fData }
 
-			Item.MouseButton1Click:Connect(function()
-				Lib.PlayClick()
+			Lib.FontSelectors[i] = function()
 				State.SelectedFontIndex = i
 				for idx, btnInfo in ipairs(fontBtns) do
 					local sel = (idx == i)
@@ -7413,6 +8042,11 @@ do
 					btnInfo.Stroke.Transparency = sel and 0 or 1
 				end
 				Lib.ApplyGlobalFont(fData.regular, fData.bold)
+			end
+
+			Item.MouseButton1Click:Connect(function()
+				Lib.PlayClick()
+				Lib.FontSelectors[i]()
 			end)
 		end
 	end
@@ -7477,11 +8111,15 @@ do
 		local image = UI.CustomBgImage
 		if val == "" then
 			image.Visible = false
+			Lib.BgAssetId, Lib.BgResolved = nil, nil
+			Lib.RefreshBgSaturation()
 			return
 		end
 		local resolved, id = Lib.ResolveImage(val)
 		image.Image = resolved
 		image.Visible = true
+		Lib.BgResolved, Lib.BgAssetId = resolved, id
+		Lib.RefreshBgSaturation()
 		if id then
 			task.delay(2, function()
 				if image.Image == resolved and not image.IsLoaded then
@@ -7624,10 +8262,16 @@ do
 	Lib.CreateSettingSliderItem(CustomBgGroup, "Background Zoom", "Enlarges the image so corners baked into it get cropped by the window", 100, 160, State.BgZoom, function(val)
 		State.BgZoom = val
 		if not State.AnimatedBgEnabled then UI.CustomBgImage.Size = Lib.BgSize(1) end
-	end, true)
+	end)
+	Lib.CreateSettingSliderItem(CustomBgGroup, "Background Saturation", "Color intensity of the custom background image", 0, 200, State.BgSaturation, function(val)
+		State.BgSaturation = val
+		Lib.QueueBgSaturation()
+	end, true, "%")
+
+	Lib.BuildMusic(Lib.CreateFeatureGroup(AppearanceScroll, "Music", 6))
 
 	task.spawn(function()
-		while true do
+		while not State.Unloaded do
 			if State.AnimatedBgEnabled and UI.CustomBgImage.Visible then
 				Lib.Tween(UI.CustomBgImage, 4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, { Position = UDim2.fromScale(0.47, 0.47), Size = Lib.BgSize(1.1) })
 				task.wait(4)
@@ -7695,74 +8339,76 @@ do
 	})
 
 	local CONFIG_FOLDER = "SeptusHub_Configs"
+	local AUTO_FILE = "SeptusHub_AutoLoad.txt"
+	local autoName
+	pcall(function()
+		if isfile and isfile(AUTO_FILE) then
+			local saved = readfile(AUTO_FILE):match("^%s*(.-)%s*$")
+			autoName = saved ~= "" and saved or nil
+		end
+	end)
 	pcall(function()
 		if makefolder and not isfolder(CONFIG_FOLDER) then
 			makefolder(CONFIG_FOLDER)
 		end
 	end)
 
+	local ConfigFields = {
+		{ "CornerRadius", "CornerRadius", "Corner Radius" },
+		{ "WindowTransparency", "WindowTransparency", "Window Transparency" },
+		{ "PanelTransparency", "PanelTransparency", "Panel Transparency" },
+		{ "BgOpacity", "BgOpacity", "Background Opacity" },
+		{ "BgZoom", "BgZoom", "Background Zoom" },
+		{ "BgSaturation", "BgSaturation", "Background Saturation" },
+		{ "MusicVolume", "MusicVolume", "Volume" },
+		{ "WalkSpeed", "WalkSpeed", "Walk Speed" },
+		{ "JumpPower", "JumpPower", "Jump Power" },
+		{ "FlySpeed", "FlySpeed", "Fly Speed" },
+		{ "FOV", "FOV", "Fov Changer" },
+		{ "HideLogo", "HideLogo", "Hide Logo", true },
+		{ "HideName", "HideName", "Hide Name", true },
+		{ "AnimatedBg", "AnimatedBgEnabled", "Animated Drift Effect", true },
+		{ "NotificationsEnabled", "NotificationsEnabled", "System Notifications", true },
+		{ "PlayerNotifsEnabled", "PlayerNotifsEnabled", "Player Activity Notifications", true },
+		{ "FlyAntiSit", "FlyAntiSit", "Prevent Seating in Flight", true },
+		{ "MusicFocus", "MusicFocus", "Only When Focused", true },
+		{ "MusicVisualizer", "MusicVisualizer", "Titlebar Visualizer", true }
+	}
+
 	local function GetStateDump()
-		return {
-			ThemeIndex = State.SelectedThemeIndex,
-			FontIndex = State.SelectedFontIndex,
-			CornerRadius = State.CornerRadius,
-			WindowTransparency = State.WindowTransparency,
-			PanelTransparency = State.PanelTransparency,
-			HideLogo = State.HideLogo,
-			HideName = State.HideName,
-			CustomBg = State.CustomBackgroundId,
-			BgOpacity = State.BgOpacity,
-			BgZoom = State.BgZoom,
-			AnimatedBg = State.AnimatedBgEnabled,
-			NotificationsEnabled = State.NotificationsEnabled,
-			PlayerNotifsEnabled = State.PlayerNotifsEnabled,
-			WalkSpeed = State.WalkSpeed,
-			JumpPower = State.JumpPower,
-			FlySpeed = State.FlySpeed,
-			FlyAntiSit = State.FlyAntiSit,
-			FOV = State.FOV
-		}
+		local dump = { ThemeIndex = State.SelectedThemeIndex, FontIndex = State.SelectedFontIndex, CustomBg = State.CustomBackgroundId }
+		for _, field in ipairs(ConfigFields) do
+			dump[field[1]] = State[field[2]]
+		end
+		return dump
 	end
 
 	local function ApplyStateDump(data)
-		if not data then return end
+		if type(data) ~= "table" then return end
 		if data.ThemeIndex and Lib.ResolveTheme(data.ThemeIndex) then
 			Lib.SelectTheme(data.ThemeIndex)
 		end
-		if data.CornerRadius then
-			Lib.SetCornerRadius(data.CornerRadius)
+		local selectFont = data.FontIndex and Lib.FontSelectors[data.FontIndex]
+		if selectFont then selectFont() end
+		for _, field in ipairs(ConfigFields) do
+			local value = data[field[1]]
+			if value ~= nil then
+				local toggle = field[4]
+				local control = (toggle and Lib.ToggleControls or Lib.SliderControls)[field[3]]
+				if not control then
+					State[field[2]] = value
+				elseif toggle then
+					control.Set(value)
+				else
+					control(value)
+				end
+			end
 		end
-		if data.WindowTransparency then
-			State.WindowTransparency = data.WindowTransparency
-			UI.Main.BackgroundTransparency = data.WindowTransparency / 100
-		end
-		if data.PanelTransparency then
-			State.PanelTransparency = data.PanelTransparency
-			Lib.ApplyPanelTransparency()
-		end
-		if data.HideLogo ~= nil then State.HideLogo = data.HideLogo end
-		if data.HideName ~= nil then State.HideName = data.HideName end
-		Lib.ApplyHeader()
-		if data.BgOpacity then
-			State.BgOpacity = data.BgOpacity
-			UI.CustomBgImage.ImageTransparency = (100 - data.BgOpacity) / 100
-		end
-		if data.BgZoom then
-			State.BgZoom = data.BgZoom
-			UI.CustomBgImage.Size = Lib.BgSize(1)
-		end
-		if data.CustomBg then
+		if data.CustomBg ~= nil then
 			State.CustomBackgroundId = data.CustomBg
 			bgInput.Text = data.CustomBg
 			UpdateBg()
 		end
-		if data.NotificationsEnabled ~= nil then State.NotificationsEnabled = data.NotificationsEnabled end
-		if data.PlayerNotifsEnabled ~= nil then State.PlayerNotifsEnabled = data.PlayerNotifsEnabled end
-		if data.WalkSpeed then State.WalkSpeed = data.WalkSpeed end
-		if data.JumpPower then State.JumpPower = data.JumpPower end
-		if data.FlySpeed then State.FlySpeed = data.FlySpeed end
-		if data.FlyAntiSit ~= nil then State.FlyAntiSit = data.FlyAntiSit end
-		if data.FOV then State.FOV = data.FOV end
 	end
 
 	local function RefreshConfigsList()
@@ -7788,7 +8434,7 @@ do
 				Lib.RegisterThemeElement(item, "BackgroundColor3", 0.7)
 
 				local nameLabel = Lib.Create("TextLabel", {
-					Size = UDim2.new(1, -160, 1, 0),
+					Size = UDim2.new(1, -225, 1, 0),
 					Position = UDim2.new(0, 14, 0, 0),
 					BackgroundTransparency = 1,
 					Text = cName,
@@ -7811,6 +8457,27 @@ do
 					Parent = item,
 					Lib.Create("UICorner", { CornerRadius = UDim.new(0, 4) })
 				})
+
+				local isAuto = autoName == cName
+				local autoBtn = Lib.Create("TextButton", {
+					Size = UDim2.fromOffset(56, 28),
+					Position = UDim2.new(1, -207, 0.5, -14),
+					BackgroundColor3 = isAuto and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(35, 35, 35),
+					Text = "Auto",
+					TextColor3 = isAuto and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(150, 150, 150),
+					TextSize = 11,
+					Font = Enum.Font.GothamBold,
+					Parent = item,
+					Lib.Create("UICorner", { CornerRadius = UDim.new(0, 4) })
+				})
+
+				autoBtn.MouseButton1Click:Connect(function()
+					Lib.PlayClick()
+					autoName = (not isAuto) and cName or nil
+					if writefile then pcall(writefile, AUTO_FILE, autoName or "") end
+					RefreshConfigsList()
+					Lib.Notify({ Title = "Config", Text = autoName and ("Auto-load: " .. cName) or "Auto-load disabled" })
+				end)
 
 				local deleteBtn = Lib.Create("TextButton", {
 					Size = UDim2.fromOffset(65, 28),
@@ -7838,6 +8505,10 @@ do
 					Lib.PlayClick()
 					pcall(function()
 						if delfile then delfile(f) end
+						if autoName == cName then
+							autoName = nil
+							pcall(writefile, AUTO_FILE, "")
+						end
 						RefreshConfigsList()
 						Lib.Notify({ Title = "Config", Text = "Deleted config: " .. cName })
 					end)
@@ -7873,6 +8544,60 @@ do
 	end)
 
 	RefreshConfigsList()
+
+	if autoName then
+		task.defer(function()
+			pcall(function()
+				local path = CONFIG_FOLDER .. "/" .. autoName .. ".json"
+				if isfile(path) then
+					ApplyStateDump(Services.HttpService:JSONDecode(readfile(path)))
+					Lib.Notify({ Title = "Config", Text = "Auto-loaded config: " .. autoName })
+				end
+			end)
+		end)
+	end
+end
+
+Lib.FeatureToggles = {
+	"Bunny Hop", "Esp Name", "ESP Outline", "Box ESP", "Tracers", "Boost FPS", "FullBright", "Remove Texture", "Part Deleted",
+	"Fly", "Anti Fling", "Anti Sit", "Anti Void", "Anti Stun", "Anti Ragdoll", "RTX Realistic", "Cyberpunk Neon", "Silent Hill Fog",
+	"Stalk Active", "Complete Suspension", "Usual Lag", "Anti-AFK", "Noclip", "Invisibility", "Auto Reconnect", "Teleport Tool"
+}
+
+function Lib.Unload()
+	if State.Unloaded then return end
+	local unanchor = State.StalkActive or State.FakeLagUsual
+	State.Unloaded = true
+
+	for _, title in ipairs(Lib.FeatureToggles) do
+		local control = Lib.ToggleControls[title]
+		if control and control.Get() then pcall(control.Set, false) end
+	end
+
+	State.FlingTarget = nil
+	for _, name in ipairs({ "StopBring", "StopMacro", "StopCurrentEmote", "ClearAllESP", "StopMusic", "ReleaseBgSaturation" }) do
+		local cleanup = Lib[name]
+		if cleanup then pcall(cleanup) end
+	end
+
+	for _, tool in pairs(Refs.Tools) do pcall(tool.Destroy, tool) end
+	if Refs.ShaderFolder then Refs.ShaderFolder:Destroy() end
+
+	local char = App.Player.Character
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	local root = char and char:FindFirstChild("HumanoidRootPart")
+	if root and unanchor then root.Anchored = false end
+	if hum then
+		if Refs.OrigHum == hum then
+			hum.WalkSpeed, hum.UseJumpPower, hum.JumpPower = Refs.OrigWS, Refs.OrigUJP, Refs.OrigJP
+		end
+		App.Camera.CameraSubject = hum
+	end
+	App.Camera.FieldOfView = Refs.OrigFOV
+
+	for _, connection in ipairs(Lib.Conns) do connection:Disconnect() end
+	table.clear(Lib.Conns)
+	ClickSound:Destroy()
 end
 
 function Lib.SwitchMainTab(tab)
@@ -8564,7 +9289,7 @@ do
 	end
 
 	local lastT, frames = tick(), 0
-	Services.Run.RenderStepped:Connect(function()
+	Lib.C(Services.Run.RenderStepped, function()
 		frames = frames + 1
 		local curT = tick()
 		if curT - lastT >= 1 then
@@ -8624,7 +9349,7 @@ do
 		end
 	end)
 
-	Services.UserInputService.InputChanged:Connect(function(input)
+	Lib.C(Services.UserInputService.InputChanged, function(input)
 		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
 			local delta = input.Position - dragStart
 			if delta.Magnitude > 4 then
