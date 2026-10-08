@@ -72,7 +72,7 @@ local App = {
 		PlayerNotifsEnabled = true,
 
 		ScriptsPage = 1, ScriptsTotalPages = 1, ScriptsLoading = false, ScriptsCache = {}, ScriptsGen = 0, ScriptsCount = 0, ScriptsBackoff = 0,
-		ScriptsProvider = "Rscripts", ScriptsSort = "Newest",
+		ScriptsProvider = "Rscripts", ScriptsSort = "Newest", ScriptsQuery = "",
 
 		EmotesPage = 1, EmotesTotalPages = 1, EmotesLoading = false,
 		EmotesCache = {},
@@ -81,6 +81,8 @@ local App = {
 		BundleAnimCache = {},
 		EmotesCategory = "Emotes",
 		EmotesSort = "Most Liked",
+		EmotesQuery = "",
+		EmotesGen = 0,
 
 		CurrentEmoteTrack = nil,
 		CurrentActiveBundle = nil,
@@ -286,6 +288,41 @@ function Lib.Tween(obj, time, style, dir, props)
 	return tween
 end
 
+Lib.SearchIcon = "rbxassetid://10734943674"
+
+function Lib.MakeSearchBox(parent, placeholder, position, size, delay, onChange)
+	local holder = Lib.Create("Frame", {
+		Size = size, Position = position, BackgroundColor3 = Color3.fromRGB(22, 22, 22), Parent = parent,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 7) })
+	})
+	Lib.RegisterThemeElement(holder, "BackgroundColor3", 0.7, true)
+
+	local box = Lib.Create("TextBox", {
+		Size = UDim2.new(1, -42, 1, 0), Position = UDim2.fromOffset(12, 0), BackgroundTransparency = 1, Text = "",
+		PlaceholderText = placeholder, PlaceholderColor3 = Color3.fromRGB(110, 110, 110), TextColor3 = Color3.fromRGB(240, 240, 240),
+		TextSize = 12, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, ClearTextOnFocus = false, Parent = holder
+	})
+	Lib.RegisterThemeText(box, "Primary")
+
+	local icon = Lib.Create("ImageLabel", {
+		Size = UDim2.fromOffset(14, 14), Position = UDim2.new(1, -26, 0.5, -7), BackgroundTransparency = 1,
+		Image = Lib.SearchIcon, ImageTransparency = 0.3, ScaleType = Enum.ScaleType.Fit, Parent = holder
+	})
+	Lib.RegisterThemeImage(icon)
+
+	local ticket = 0
+	box:GetPropertyChangedSignal("Text"):Connect(function()
+		local text = box.Text:match("^%s*(.-)%s*$")
+		if delay <= 0 then return onChange(text) end
+		ticket += 1
+		local mine = ticket
+		task.delay(delay, function()
+			if mine == ticket then onChange(text) end
+		end)
+	end)
+	return box, holder
+end
+
 Lib.ThemeCount = 0
 Lib.Theme = {
 	Base = Color3.fromRGB(18, 18, 18),
@@ -308,6 +345,21 @@ Lib.ThemePresets = {
 	Color3.fromRGB(60, 75, 105), Color3.fromRGB(75, 45, 75), Color3.fromRGB(255, 255, 255)
 }
 
+Lib.HalloweenTheme = {
+	Name = "Halloween",
+	Halloween = true,
+	Background = Color3.fromRGB(14, 9, 18),
+	Surface = Color3.fromRGB(26, 16, 30),
+	Item = Color3.fromRGB(40, 24, 42),
+	Text = Color3.fromRGB(255, 238, 220),
+	Muted = Color3.fromRGB(178, 142, 122),
+	Accent = Color3.fromRGB(255, 122, 24),
+	SwitchOff = Color3.fromRGB(60, 40, 54)
+}
+
+Lib.HalloweenAssets = { Pumpkin = "", Web = "", Bat = "", Ghost = "" }
+Lib.HalloweenEmoji = { Pumpkin = "🎃", Web = "🕸️", Bat = "🦇", Ghost = "👻" }
+
 function Lib.ThemeColor(factor)
 	if factor == 0.5 then return Lib.Theme.Card end
 	if factor == 0.7 then return Lib.Theme.Item end
@@ -323,17 +375,18 @@ function Lib.Luma(color)
 end
 
 function Lib.ResolveTheme(index)
+	if index == 0 then return Lib.HalloweenTheme end
 	local presets = Lib.ThemePresets
 	if index <= #presets then return presets[index] end
 	return State.CustomThemes[index - #presets]
 end
 
-function Lib.RegisterThemeElement(element, propType, darkMultiplier)
+function Lib.RegisterThemeElement(element, propType, darkMultiplier, panel)
 	local prop, factor = propType or "BackgroundColor3", darkMultiplier or 1
 	element[prop] = Lib.ThemeColor(factor)
 	UI.ThemeElements[element] = { prop, factor }
 	Lib.ThemeCount = Lib.ThemeCount + 1
-	if factor == 0.5 and prop == "BackgroundColor3" and element.BackgroundTransparency == 0 then
+	if (factor == 0.5 or panel) and prop == "BackgroundColor3" and element.BackgroundTransparency == 0 then
 		element.BackgroundTransparency = State.PanelTransparency / 100
 		UI.PanelElements[element] = true
 	end
@@ -426,6 +479,10 @@ function Lib.ApplyTheme(spec, instant)
 	end
 
 	State.LightTheme = light
+
+	if Lib.SetHalloweenDecor then
+		Lib.SetHalloweenDecor(typeof(spec) == "table" and spec.Halloween == true)
+	end
 
 	if UI.Main then
 		if instant then
@@ -542,8 +599,7 @@ function Lib.Notify(options)
 		BackgroundColor3 = bgColor,
 		BorderSizePixel = 0,
 		Parent = UI.NotifContainer,
-		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) }),
-		Lib.Create("UIStroke", { Color = isWhite and Color3.fromRGB(220, 220, 220) or Color3.fromRGB(35, 35, 35), Thickness = 1 })
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
 	})
 
 	local contentX = 12
@@ -661,6 +717,7 @@ function Lib.CreateTabSystem(section, sideBar, stateKey, onSwitch)
 		})
 
 		local view = Lib.Create("CanvasGroup", {
+			Name = name,
 			Size = UDim2.new(1, -190, 1, -20),
 			Position = UDim2.new(0, 180, 0, 10),
 			BackgroundTransparency = 1,
@@ -1107,7 +1164,7 @@ do
 	local function Fetch(kind, page, sortType)
 		local k = Kinds[kind]
 		local result = { success = false, data = {}, totalPages = 1 }
-		local sortQuery = SortQueries[sortType] or SortQueries["Most Liked"]
+		local sortQuery = (SortQueries[sortType] or SortQueries["Most Liked"]) .. (State.EmotesQuery ~= "" and ("&keyword=" .. Services.HttpService:UrlEncode(State.EmotesQuery)) or "")
 		local cache = State[k.cache]
 		local cursorKey = k.prefix .. tostring(sortType) .. "_cursor_"
 		local cursor = cache[cursorKey .. page] or ""
@@ -1132,6 +1189,10 @@ do
 					failures[#failures + 1] = tag .. "API error: " .. tostring(decoded.errors[1].message or decoded.errors[1].code)
 				elseif not decoded.data or #decoded.data == 0 then
 					failures[#failures + 1] = tag .. "API returned no items"
+					if State.EmotesQuery ~= "" then
+						result.empty = true
+						break
+					end
 				else
 					result.success = true
 					if decoded.nextPageCursor then
@@ -1462,6 +1523,79 @@ UI.Main = Lib.Create("Frame", {
 	UI.HeaderIcon,
 	UI.HeaderLogo
 })
+
+do
+	local Tween = Services.Tween
+	local container, motion, active = nil, {}, false
+
+	local function Piece(kind, size, alpha, props)
+		local id = Lib.HalloweenAssets[kind]
+		props.BackgroundTransparency = 1
+		props.Size = UDim2.fromOffset(size, size)
+		props.Parent = container
+		if id ~= "" then
+			props.Image = (Lib.ResolveImage(id))
+			props.ImageTransparency = alpha
+			props.ScaleType = Enum.ScaleType.Fit
+			return Lib.Create("ImageLabel", props)
+		end
+		props.Text = Lib.HalloweenEmoji[kind]
+		props.TextSize = math.floor(size * 0.78)
+		props.TextTransparency = alpha
+		return Lib.Create("TextLabel", props)
+	end
+
+	local function Loop(piece, goal, duration)
+		motion[#motion + 1] = Tween:Create(piece, TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), goal)
+	end
+
+	local function Build()
+		container = Lib.Create("CanvasGroup", {
+			Name = "HalloweenDecor",
+			Size = UDim2.fromScale(1, 1),
+			BackgroundTransparency = 1,
+			GroupTransparency = 1,
+			ZIndex = 4,
+			Visible = false,
+			Parent = UI.Main
+		})
+
+		Piece("Web", 96, 0.3, { Position = UDim2.fromOffset(0, 0) })
+		Piece("Web", 72, 0.4, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Rotation = 90 })
+
+		local pumpkin = Piece("Pumpkin", 58, 0.1, { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 8, 1, -4) })
+		Loop(pumpkin, { Position = UDim2.new(0, 8, 1, -9) }, 2.4)
+
+		local small = Piece("Pumpkin", 44, 0.1, { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -10, 1, -4) })
+		Loop(small, { Position = UDim2.new(1, -10, 1, -8) }, 2.9)
+
+		local ghost = Piece("Ghost", 40, 0.2, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.84, 0, 1, -6) })
+		Loop(ghost, { Position = UDim2.new(0.84, 0, 1, -16) }, 3.4)
+
+		local bat = Piece("Bat", 24, 0.15, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(-0.06, 0.07) })
+		Loop(bat, { Position = UDim2.fromScale(1.06, 0.07) }, 18)
+
+		local second = Piece("Bat", 20, 0.25, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(1.06, 0.16) })
+		Loop(second, { Position = UDim2.fromScale(-0.06, 0.16) }, 26)
+	end
+
+	function Lib.SetHalloweenDecor(on)
+		if on == active then return end
+		active = on
+		if on then
+			if not container then Build() end
+			container.Visible = true
+			for _, tween in ipairs(motion) do tween:Play() end
+			Lib.Tween(container, 0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { GroupTransparency = 0 })
+		elseif container then
+			Lib.Tween(container, 0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { GroupTransparency = 1 }).Completed:Connect(function()
+				if active then return end
+				container.Visible = false
+				for _, tween in ipairs(motion) do tween:Pause() end
+			end)
+		end
+	end
+end
 
 UI.ContentArea = Lib.Create("Frame", { Size = UDim2.new(1, 0, 1, -58), Position = UDim2.new(0, 0, 0, 58), BackgroundTransparency = 1, ClipsDescendants = true, ZIndex = 2, Parent = UI.Main })
 
@@ -1800,6 +1934,99 @@ do
 	end
 end
 
+function Lib.BuildUpdateLog(view)
+	local releases = {
+		{
+			version = "V3.3", title = "Halloween", date = "Oct 9", latest = true,
+			notes = {
+				"Adding search bars to the Features, Emotes, and Scripts sections.",
+				"Visual update of certain objects.",
+				"Adding an \"Update Log\" subsection to Home.",
+				"New Halloween menu theme.",
+				"Fixed menu-related bugs.",
+				"An option to select the sound played when pressing various switches and buttons has been added to the \"Appearance\" section.",
+				"Fixed an issue where some objects did not change their transparency.",
+				"Added Anti-AFK to the Misc subsection"
+			}
+		},
+		{
+			version = "V3.2", date = "Oct 6",
+			notes = {
+				"Fixing Corner Radius bugs for Custom Background.",
+				"Adding auto-loading for the selected config.",
+				"Fixing bugs and sliders/switches not changing their position when loading the config.",
+				"Added functionality to disable features when the menu is fully closed.",
+				"Adding Music to Appearance.",
+				"Increased the z-index for all menus and script objects so they are not overlapped by the game interface."
+			}
+		}
+	}
+
+	local scroll = Lib.Create("ScrollingFrame", {
+		Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 2,
+		ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(),
+		Parent = view,
+		Lib.Create("UIListLayout", { Padding = UDim.new(0, 24), SortOrder = Enum.SortOrder.LayoutOrder }),
+		Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 12), PaddingBottom = UDim.new(0, 14) })
+	})
+
+	for index, release in ipairs(releases) do
+		local block = Lib.Create("Frame", {
+			Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = index, Parent = scroll,
+			Lib.Create("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder })
+		})
+
+		local header = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 24), BackgroundTransparency = 1, LayoutOrder = 0, Parent = block })
+		local left = Lib.Create("Frame", {
+			Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1, Parent = header,
+			Lib.Create("UIListLayout", {
+				FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center,
+				Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder
+			})
+		})
+
+		local title = Lib.Create("TextLabel", {
+			Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1, LayoutOrder = 1,
+			Text = release.title and (release.version .. " " .. release.title) or release.version,
+			TextColor3 = Color3.fromRGB(245, 245, 245), TextSize = 17, Font = Enum.Font.GothamBold, Parent = left
+		})
+		Lib.RegisterThemeText(title, "Primary")
+
+		if release.latest then
+			local badge = Lib.Create("TextLabel", {
+				Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = Color3.fromRGB(128, 128, 128),
+				BackgroundTransparency = 0.8, LayoutOrder = 2, Text = "LATEST", TextColor3 = Color3.fromRGB(245, 245, 245),
+				TextSize = 10, Font = Enum.Font.GothamBold, Parent = left,
+				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 5) }),
+				Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) })
+			})
+			Lib.RegisterThemeText(badge, "Primary")
+		end
+
+		local date = Lib.Create("TextLabel", {
+			Size = UDim2.fromOffset(100, 24), Position = UDim2.new(1, -100, 0, 0), BackgroundTransparency = 1, Text = release.date,
+			TextColor3 = Color3.fromRGB(145, 145, 145), TextSize = 12, Font = Enum.Font.GothamMedium,
+			TextXAlignment = Enum.TextXAlignment.Right, Parent = header
+		})
+		Lib.RegisterThemeText(date, "Secondary")
+
+		local notes = Lib.Create("Frame", {
+			Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 1, Parent = block,
+			Lib.Create("UIListLayout", { Padding = UDim.new(0, 7), SortOrder = Enum.SortOrder.LayoutOrder }),
+			Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 2) })
+		})
+
+		for noteIndex, note in ipairs(release.notes) do
+			local label = Lib.Create("TextLabel", {
+				Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = noteIndex,
+				Text = "\u{2022}  " .. note, TextColor3 = Color3.fromRGB(145, 145, 145), TextSize = 13, Font = Enum.Font.GothamMedium,
+				TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true, Parent = notes
+			})
+			Lib.RegisterThemeText(label, "Secondary")
+		end
+	end
+end
+
 do
 	local HomeSection = Lib.Create("Frame", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Visible = false, Parent = UI.ContentArea })
 	UI.HomeSection = HomeSection
@@ -1816,6 +2043,7 @@ do
 	local View_Account = MakeTab("Account", 90)
 	local View_Achievements = MakeTab("Achievements", 130)
 	local View_Developers = MakeTab("Developers", 170)
+	Lib.BuildUpdateLog(MakeTab("Update Log", 210))
 
 	Lib.Create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 15), Parent = View_Overview })
 
@@ -2064,6 +2292,16 @@ do
 end
 
 do
+	Lib.SearchItems, Lib.SearchGroups, Lib.SearchScrolls = {}, {}, {}
+
+	function Lib.SearchAdd(card, item, title)
+		if not Lib.SearchGroups[card] then return end
+		local list = Lib.SearchItems
+		local index = #list + 1
+		list[index] = { Item = item, Parent = card, Title = title:lower() }
+		item.LayoutOrder = index
+	end
+
 	function Lib.CreateFeatureGroup(parentScroll, title, layoutOrder)
 		local GroupContainer = Lib.Create("Frame", {
 			Size = UDim2.new(1, 0, 0, 0),
@@ -2096,6 +2334,7 @@ do
 			Lib.Create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder })
 		})
 		Lib.RegisterThemeElement(grp, "BackgroundColor3", 0.5)
+		if Lib.SearchScrolls[parentScroll] then Lib.SearchGroups[grp] = true end
 		return grp
 	end
 
@@ -2197,6 +2436,7 @@ do
 			Lib.Notify({ Title = title, Text = state and "Enabled" or "Disabled" })
 		end)
 
+		Lib.SearchAdd(parentCard, Item, title)
 		return Item
 	end
 
@@ -2333,6 +2573,7 @@ do
 			end
 		end)
 
+		Lib.SearchAdd(parentCard, Item, title)
 		return Item
 	end
 
@@ -2395,9 +2636,182 @@ do
 		Item.MouseButton1Up:Connect(function() Lib.Tween(Item, 0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundColor3 = Lib.Lighten(Lib.Theme.Card, 0.055) }) end)
 		Item.MouseButton1Click:Connect(function() onClick(TitleLabel) end)
 
+		Lib.SearchAdd(parentCard, Item, title)
 		return Item
 	end
 end
+
+function Lib.BuildFeatureSearch(section, sideBar)
+	local list = Lib.SearchItems
+	local shown = {}
+	local active = false
+
+	local results = Lib.Create("ScrollingFrame", {
+		Size = UDim2.new(1, -190, 1, -20), Position = UDim2.new(0, 180, 0, 10), BackgroundTransparency = 1, BorderSizePixel = 0,
+		ScrollBarThickness = 2, ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), CanvasSize = UDim2.new(),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y, Visible = false, Parent = section,
+		Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 5), PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 15) })
+	})
+	local card = Lib.Create("Frame", {
+		Size = UDim2.fromScale(1, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = Color3.fromRGB(15, 15, 15), Parent = results,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) }),
+		Lib.Create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder })
+	})
+	Lib.RegisterThemeElement(card, "BackgroundColor3", 0.5)
+	local empty = Lib.Create("TextLabel", {
+		Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1, Text = "No features found", TextColor3 = Color3.fromRGB(130, 130, 130),
+		TextSize = 13, Font = Enum.Font.GothamMedium, Visible = false, Parent = results
+	})
+	Lib.RegisterThemeText(empty, "Secondary")
+
+	local function SetViews(current)
+		for _, view in ipairs(section:GetChildren()) do
+			if view:IsA("CanvasGroup") then view.Visible = view.Name == current end
+		end
+	end
+
+	local function Apply(text)
+		local query = text:lower()
+		for i = #shown, 1, -1 do
+			local entry = shown[i]
+			entry.Item.Parent = entry.Parent
+			shown[i] = nil
+		end
+		if query == "" then
+			if active then
+				active = false
+				results.Visible = false
+				SetViews(State.CurrentFeaturesTab)
+			end
+			return
+		end
+		if not active then
+			active = true
+			SetViews(nil)
+			results.Visible = true
+		end
+		local length = #query
+		for i = 1, #list do
+			local entry = list[i]
+			local title = entry.Title
+			if title:sub(1, length) == query or title:find(" " .. query, 1, true) then
+				entry.Item.Parent = card
+				shown[#shown + 1] = entry
+			end
+		end
+		card.Visible = #shown > 0
+		empty.Visible = #shown == 0
+		results.CanvasPosition = Vector2.zero
+	end
+
+	local box = Lib.MakeSearchBox(sideBar, "Search features", UDim2.fromOffset(15, 46), UDim2.new(1, -30, 0, 28), 0, Apply)
+	for _, button in ipairs(sideBar:GetChildren()) do
+		if button:IsA("TextButton") then
+			button.MouseButton1Click:Connect(function()
+				task.defer(function() box.Text = "" end)
+			end)
+		end
+	end
+end
+
+function Lib.BuildBrowseSearch(view, scroll, bottom, placeholder, onQuery)
+	local api = {}
+
+	local strip = Lib.Create("ScrollingFrame", {
+		Size = UDim2.new(1, 0, 0, 56), Position = UDim2.fromOffset(0, 38), BackgroundTransparency = 1, BorderSizePixel = 0,
+		ScrollBarThickness = 2, ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), ScrollingDirection = Enum.ScrollingDirection.X,
+		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.X, Visible = false, Parent = view,
+		Lib.Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingBottom = UDim.new(0, 4) })
+	})
+
+	local function Layout(hasStrip)
+		local top = hasStrip and 102 or 38
+		scroll.Position = UDim2.fromOffset(0, top)
+		scroll.Size = UDim2.new(1, 0, 1, -(top + bottom))
+		strip.Visible = hasStrip
+	end
+
+	api.Box = Lib.MakeSearchBox(view, placeholder, UDim2.fromOffset(8, 0), UDim2.new(1, -16, 0, 30), 0.4, onQuery)
+
+	function api.SetSuggestions(list)
+		for _, child in ipairs(strip:GetChildren()) do
+			if child:IsA("GuiButton") then child:Destroy() end
+		end
+		local count = list and #list or 0
+		for i = 1, count do
+			local data = list[i]
+			local card = Lib.Create("TextButton", {
+				Size = UDim2.fromOffset(190, 50), BackgroundColor3 = Color3.fromRGB(15, 15, 15), Text = "", AutoButtonColor = false,
+				LayoutOrder = i, Parent = strip,
+				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
+			})
+			Lib.RegisterThemeElement(card, "BackgroundColor3", 0.5)
+
+			local thumb = Lib.Create("ImageLabel", {
+				Size = UDim2.fromOffset(36, 36), Position = UDim2.fromOffset(7, 7), BackgroundColor3 = Color3.fromRGB(22, 22, 22),
+				Image = data.Image or "rbxassetid://113533839488998", ScaleType = Enum.ScaleType.Crop, Parent = card,
+				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
+			})
+			Lib.RegisterThemeElement(thumb, "BackgroundColor3", 0.7)
+
+			local name = Lib.Create("TextLabel", {
+				Size = UDim2.new(1, -56, 0, 16), Position = UDim2.fromOffset(50, 7), BackgroundTransparency = 1, Text = data.Name,
+				TextColor3 = Color3.fromRGB(240, 240, 240), TextSize = 12, Font = Enum.Font.GothamBold,
+				TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = card
+			})
+			Lib.RegisterThemeText(name, "Primary")
+
+			local sub = Lib.Create("TextLabel", {
+				Size = UDim2.new(1, -56, 0, 20), Position = UDim2.fromOffset(50, 24), BackgroundTransparency = 1, Text = data.Sub or "",
+				TextColor3 = Color3.fromRGB(130, 130, 130), TextSize = 10, Font = Enum.Font.Gotham, TextWrapped = true,
+				TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextTruncate = Enum.TextTruncate.AtEnd, Parent = card
+			})
+			Lib.RegisterThemeText(sub, "Secondary")
+
+			card.MouseEnter:Connect(function()
+				Lib.Tween(card, 0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundColor3 = Lib.Lighten(Lib.Theme.Card, 0.04) })
+			end)
+			card.MouseLeave:Connect(function()
+				Lib.Tween(card, 0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundColor3 = Lib.Theme.Card })
+			end)
+			card.MouseButton1Click:Connect(function()
+				Lib.PlayClick()
+				api.Box.Text = data.Name
+			end)
+		end
+		Layout(count > 0)
+	end
+
+	Layout(false)
+	return api
+end
+
+function Lib.CollectPlaces(data, query)
+	local order, map = {}, {}
+	for _, script in ipairs(data) do
+		local name = script.game
+		if name and name ~= "" and name ~= "Universal" then
+			local lower = name:lower()
+			if lower:sub(1, #query) == query or lower:find(" " .. query, 1, true) then
+				local entry = map[lower]
+				if not entry and #order < 10 then
+					entry = { Name = name, Image = script.imageUrl, Titles = {} }
+					map[lower] = entry
+					order[#order + 1] = entry
+				end
+				if entry and script.title and #entry.Titles < 2 then
+					entry.Titles[#entry.Titles + 1] = script.title
+				end
+			end
+		end
+	end
+	for _, entry in ipairs(order) do
+		entry.Sub = table.concat(entry.Titles, " \u{2022} ")
+	end
+	return order
+end
+
 
 do
 	local function ClearPlayerESP(plr)
@@ -2954,6 +3368,136 @@ do
 			{ "ColorCorrectionEffect", { Brightness = -0.06, Contrast = 0.18, Saturation = -0.7, TintColor = Color3.fromRGB(210, 215, 210) } },
 			{ "BlurEffect", { Size = 2 } }
 		})
+	end
+
+	do
+		local Run, UIS, Players = Services.Run, Services.UserInputService, Services.Players
+		local Panel, Values, Beat, StartClock, Frames, LastTick
+		local Pos, Goal, Origin, Anchor, Loop
+		local Dragging = false
+		local Names = { "AFK Time", "Players", "FPS" }
+		local Width, Height = 176, 78
+
+		local function Clamp(v)
+			local view = UI.Screen.AbsoluteSize
+			return Vector2.new(math.clamp(v.X, 0, math.max(view.X - Width, 0)), math.clamp(v.Y, 0, math.max(view.Y - Height, 0)))
+		end
+
+		local function Step(dt)
+			Pos = Pos:Lerp(Goal, 1 - math.exp(-dt * 24))
+			if not Dragging and (Pos - Goal).Magnitude < 0.4 then
+				Pos = Goal
+				Loop:Disconnect()
+				Loop = nil
+			end
+			Panel.Position = UDim2.fromOffset(Pos.X, Pos.Y)
+		end
+
+		local function Build()
+			Panel = Lib.Create("CanvasGroup", {
+				Name = "AntiAFKStats",
+				Size = UDim2.fromOffset(Width, Height),
+				BackgroundColor3 = Lib.Theme.Card,
+				GroupTransparency = 1,
+				Visible = false,
+				ZIndex = 140,
+				Parent = UI.Screen
+			})
+			Lib.RegisterThemeElement(Panel, "BackgroundColor3", 0.5)
+			Lib.BindCorner(Panel, "StatsCorner")
+			Lib.Create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Center, Parent = Panel })
+			Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14), Parent = Panel })
+
+			Values = {}
+			for i, name in ipairs(Names) do
+				local row = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 22), BackgroundTransparency = 1, LayoutOrder = i, Parent = Panel })
+				local label = Lib.Create("TextLabel", {
+					Size = UDim2.fromScale(0.5, 1), BackgroundTransparency = 1, Text = name, TextSize = 11,
+					TextColor3 = Lib.Palette.Secondary, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, Parent = row
+				})
+				Lib.RegisterThemeText(label, "Secondary")
+				local value = Lib.Create("TextLabel", {
+					Size = UDim2.fromScale(0.5, 1), Position = UDim2.fromScale(0.5, 0), BackgroundTransparency = 1, Text = "--", TextSize = 12,
+					TextColor3 = Lib.Palette.Primary, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Right, Parent = row
+				})
+				Lib.RegisterThemeText(value, "Primary")
+				Values[i] = value
+			end
+
+			Pos = Clamp(Vector2.new(16, UI.Screen.AbsoluteSize.Y - Height - 16))
+			Goal = Pos
+			Panel.Position = UDim2.fromOffset(Pos.X, Pos.Y)
+
+			Panel.InputBegan:Connect(function(input)
+				local kind = input.UserInputType
+				if kind ~= Enum.UserInputType.MouseButton1 and kind ~= Enum.UserInputType.Touch then return end
+				Dragging, Origin, Anchor, Goal = true, input.Position, Pos, Pos
+				if not Loop then Loop = Run.RenderStepped:Connect(Step) end
+				local move
+				move = UIS.InputChanged:Connect(function(changed)
+					local moved = changed.UserInputType
+					if moved == Enum.UserInputType.MouseMovement or moved == Enum.UserInputType.Touch then
+						local delta = changed.Position - Origin
+						Goal = Clamp(Anchor + Vector2.new(delta.X, delta.Y))
+					end
+				end)
+				input.Changed:Connect(function()
+					if input.UserInputState == Enum.UserInputState.End then
+						Dragging = false
+						move:Disconnect()
+					end
+				end)
+			end)
+		end
+
+		local function Format(elapsed)
+			local total = math.floor(elapsed)
+			return string.format("%02d:%02d:%02d", total // 3600, total // 60 % 60, total % 60)
+		end
+
+		local function Refresh(now)
+			Values[1].Text = Format(now - StartClock)
+			Values[2].Text = tostring(#Players:GetPlayers())
+		end
+
+		local function Start()
+			if Beat then Beat:Disconnect() end
+			StartClock = os.clock()
+			LastTick, Frames = StartClock, 0
+			Refresh(StartClock)
+			Values[3].Text = "--"
+			Beat = Run.RenderStepped:Connect(function()
+				Frames = Frames + 1
+				local now = os.clock()
+				local span = now - LastTick
+				if span < 0.5 then return end
+				Values[3].Text = tostring(math.floor(Frames / span + 0.5))
+				Refresh(now)
+				Frames, LastTick = 0, now
+			end)
+		end
+
+		function Lib.SetAntiAFKStats(on)
+			if on then
+				if not Panel then Build() end
+				Pos = Clamp(Pos)
+				Goal = Pos
+				Panel.Position = UDim2.fromOffset(Pos.X, Pos.Y)
+				Start()
+				Panel.Visible = true
+				Lib.Tween(Panel, 0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { GroupTransparency = 0 })
+				return
+			end
+			if Beat then
+				Beat:Disconnect()
+				Beat = nil
+			end
+			if Panel then
+				Lib.Tween(Panel, 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { GroupTransparency = 1 }).Completed:Connect(function()
+					if not State.AntiAFK then Panel.Visible = false end
+				end)
+			end
+		end
 	end
 
 	Lib.C(App.Player.Idled, function()
@@ -4365,6 +4909,7 @@ function Lib.BuildMiscUtilities(scroll)
 
 	local function UtilityRow(title, desc, isLast, onClick)
 		local row = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 50), BackgroundTransparency = 1, Parent = utilityGroup })
+		Lib.SearchAdd(utilityGroup, row, title)
 		local titleLabel = Lib.Create("TextLabel", {
 			Size = UDim2.new(1, -110, 0, 20), Position = UDim2.new(0, 14, 0, 7), BackgroundTransparency = 1, Text = title,
 			TextColor3 = Color3.fromRGB(240, 240, 240), TextSize = 13, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = row
@@ -5009,14 +5554,14 @@ do
 	local MakeFeaturesTab
 	Lib.SwitchFeaturesTab, MakeFeaturesTab = Lib.CreateTabSystem(FeaturesSection, FeaturesSideBar, "CurrentFeaturesTab")
 
-	local View_Visuals = MakeFeaturesTab("Visuals", 50)
-	local View_Movement = MakeFeaturesTab("Movement", 90)
-	local View_Protect = MakeFeaturesTab("Protect", 130)
-	local View_Shaders = MakeFeaturesTab("Shaders", 170)
-	local View_Funny = MakeFeaturesTab("Funny", 210)
-	local View_Misc = MakeFeaturesTab("Misc", 250)
-	local View_Server = MakeFeaturesTab("Server", 290)
-	local View_Teleport = MakeFeaturesTab("Teleport", 330)
+	local View_Visuals = MakeFeaturesTab("Visuals", 84)
+	local View_Movement = MakeFeaturesTab("Movement", 124)
+	local View_Protect = MakeFeaturesTab("Protect", 164)
+	local View_Shaders = MakeFeaturesTab("Shaders", 204)
+	local View_Funny = MakeFeaturesTab("Funny", 244)
+	local View_Misc = MakeFeaturesTab("Misc", 284)
+	local View_Server = MakeFeaturesTab("Server", 324)
+	local View_Teleport = MakeFeaturesTab("Teleport", 364)
 
 	local function MakeScroll(view)
 		local scr = Lib.Create("ScrollingFrame", {
@@ -5025,6 +5570,7 @@ do
 			ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), BorderSizePixel = 0,
 			Parent = view
 		})
+		Lib.SearchScrolls[scr] = true
 		local lyt = Lib.Create("UIListLayout", { Padding = UDim.new(0, 14), SortOrder = Enum.SortOrder.LayoutOrder, Parent = scr })
 		Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 5), PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 15), Parent = scr })
 
@@ -5044,9 +5590,11 @@ do
 	local TeleportScroll = MakeScroll(View_Teleport)
 
 	do
-		local QoLView = MakeFeaturesTab("QoL", 370)
+		local QoLView = MakeFeaturesTab("QoL", 404)
 		Lib.BuildQoL(MakeScroll(QoLView))
 	end
+
+	Lib.BuildFeatureSearch(FeaturesSection, FeaturesSideBar)
 
 	local ESPGroup = Lib.CreateFeatureGroup(VisualsScroll, "ESP", 1)
 	Lib.CreateSettingToggleItem(ESPGroup, "Esp Name", "Display player display names with studs distance", State.ESP_Name, function(val) State.ESP_Name = val end)
@@ -5476,7 +6024,10 @@ do
 	end, true)
 
 	local MiscPlayerGroup = Lib.CreateFeatureGroup(MiscScroll, "Player & Movement", 1)
-	Lib.CreateSettingToggleItem(MiscPlayerGroup, "Anti-AFK", "Prevents Roblox 20-minute idle disconnect", State.AntiAFK, function(val) State.AntiAFK = val end)
+	Lib.CreateSettingToggleItem(MiscPlayerGroup, "Anti-AFK", "Prevents Roblox 20-minute idle disconnect", State.AntiAFK, function(val)
+		State.AntiAFK = val
+		Lib.SetAntiAFKStats(val)
+	end)
 	Lib.CreateSettingToggleItem(MiscPlayerGroup, "Noclip", "Walk through walls, doors and solid obstacles", State.Noclip, function(val) State.Noclip = val end)
 	Lib.CreateSettingToggleItem(MiscPlayerGroup, "Invisibility", "FE Server-sided invisible character glitch", State.InvisFE, function(val)
 		State.InvisFE = val
@@ -5784,7 +6335,7 @@ do
 			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
 			Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
 		})
-		Lib.RegisterThemeElement(box, "BackgroundColor3", 0.7)
+		Lib.RegisterThemeElement(box, "BackgroundColor3", 0.7, true)
 		Lib.RegisterThemeText(box, "Primary")
 
 		local joinBtn = Lib.Create("TextButton", {
@@ -6060,6 +6611,12 @@ do
 	local BrowseGrid = Lib.Create("UIGridLayout", { CellSize = UDim2.fromOffset(185, 220), CellPadding = UDim2.fromOffset(15, 15), SortOrder = Enum.SortOrder.LayoutOrder, Parent = BrowseScroll })
 	Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 5), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 15), Parent = BrowseScroll })
 
+	Lib.ScriptsSearch = Lib.BuildBrowseSearch(View_Browse, BrowseScroll, 0, "Search by place or script name...", function(query)
+		if State.ScriptsQuery == query then return end
+		State.ScriptsQuery = query
+		ClearScriptsCache()
+	end)
+
 	local function CheckMore()
 		if State.ScriptsLoading or not BrowseScroll.Visible or State.ScriptsPage >= State.ScriptsTotalPages or os.clock() < State.ScriptsBackoff then return end
 		if BrowseScroll.CanvasPosition.Y + BrowseScroll.AbsoluteWindowSize.Y >= BrowseGrid.AbsoluteContentSize.Y - 220 then
@@ -6116,7 +6673,7 @@ do
 				result.totalPages = (decoded.meta and decoded.meta.totalPages) or 1
 			elseif type(decoded.scripts) == "table" then
 				rawScripts = decoded.scripts
-				result.totalPages = decoded.totalPages or 1
+				result.totalPages = decoded.totalPages or (decoded.info and decoded.info.maxPages) or 1
 			end
 
 			if rawScripts and #rawScripts > 0 then
@@ -6138,6 +6695,22 @@ do
 				return true
 			end
 			return false
+		end
+
+		if State.ScriptsQuery ~= "" then
+			local encoded = Services.HttpService:UrlEncode(State.ScriptsQuery)
+			local urls = { "https://scriptblox.com/api/script/search?q=" .. encoded .. "&page=" .. tostring(page) }
+			if State.ScriptsProvider ~= "ScriptBlox" then
+				table.insert(urls, 1, "https://rscripts.net/api/v2/scripts?q=" .. encoded .. "&page=" .. tostring(page) .. "&orderBy=date&sort=desc")
+			end
+			for _, u in ipairs(urls) do
+				local success, body = API.HTTPRequest(u)
+				if success and body then
+					local decSuccess, decoded = pcall(Services.HttpService.JSONDecode, Services.HttpService, body)
+					if decSuccess and type(decoded) == "table" and (ParseScriptBlox(decoded) or ParseRscripts(decoded)) then break end
+				end
+			end
+			return result
 		end
 
 		if State.ScriptsProvider == "ScriptBlox" then
@@ -6359,6 +6932,7 @@ do
 			end
 			State.ScriptsCount = 0
 			BrowseScroll.Visible = false
+			LoadingLabel.Text = "Loading scripts..."
 			LoadingLabel.Visible = true
 		else
 			MoreLabel.Visible = true
@@ -6371,6 +6945,24 @@ do
 			LoadingLabel.Visible = false
 			MoreLabel.Visible = false
 
+			local query = State.ScriptsQuery:lower()
+			if first then
+				Lib.ScriptsSearch.SetSuggestions(query ~= "" and result.success and Lib.CollectPlaces(result.data, query) or nil)
+			end
+			if query ~= "" and result.success then
+				local kept = {}
+				for _, s in ipairs(result.data) do
+					if (s.game or ""):lower():find(query, 1, true) or (s.title or ""):lower():find(query, 1, true) then
+						kept[#kept + 1] = s
+					end
+				end
+				result.data = kept
+				if #kept == 0 and page < result.totalPages and page < 4 then
+					State.ScriptsLoading = false
+					return Lib.LoadScriptsPage(page + 1)
+				end
+			end
+
 			if result.success and #result.data > 0 then
 				local base = State.ScriptsCount
 				State.ScriptsCache[page] = true
@@ -6382,10 +6974,19 @@ do
 				State.ScriptsCount = base + #result.data
 				BrowseScroll.Visible = true
 			elseif first then
-				ErrorLabel.Visible = true
-				RetryBtn.Visible = true
+				if query ~= "" and result.success then
+					LoadingLabel.Text = "No scripts found"
+					LoadingLabel.Visible = true
+				else
+					ErrorLabel.Visible = true
+					RetryBtn.Visible = true
+				end
 			else
 				State.ScriptsBackoff = os.clock() + 4
+				if State.ScriptsCount == 0 and query ~= "" then
+					LoadingLabel.Text = "No scripts found"
+					LoadingLabel.Visible = true
+				end
 			end
 
 			State.ScriptsLoading = false
@@ -6414,6 +7015,8 @@ do
 		State.EmotesCache = {}
 		State.AnimationPacksCache = {}
 		State.EmotesPage = 1
+		State.EmotesLoading = false
+		State.EmotesGen = State.EmotesGen + 1
 		if State.CurrentEmotesTab == "Browse" and Lib.LoadEmotesPage then Lib.LoadEmotesPage(1) end
 	end
 
@@ -6442,6 +7045,12 @@ do
 
 	EmotesGrid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 		EmotesScroll.CanvasSize = UDim2.new(0, 0, 0, EmotesGrid.AbsoluteContentSize.Y + 20)
+	end)
+
+	Lib.EmotesSearch = Lib.BuildBrowseSearch(View_EmotesBrowse, EmotesScroll, 40, "Search emotes by name...", function(query)
+		if State.EmotesQuery == query then return end
+		State.EmotesQuery = query
+		ClearEmotesDataCache()
 	end)
 
 	local EmotesPaginationPanel = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 30), Position = UDim2.new(0, 0, 1, -30), BackgroundTransparency = 1, Parent = View_EmotesBrowse })
@@ -6498,6 +7107,7 @@ do
 	function Lib.LoadEmotesPage(page)
 		if State.EmotesLoading then return end
 		State.EmotesLoading = true
+		local gen = State.EmotesGen
 
 		for _, child in ipairs(EmotesScroll:GetChildren()) do
 			if child:IsA("Frame") then child:Destroy() end
@@ -6522,6 +7132,7 @@ do
 				result = ok and fetched or { success = false, error = "script error: " .. tostring(fetched) }
 				if result.success then currentCache[page] = result end
 			end
+			if gen ~= State.EmotesGen then return end
 
 			if result and result.success and result.data and #result.data > 0 then
 				State.EmotesPage = page
@@ -6533,9 +7144,33 @@ do
 				end
 				EmotesScroll.CanvasPosition = Vector2.new(0, 0)
 
+				if page == 1 then
+					local query = State.EmotesQuery:lower()
+					local suggestions
+					if query ~= "" then
+						suggestions = {}
+						for _, e in ipairs(result.data) do
+							local name = e.name:lower()
+							if name:sub(1, #query) == query or name:find(" " .. query, 1, true) then
+								suggestions[#suggestions + 1] = {
+									Name = e.name,
+									Sub = e.price,
+									Image = "rbxthumb://type=" .. (e.itemType == "Bundle" and "BundleThumbnail" or "Asset") .. "&id=" .. tostring(e.thumbnailId) .. "&w=150&h=150"
+								}
+								if #suggestions == 10 then break end
+							end
+						end
+					end
+					Lib.EmotesSearch.SetSuggestions(suggestions)
+				end
+
 				EmotesLoadingLabel.Visible = false
 				EmotesScroll.Visible = true
 				EmotesPaginationPanel.Visible = true
+			elseif result and result.empty then
+				Lib.EmotesSearch.SetSuggestions(nil)
+				EmotesLoadingLabel.Text = "Nothing found"
+				EmotesLoadingLabel.Visible = true
 			else
 				EmotesLoadingLabel.Visible = false
 				local reason = result and result.error
@@ -6700,7 +7335,7 @@ function Lib.BuildMusic(group)
 		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
 		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10) })
 	})
-	Lib.RegisterThemeElement(modeBtn, "BackgroundColor3", 0.7)
+	Lib.RegisterThemeElement(modeBtn, "BackgroundColor3", 0.7, true)
 	Lib.RegisterThemeText(modeBtn, "Primary")
 
 	local chevron = Lib.Create("TextLabel", {
@@ -6716,7 +7351,7 @@ function Lib.BuildMusic(group)
 		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
 		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
 	})
-	Lib.RegisterThemeElement(input, "BackgroundColor3", 0.7)
+	Lib.RegisterThemeElement(input, "BackgroundColor3", 0.7, true)
 	Lib.RegisterThemeText(input, "Primary")
 
 	local addBtn = Lib.Create("TextButton", {
@@ -6764,7 +7399,7 @@ function Lib.BuildMusic(group)
 		Size = UDim2.new(1, -24, 0, 56), Position = UDim2.fromOffset(12, 0), BackgroundColor3 = Color3.fromRGB(22, 22, 22), Parent = playerRow,
 		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
 	})
-	Lib.RegisterThemeElement(box, "BackgroundColor3", 0.7)
+	Lib.RegisterThemeElement(box, "BackgroundColor3", 0.7, true)
 
 	local function IconButton(text, x)
 		return Lib.Create("TextButton", {
@@ -6917,7 +7552,7 @@ function Lib.BuildMusic(group)
 				Size = UDim2.new(1, 0, 0, 40), BackgroundColor3 = Color3.fromRGB(22, 22, 22), LayoutOrder = i, Parent = listFrame,
 				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
 			})
-			Lib.RegisterThemeElement(item, "BackgroundColor3", 0.7)
+			Lib.RegisterThemeElement(item, "BackgroundColor3", 0.7, true)
 
 			local play = Lib.Create("TextButton", {
 				Size = UDim2.fromOffset(28, 28), Position = UDim2.new(0, 8, 0.5, -14), BackgroundTransparency = 1, Text = "▶",
@@ -7812,6 +8447,12 @@ do
 				})
 			end
 
+			if theme and theme.Halloween then
+				Lib.Create("TextLabel", {
+					Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "🎃", TextSize = 18, Font = Enum.Font.GothamBold, Parent = Item
+				})
+			end
+
 			local Stroke = Lib.Create("UIStroke", {
 				Color = light and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(255, 255, 255),
 				Thickness = 2,
@@ -7845,15 +8486,18 @@ do
 			end)
 
 			if theme then
+				local builtin = theme.Halloween
 				Item.MouseEnter:Connect(function()
-					thDesc.Text = theme.Name .. "  ·  right-click to delete"
+					thDesc.Text = builtin and theme.Name or (theme.Name .. "  ·  right-click to delete")
 				end)
 				Item.MouseLeave:Connect(function()
 					thDesc.Text = DESC
 				end)
-				Item.MouseButton2Click:Connect(function()
-					DeleteCustom(theme)
-				end)
+				if not builtin then
+					Item.MouseButton2Click:Connect(function()
+						DeleteCustom(theme)
+					end)
+				end
 			end
 		end
 
@@ -7867,8 +8511,9 @@ do
 			for i, color in ipairs(Lib.ThemePresets) do
 				AddSwatch(i, i, color)
 			end
+			AddSwatch(0, presetCount + 1, nil, Lib.HalloweenTheme)
 			for k, theme in ipairs(State.CustomThemes) do
-				AddSwatch(presetCount + k, presetCount + 1 + k, nil, theme)
+				AddSwatch(presetCount + k, presetCount + 2 + k, nil, theme)
 			end
 			UpdateSelection()
 		end
@@ -7881,7 +8526,7 @@ do
 			TextSize = 22,
 			Font = Enum.Font.GothamMedium,
 			AutoButtonColor = false,
-			LayoutOrder = #Lib.ThemePresets + 1,
+			LayoutOrder = #Lib.ThemePresets + 2,
 			Parent = ThemeHolder,
 			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) }),
 			Lib.Create("UIStroke", { Color = Color3.fromRGB(130, 130, 130), Thickness = 1, Transparency = 0.35, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
@@ -8102,7 +8747,7 @@ do
 		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
 		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
 	})
-	Lib.RegisterThemeElement(bgInput, "BackgroundColor3", 0.7)
+	Lib.RegisterThemeElement(bgInput, "BackgroundColor3", 0.7, true)
 	Lib.RegisterThemeText(bgInput, "Primary")
 
 	local function UpdateBg()
@@ -8181,7 +8826,7 @@ do
 					Size = UDim2.new(1, 0, 0, 50), BackgroundColor3 = Color3.fromRGB(22, 22, 22), LayoutOrder = i, Parent = SavedFrame,
 					Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
 				})
-				Lib.RegisterThemeElement(item, "BackgroundColor3", 0.7)
+				Lib.RegisterThemeElement(item, "BackgroundColor3", 0.7, true)
 
 				Lib.Create("ImageLabel", {
 					Size = UDim2.fromOffset(38, 38), Position = UDim2.fromOffset(6, 6), BackgroundColor3 = Color3.fromRGB(40, 40, 40),
@@ -8268,7 +8913,253 @@ do
 		Lib.QueueBgSaturation()
 	end, true, "%")
 
-	Lib.BuildMusic(Lib.CreateFeatureGroup(AppearanceScroll, "Music", 6))
+do
+	local FILE = "SeptusHub_Sounds.json"
+	local Http, Market, Debris = Services.HttpService, game:GetService("MarketplaceService"), game:GetService("Debris")
+	local Presets = {
+		{ "Default", "rbxassetid://6895079853", 1, 0.5 },
+		{ "Soft Tick", "rbxassetid://6895079853", 1.35, 0.35 },
+		{ "Deep Tap", "rbxassetid://6895079853", 0.78, 0.45 },
+		{ "Airy", "rbxassetid://6895079853", 1.7, 0.3 },
+		{ "Switch", "rbxasset://sounds/switch.ogg", 1, 0.4 },
+		{ "Snap", "rbxasset://sounds/snap.mp3", 1, 0.3 },
+		{ "Ping", "rbxasset://sounds/electronicpingshort.wav", 1, 0.25 },
+		{ "Off", "", 1, 0 }
+	}
+	local custom, selected, busy, Rebuild = {}, "p:Default", false, nil
+
+	local function Resolve(key)
+		local kind, value = key:match("^(%a):(.+)$")
+		if kind == "p" then
+			for _, preset in ipairs(Presets) do
+				if preset[1] == value then return preset[2], preset[3], preset[4] end
+			end
+		elseif kind == "c" then
+			for _, entry in ipairs(custom) do
+				if entry.id == value then return "rbxassetid://" .. value, 1, 0.5 end
+			end
+		end
+	end
+
+	local function Persist()
+		if not writefile then return end
+		local out = {}
+		for i, entry in ipairs(custom) do out[i] = { id = entry.id, name = entry.name } end
+		pcall(writefile, FILE, Http:JSONEncode({ selected = selected, custom = out }))
+	end
+
+	local function Apply()
+		local id, speed, volume = Resolve(selected)
+		ClickSound.SoundId, ClickSound.PlaybackSpeed, ClickSound.Volume = id, speed, volume
+	end
+
+	local function Preview(key)
+		local id, speed, volume = Resolve(key)
+		if not id or id == "" then return end
+		local sound = Instance.new("Sound")
+		sound.SoundId, sound.PlaybackSpeed, sound.Volume = id, speed, volume
+		sound.Parent = Services.SoundService
+		sound:Play()
+		Debris:AddItem(sound, 6)
+	end
+
+	local function Probe(id)
+		local probe = Instance.new("Sound")
+		probe.SoundId, probe.Volume = "rbxassetid://" .. id, 0
+		probe.Parent = Services.SoundService
+		local deadline = os.clock() + 5
+		while not probe.IsLoaded and os.clock() < deadline do task.wait(0.1) end
+		local loaded, length = probe.IsLoaded, probe.TimeLength
+		probe:Destroy()
+		return loaded and length > 0, length
+	end
+
+	if isfile and readfile then
+		pcall(function()
+			if not isfile(FILE) then return end
+			local data = Http:JSONDecode(readfile(FILE))
+			for _, entry in ipairs(data.custom or {}) do
+				if type(entry) == "table" and tostring(entry.id):match("^%d+$") then
+					custom[#custom + 1] = { id = tostring(entry.id), name = tostring(entry.name or entry.id) }
+				end
+			end
+			if type(data.selected) == "string" then selected = data.selected end
+		end)
+	end
+	if not Resolve(selected) then selected = "p:Default" end
+	Apply()
+
+	function Lib.SelectClickSound(key)
+		if not Resolve(key) then return false end
+		selected = key
+		Apply()
+		Persist()
+		Rebuild()
+		return true
+	end
+
+	function Lib.GetClickSoundKey()
+		return selected
+	end
+
+	local SoundGroup = Lib.CreateFeatureGroup(AppearanceScroll, "Interface Sounds", 6)
+
+	local AddCard = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 52), BackgroundTransparency = 1, LayoutOrder = 1, Parent = SoundGroup })
+	local input = Lib.Create("TextBox", {
+		Size = UDim2.new(1, -96, 0, 36), Position = UDim2.fromOffset(12, 8), BackgroundColor3 = Color3.fromRGB(22, 22, 22),
+		PlaceholderText = "Paste a Sound Asset ID...", PlaceholderColor3 = Color3.fromRGB(110, 110, 110), TextColor3 = Color3.fromRGB(240, 240, 240),
+		TextSize = 12, Font = Enum.Font.GothamMedium, Text = "", ClearTextOnFocus = false, TextXAlignment = Enum.TextXAlignment.Left, Parent = AddCard,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
+		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
+	})
+	Lib.RegisterThemeElement(input, "BackgroundColor3", 0.7, true)
+	Lib.RegisterThemeText(input, "Primary")
+
+	local addBtn = Lib.Create("TextButton", {
+		Size = UDim2.fromOffset(60, 36), Position = UDim2.new(1, -72, 0, 8), BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		Text = "Add", TextColor3 = Color3.fromRGB(0, 0, 0), TextSize = 12, Font = Enum.Font.GothamBold, AutoButtonColor = false, Parent = AddCard,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
+	})
+
+	local list = Lib.Create("Frame", {
+		Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 2, Parent = SoundGroup,
+		Lib.Create("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
+		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12), PaddingBottom = UDim.new(0, 10) })
+	})
+
+	local function Row(label, key, order, removable)
+		local active = key == selected
+		local id = Resolve(key)
+		local item = Lib.Create("Frame", {
+			Size = UDim2.new(1, 0, 0, 40), BackgroundColor3 = Color3.fromRGB(22, 22, 22), LayoutOrder = order, Parent = list,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
+		})
+		Lib.RegisterThemeElement(item, "BackgroundColor3", 0.7, true)
+
+		local pick = Lib.Create("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, Parent = item })
+
+		local dot = Lib.Create("TextLabel", {
+			Size = UDim2.fromOffset(20, 40), Position = UDim2.fromOffset(10, 0), BackgroundTransparency = 1, Text = active and "\u{25CF}" or "\u{25CB}",
+			TextColor3 = Color3.fromRGB(150, 150, 150), TextSize = 12, Font = Enum.Font.GothamBold, Parent = item
+		})
+		Lib.RegisterThemeText(dot, active and "Primary" or "Secondary")
+
+		local name = Lib.Create("TextLabel", {
+			Size = UDim2.new(1, removable and -112 or -82, 1, 0), Position = UDim2.fromOffset(38, 0), BackgroundTransparency = 1, Text = label,
+			TextColor3 = Color3.fromRGB(240, 240, 240), TextSize = 12, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left,
+			TextTruncate = Enum.TextTruncate.AtEnd, Parent = item
+		})
+		Lib.RegisterThemeText(name, "Primary")
+
+		pick.MouseButton1Click:Connect(function()
+			if key ~= selected and Lib.SelectClickSound(key) then Preview(key) end
+		end)
+
+		if id ~= "" then
+			local play = Lib.Create("TextButton", {
+				Size = UDim2.fromOffset(28, 28), Position = UDim2.new(1, removable and -66 or -36, 0.5, -14), BackgroundTransparency = 1, Text = "\u{25B6}",
+				TextColor3 = Color3.fromRGB(150, 150, 150), TextSize = 11, Font = Enum.Font.GothamBold, AutoButtonColor = false, Parent = item
+			})
+			Lib.RegisterThemeText(play, "Secondary")
+			play.MouseButton1Click:Connect(function() Preview(key) end)
+		end
+
+		if removable then
+			local remove = Lib.Create("TextButton", {
+				Size = UDim2.fromOffset(28, 28), Position = UDim2.new(1, -34, 0.5, -14), BackgroundTransparency = 1, Text = "\u{00D7}",
+				TextColor3 = Color3.fromRGB(150, 150, 150), TextSize = 16, Font = Enum.Font.GothamBold, AutoButtonColor = false, Parent = item
+			})
+			Lib.RegisterThemeText(remove, "Secondary")
+			remove.MouseButton1Click:Connect(function()
+				Lib.PlayClick()
+				local value = key:sub(3)
+				for i, entry in ipairs(custom) do
+					if entry.id == value then
+						table.remove(custom, i)
+						break
+					end
+				end
+				if selected == key then
+					selected = "p:Default"
+					Apply()
+				end
+				Persist()
+				Rebuild()
+			end)
+		end
+	end
+
+	function Rebuild()
+		for _, child in ipairs(list:GetChildren()) do
+			if child:IsA("GuiObject") then child:Destroy() end
+		end
+		local header = Lib.Create("TextLabel", {
+			Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, Text = "Click sound", LayoutOrder = 0,
+			TextColor3 = Color3.fromRGB(150, 150, 150), TextSize = 11, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = list
+		})
+		Lib.RegisterThemeText(header, "Secondary")
+		local order = 0
+		for _, preset in ipairs(Presets) do
+			order += 1
+			Row(preset[1], "p:" .. preset[1], order, false)
+		end
+		for _, entry in ipairs(custom) do
+			order += 1
+			Row(entry.name, "c:" .. entry.id, order, true)
+		end
+	end
+
+	addBtn.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		if busy then return end
+		local text = input.Text:match("^%s*(.-)%s*$")
+		local id = text:match("^%d+$") or text:match("rbxassetid://(%d+)") or text:match("[?&]id=(%d+)") or text:match("/library/(%d+)") or text:match("(%d%d%d%d+)")
+		if not id then
+			Lib.Notify({ Title = "Sounds", Text = "Invalid Asset ID" })
+			return
+		end
+		for _, entry in ipairs(custom) do
+			if entry.id == id then
+				Lib.Notify({ Title = "Sounds", Text = "Already saved" })
+				return
+			end
+		end
+		if #custom >= 30 then
+			Lib.Notify({ Title = "Sounds", Text = "Saved list is full" })
+			return
+		end
+		busy = true
+		task.spawn(function()
+			local ok, length = Probe(id)
+			busy = false
+			if State.Unloaded then return end
+			if not ok then
+				Lib.Notify({ Title = "Sounds", Text = "Sound failed to load" })
+				return
+			end
+			if length > 5 then
+				Lib.Notify({ Title = "Sounds", Text = "Sound is too long (max 5 seconds)" })
+				return
+			end
+			local entry = { id = id, name = "Sound " .. id }
+			custom[#custom + 1] = entry
+			input.Text = ""
+			Persist()
+			Rebuild()
+			Preview("c:" .. id)
+			Lib.Notify({ Title = "Sounds", Text = "Sound saved" })
+			local good, info = pcall(Market.GetProductInfo, Market, tonumber(id))
+			if good and type(info) == "table" and info.Name and info.Name ~= "" and table.find(custom, entry) then
+				entry.name = info.Name
+				Persist()
+				Rebuild()
+			end
+		end)
+	end)
+
+	Rebuild()
+end
+	Lib.BuildMusic(Lib.CreateFeatureGroup(AppearanceScroll, "Music", 7))
 
 	task.spawn(function()
 		while not State.Unloaded do
@@ -8314,7 +9205,7 @@ do
 		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
 		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
 	})
-	Lib.RegisterThemeElement(cfgNameInput, "BackgroundColor3", 0.7)
+	Lib.RegisterThemeElement(cfgNameInput, "BackgroundColor3", 0.7, true)
 	Lib.RegisterThemeText(cfgNameInput, "Primary")
 
 	local saveCfgBtn = Lib.Create("TextButton", {
@@ -8376,7 +9267,7 @@ do
 	}
 
 	local function GetStateDump()
-		local dump = { ThemeIndex = State.SelectedThemeIndex, FontIndex = State.SelectedFontIndex, CustomBg = State.CustomBackgroundId }
+		local dump = { ThemeIndex = State.SelectedThemeIndex, FontIndex = State.SelectedFontIndex, CustomBg = State.CustomBackgroundId, ClickSound = Lib.GetClickSoundKey() }
 		for _, field in ipairs(ConfigFields) do
 			dump[field[1]] = State[field[2]]
 		end
@@ -8390,6 +9281,7 @@ do
 		end
 		local selectFont = data.FontIndex and Lib.FontSelectors[data.FontIndex]
 		if selectFont then selectFont() end
+		if type(data.ClickSound) == "string" then Lib.SelectClickSound(data.ClickSound) end
 		for _, field in ipairs(ConfigFields) do
 			local value = data[field[1]]
 			if value ~= nil then
@@ -8431,10 +9323,10 @@ do
 					Parent = SavedListContainer,
 					Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
 				})
-				Lib.RegisterThemeElement(item, "BackgroundColor3", 0.7)
+				Lib.RegisterThemeElement(item, "BackgroundColor3", 0.7, true)
 
 				local nameLabel = Lib.Create("TextLabel", {
-					Size = UDim2.new(1, -225, 1, 0),
+					Size = UDim2.new(1, -255, 1, 0),
 					Position = UDim2.new(0, 14, 0, 0),
 					BackgroundTransparency = 1,
 					Text = cName,
@@ -8459,19 +9351,33 @@ do
 				})
 
 				local isAuto = autoName == cName
-				local autoBtn = Lib.Create("TextButton", {
-					Size = UDim2.fromOffset(56, 28),
-					Position = UDim2.new(1, -207, 0.5, -14),
-					BackgroundColor3 = isAuto and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(35, 35, 35),
-					Text = "Auto",
-					TextColor3 = isAuto and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(150, 150, 150),
+				local autoLabel = Lib.Create("TextLabel", {
+					Size = UDim2.fromOffset(60, 28),
+					Position = UDim2.new(1, -241, 0.5, -14),
+					BackgroundTransparency = 1,
+					Text = "Auto Load",
+					TextColor3 = Color3.fromRGB(150, 150, 150),
 					TextSize = 11,
+					Font = Enum.Font.GothamMedium,
+					TextXAlignment = Enum.TextXAlignment.Right,
+					Parent = item
+				})
+				Lib.RegisterThemeText(autoLabel, "Secondary")
+
+				local autoBox = Lib.Create("TextButton", {
+					Size = UDim2.fromOffset(20, 20),
+					Position = UDim2.new(1, -173, 0.5, -10),
+					BackgroundColor3 = isAuto and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(35, 35, 35),
+					Text = isAuto and "\u{2713}" or "",
+					TextColor3 = Color3.fromRGB(0, 0, 0),
+					TextSize = 13,
 					Font = Enum.Font.GothamBold,
+					AutoButtonColor = false,
 					Parent = item,
-					Lib.Create("UICorner", { CornerRadius = UDim.new(0, 4) })
+					Lib.Create("UICorner", { CornerRadius = UDim.new(0, 5) })
 				})
 
-				autoBtn.MouseButton1Click:Connect(function()
+				autoBox.MouseButton1Click:Connect(function()
 					Lib.PlayClick()
 					autoName = (not isAuto) and cName or nil
 					if writefile then pcall(writefile, AUTO_FILE, autoName or "") end
