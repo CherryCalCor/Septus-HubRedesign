@@ -12,7 +12,7 @@
 
 Добавление 2-х подразделов в Scripts и Emotes а именно Saved и Recent.
 
-Переработка Settings у разделов Scripts и Emotes.
+Переработка Settings у разделов Scripts и Emotes [Теперь это Filters]
 
 Добавление иконок у некоторых кнопок подразделов.
 
