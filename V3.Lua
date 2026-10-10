@@ -48,6 +48,7 @@ local App = {
 		ActiveMain = "",
 		CurrentTab = "", CurrentScriptsTab = "", CurrentEmotesTab = "", CurrentFeaturesTab = "", CurrentSettingsTab = "",
 		OriginalSize = UDim2.fromOffset(800, 540),
+		MenuAnim = "Standard",
 		CornerRadius = 10,
 		SelectedThemeIndex = 1,
 		SelectedFontIndex = 1,
@@ -72,7 +73,7 @@ local App = {
 		PlayerNotifsEnabled = true,
 
 		ScriptsPage = 1, ScriptsTotalPages = 1, ScriptsLoading = false, ScriptsCache = {}, ScriptsGen = 0, ScriptsCount = 0, ScriptsBackoff = 0,
-		ScriptsProvider = "Rscripts", ScriptsSort = "Newest", ScriptsQuery = "",
+		ScriptsSources = { Rscripts = true }, ScriptsSort = "Relevance", ScriptsShow = "New", ScriptsOrder = "Descending", ScriptsGame = "", ScriptsQuery = "",
 
 		EmotesPage = 1, EmotesTotalPages = 1, EmotesLoading = false,
 		EmotesCache = {},
@@ -209,9 +210,12 @@ end
 
 Lib.ToggleControls = {}
 Lib.SliderControls = {}
+Lib.ChoiceControls = {}
+Lib.ConfigExtras = {}
 Lib.FontSelectors = {}
 Lib.BoundCorners = {}
 Lib.ImageTheme = {}
+Lib.ThemeHooks = {}
 
 function Lib.BindCorner(parent, name)
 	local corner = Instance.new("UICorner")
@@ -526,6 +530,10 @@ function Lib.ApplyTheme(spec, instant)
 		image.ImageColor3 = palette.Primary
 	end
 
+	for _, hook in ipairs(Lib.ThemeHooks) do
+		pcall(hook)
+	end
+
 	for _, sw in ipairs(UI.Switches) do
 		local color = sw.GetState() and palette.SwitchOn or palette.SwitchOff
 		if instant then
@@ -666,7 +674,12 @@ function Lib.Notify(options)
 end
 
 function Lib.CreateTabSystem(section, sideBar, stateKey, onSwitch)
-	local views, btns = {}, {}
+	local views, btns, icons = {}, {}, {}
+
+	local function Tint(name, color, time)
+		local icon = icons[name]
+		if icon then Lib.Tween(icon, time, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { ImageColor3 = color }) end
+	end
 
 	local function Switch(tabName)
 		if State[stateKey] == tabName then return end
@@ -684,6 +697,8 @@ function Lib.CreateTabSystem(section, sideBar, stateKey, onSwitch)
 				BackgroundTransparency = isSel and (isWhite and 0.88 or 0.92) or 1
 			})
 
+			Tint(name, isSel and selColor or unselColor, 0.2)
+
 			if isSel then
 				view.Visible = true
 				view.Position = UDim2.new(0, 195, 0, 10)
@@ -699,7 +714,7 @@ function Lib.CreateTabSystem(section, sideBar, stateKey, onSwitch)
 		if onSwitch then onSwitch(tabName) end
 	end
 
-	local function Make(name, posY)
+	local function Make(name, posY, iconId)
 		local isWhite = State.LightTheme
 		local btn = Lib.Create("TextButton", {
 			Size = UDim2.new(1, -30, 0, 34),
@@ -729,9 +744,21 @@ function Lib.CreateTabSystem(section, sideBar, stateKey, onSwitch)
 
 		views[name], btns[name] = view, btn
 
+		if iconId then
+			local icon = Lib.Create("ImageLabel", {
+				Size = UDim2.fromOffset(16, 16), Position = UDim2.new(0, 0, 0.5, -8), BackgroundTransparency = 1,
+				Image = "rbxassetid://" .. iconId, ImageColor3 = btn.TextColor3, ScaleType = Enum.ScaleType.Fit, Parent = btn
+			})
+			icons[name] = icon
+			local function Place() icon.Position = UDim2.new(0, btn.TextBounds.X + 8, 0.5, -8) end
+			btn:GetPropertyChangedSignal("TextBounds"):Connect(Place)
+			Place()
+		end
+
 		btn.MouseEnter:Connect(function()
 			local currentWhite = State.LightTheme
 			if State[stateKey] ~= name then
+				Tint(name, currentWhite and Color3.fromRGB(30, 30, 30) or Color3.fromRGB(210, 210, 210), 0.15)
 				Lib.Tween(btn, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, {
 					TextColor3 = currentWhite and Color3.fromRGB(30, 30, 30) or Color3.fromRGB(210, 210, 210),
 					BackgroundTransparency = currentWhite and 0.92 or 0.96
@@ -742,6 +769,7 @@ function Lib.CreateTabSystem(section, sideBar, stateKey, onSwitch)
 			local currentWhite = State.LightTheme
 			Lib.Tween(btn, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { Size = UDim2.new(1, -30, 0, 34) })
 			if State[stateKey] ~= name then
+				Tint(name, currentWhite and Color3.fromRGB(110, 110, 110) or Color3.fromRGB(150, 150, 150), 0.15)
 				Lib.Tween(btn, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, {
 					TextColor3 = currentWhite and Color3.fromRGB(110, 110, 110) or Color3.fromRGB(150, 150, 150),
 					BackgroundTransparency = 1
@@ -1729,33 +1757,73 @@ function Lib.ToggleMenu(force)
 	if show == nil then show = (not UI.Main.Visible) or State.MenuHiding end
 	State.MenuToken = (State.MenuToken or 0) + 1
 	local token = State.MenuToken
-	local scale, button = UI.MainScale, UI.SHToggleButton
+	local scale, button, main = UI.MainScale, UI.SHToggleButton, UI.Main
 	if not scale or not button then
-		UI.Main.Visible = show
+		main.Visible = show
 		return
 	end
 	local base = Lib.MenuBaseScale or 1
-	local _, target = Lib.MainLayout()
+	local size, target = Lib.MainLayout()
+	local mode = State.MenuAnim
 	local center = button.AbsolutePosition + button.AbsoluteSize / 2
 	local origin = UDim2.fromOffset(center.X, center.Y)
+	local below = UDim2.new(target.X.Scale, target.X.Offset, target.Y.Scale, target.Y.Offset + UI.Screen.AbsoluteSize.Y)
+	local line = UDim2.new(size.X.Scale, size.X.Offset, 0, 4)
+	local quint = Enum.EasingStyle.Quint
+
+	local function Finish()
+		if State.MenuToken ~= token then return end
+		main.Visible = false
+		State.MenuHiding = false
+		scale.Scale = base
+		main.Size, main.Position = Lib.MainLayout()
+	end
+
+	local function Chain(first, nextStage)
+		Lib.WindowTween = first
+		first.Completed:Connect(function()
+			if State.MenuToken == token then nextStage() end
+		end)
+	end
+
 	if show then
 		State.MenuHiding = false
-		scale.Scale = base * 0.05
-		UI.Main.Position = origin
-		UI.Main.Visible = true
-		Lib.WindowTween = Lib.Tween(UI.Main, 0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out, { Position = target })
-		Lib.Tween(scale, 0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out, { Scale = base })
-	else
-		State.MenuHiding = true
-		Lib.WindowTween = Lib.Tween(UI.Main, 0.34, Enum.EasingStyle.Quint, Enum.EasingDirection.In, { Position = origin })
-		Lib.Tween(scale, 0.34, Enum.EasingStyle.Quint, Enum.EasingDirection.In, { Scale = base * 0.05 }).Completed:Connect(function()
-			if State.MenuToken == token then
-				UI.Main.Visible = false
-				State.MenuHiding = false
-				scale.Scale = base
-				UI.Main.Position = select(2, Lib.MainLayout())
-			end
+		if mode == "Slide Up" then
+			scale.Scale = base * 0.9
+			main.Size, main.Position = size, below
+			main.Visible = true
+			Lib.WindowTween = Lib.Tween(main, 0.6, quint, Enum.EasingDirection.Out, { Position = target })
+			Lib.Tween(scale, 0.6, quint, Enum.EasingDirection.Out, { Scale = base })
+		elseif mode == "Unfold" then
+			scale.Scale = base
+			main.Size, main.Position = UDim2.fromOffset(0, 4), target
+			main.Visible = true
+			Chain(Lib.Tween(main, 0.3, quint, Enum.EasingDirection.Out, { Size = line }), function()
+				Lib.WindowTween = Lib.Tween(main, 0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out, { Size = size })
+			end)
+		else
+			scale.Scale = base * 0.05
+			main.Size, main.Position = size, origin
+			main.Visible = true
+			Lib.WindowTween = Lib.Tween(main, 0.5, quint, Enum.EasingDirection.Out, { Position = target })
+			Lib.Tween(scale, 0.5, quint, Enum.EasingDirection.Out, { Scale = base })
+		end
+		return
+	end
+
+	State.MenuHiding = true
+	if mode == "Slide Up" then
+		Lib.WindowTween = Lib.Tween(main, 0.45, quint, Enum.EasingDirection.In, { Position = below })
+		Lib.Tween(scale, 0.45, quint, Enum.EasingDirection.In, { Scale = base * 0.9 }).Completed:Connect(Finish)
+	elseif mode == "Unfold" then
+		Chain(Lib.Tween(main, 0.3, quint, Enum.EasingDirection.In, { Size = line }), function()
+			local last = Lib.Tween(main, 0.22, quint, Enum.EasingDirection.In, { Size = UDim2.fromOffset(0, 4) })
+			Lib.WindowTween = last
+			last.Completed:Connect(Finish)
 		end)
+	else
+		Lib.WindowTween = Lib.Tween(main, 0.34, quint, Enum.EasingDirection.In, { Position = origin })
+		Lib.Tween(scale, 0.34, quint, Enum.EasingDirection.In, { Scale = base * 0.05 }).Completed:Connect(Finish)
 	end
 end
 
@@ -1806,12 +1874,81 @@ do
 end
 
 do
+	local UIS = Services.UserInputService
+	local MIN_W, MIN_H, MAX_W, MAX_H = 560, 380, 1500, 950
+	local EDGE, CORNER = 6, 14
+	local active, origin, startW, startH, startOffset
+
+	local handles = {
+		{ -1, 0, UDim2.new(0, EDGE, 1, -CORNER * 2), UDim2.fromOffset(0, CORNER) },
+		{ 1, 0, UDim2.new(0, EDGE, 1, -CORNER * 2), UDim2.new(1, -EDGE, 0, CORNER) },
+		{ 0, -1, UDim2.new(1, -CORNER * 2, 0, EDGE), UDim2.fromOffset(CORNER, 0) },
+		{ 0, 1, UDim2.new(1, -CORNER * 2, 0, EDGE), UDim2.new(0, CORNER, 1, -EDGE) },
+		{ -1, -1, UDim2.fromOffset(CORNER, CORNER), UDim2.fromOffset(0, 0) },
+		{ 1, -1, UDim2.fromOffset(CORNER, CORNER), UDim2.new(1, -CORNER, 0, 0) },
+		{ -1, 1, UDim2.fromOffset(CORNER, CORNER), UDim2.new(0, 0, 1, -CORNER) },
+		{ 1, 1, UDim2.fromOffset(CORNER, CORNER), UDim2.new(1, -CORNER, 1, -CORNER) }
+	}
+
+	local function Blocked()
+		return State.Maximized or State.Minimized or Lib.WindowBusy()
+	end
+
+	for _, data in ipairs(handles) do
+		local handle = Lib.Create("Frame", {
+			Name = "ResizeHandle", Size = data[3], Position = data[4], BackgroundColor3 = Color3.new(1, 1, 1),
+			BackgroundTransparency = 1, BorderSizePixel = 0, Active = true, ZIndex = 60, Parent = UI.Main
+		})
+		local function Glow(transparency)
+			handle.BackgroundColor3 = State.LightTheme and Color3.new(0, 0, 0) or Color3.new(1, 1, 1)
+			Lib.Tween(handle, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundTransparency = transparency })
+		end
+		handle.MouseEnter:Connect(function()
+			if not active and not Blocked() then Glow(0.82) end
+		end)
+		handle.MouseLeave:Connect(function()
+			if active ~= data then Glow(1) end
+		end)
+		handle.InputBegan:Connect(function(input)
+			if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
+			if Blocked() then return end
+			active, origin = data, input.Position
+			startW, startH, startOffset = State.OriginalSize.X.Offset, State.OriginalSize.Y.Offset, Lib.DragOffset
+			Glow(0.6)
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					active = nil
+					Glow(1)
+				end
+			end)
+		end)
+	end
+
+	Lib.C(UIS.InputChanged, function(input)
+		if not active or (input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch) then return end
+		if Blocked() then
+			active = nil
+			return
+		end
+		local s = Lib.MenuBaseScale or 1
+		local view = UI.Screen.AbsoluteSize
+		local dx, dy = active[1], active[2]
+		local delta = input.Position - origin
+		local w = math.clamp(startW + dx * delta.X / s, MIN_W, math.max(MIN_W, math.min(MAX_W, view.X / s - 20)))
+		local h = math.clamp(startH + dy * delta.Y / s, MIN_H, math.max(MIN_H, math.min(MAX_H, view.Y / s - 20)))
+		State.OriginalSize = UDim2.fromOffset(w, h)
+		Lib.DragOffset = startOffset + Vector2.new(dx * (w - startW) * s / 2, dy * (h - startH) * s / 2)
+		UI.Main.Size, UI.Main.Position = Lib.MainLayout()
+	end)
+end
+
+do
 	local NavTabsData = {
 		{ id = "Home", title = "Home", icon = "rbxassetid://128407802503574", expWidth = 76 },
-		{ id = "Features", title = "Features", icon = "rbxassetid://10734944449", expWidth = 94 },
+		{ id = "Features", title = "Features", icon = "rbxassetid://74917927400316", expWidth = 94 },
 		{ id = "Scripts", title = "Scripts", icon = "rbxassetid://99356660335373", expWidth = 84 },
 		{ id = "Emotes", title = "Emotes", icon = "rbxassetid://132655372254315", expWidth = 84 },
-		{ id = "Settings", title = "Settings", icon = "rbxassetid://72855116322935", expWidth = 94 }
+		{ id = "Settings", title = "Settings", icon = "rbxassetid://112763474266331", expWidth = 94 }
 	}
 	local BASE_TAB_WIDTH, TAB_GAP = 34, 8
 
@@ -1937,7 +2074,22 @@ end
 function Lib.BuildUpdateLog(view)
 	local releases = {
 		{
-			version = "V3.3", title = "Halloween", date = "Oct 9", latest = true,
+			version = "V3.4", date = "Oct 10", latest = true,
+			notes = {
+				"Visual change to certain objects.",
+				"Changing the settings icons and the Features icon.",
+				"Added two types of animations for the menu.",
+				"Adding two subsections to Scripts and Emotes: Saved and Recent.",
+				"Reworked Settings for the Scripts and Emotes sections [Now called Filters]",
+				"Adding icons to some subsection buttons.",
+				"Added the ability to resize the main menu.",
+				"Addition of the new script search service HaxHell.",
+				"Fixed the copying of loadstring references for scripts.",
+				"Adding a Combat subsection to Features."
+			}
+		},
+		{
+			version = "V3.3", title = "Halloween", date = "Oct 9",
 			notes = {
 				"Adding search bars to the Features, Emotes, and Scripts sections.",
 				"Visual update of certain objects.",
@@ -2440,7 +2592,13 @@ do
 		return Item
 	end
 
-	function Lib.CreateSettingSliderItem(parentCard, title, desc, minVal, maxVal, defaultVal, onChange, isLast, suffix)
+	function Lib.CreateSettingSliderItem(parentCard, title, desc, minVal, maxVal, defaultVal, onChange, isLast, suffix, step)
+		local digits = step and #(tostring(step):match("%.(%d+)") or "") or 0
+		local function Fmt(value)
+			if not step then return tostring(math.floor(value)) end
+			return string.format("%." .. digits .. "f", value)
+		end
+
 		local Item = Lib.Create("Frame", {
 			Size = UDim2.new(1, 0, 0, 50),
 			BackgroundTransparency = 1,
@@ -2464,7 +2622,7 @@ do
 			Size = UDim2.new(1, -190, 0, 16),
 			Position = UDim2.new(0, 14, 0, 26),
 			BackgroundTransparency = 1,
-			Text = desc .. " (" .. math.floor(defaultVal) .. (suffix or "") .. ")",
+			Text = desc .. " (" .. Fmt(defaultVal) .. (suffix or "") .. ")",
 			TextColor3 = Color3.fromRGB(130, 130, 130),
 			TextSize = 11,
 			Font = Enum.Font.GothamMedium,
@@ -2527,10 +2685,15 @@ do
 			local trackAbsSize = SliderTrack.AbsoluteSize.X
 			local relX = math.clamp((inputPos.X - trackAbsPos) / trackAbsSize, 0, 1)
 			local currentVal = math.floor(minVal + (maxVal - minVal) * relX)
+			local shown = relX
+			if step then
+				currentVal = tonumber(Fmt(math.clamp(minVal + math.floor((maxVal - minVal) * relX / step + 0.5) * step, minVal, maxVal)))
+				shown = math.clamp((currentVal - minVal) / (maxVal - minVal), 0, 1)
+			end
 
-			SliderKnob.Position = UDim2.new(relX, 0, 0.5, 0)
-			SliderFill.Size = UDim2.new(relX, 0, 1, 0)
-			DescLabel.Text = desc .. " (" .. currentVal .. (suffix or "") .. ")"
+			SliderKnob.Position = UDim2.new(shown, 0, 0.5, 0)
+			SliderFill.Size = UDim2.new(shown, 0, 1, 0)
+			DescLabel.Text = desc .. " (" .. Fmt(currentVal) .. (suffix or "") .. ")"
 			onChange(currentVal)
 		end
 
@@ -2538,7 +2701,7 @@ do
 			local percent = math.clamp((value - minVal) / (maxVal - minVal), 0, 1)
 			SliderKnob.Position = UDim2.new(percent, 0, 0.5, 0)
 			SliderFill.Size = UDim2.new(percent, 0, 1, 0)
-			DescLabel.Text = desc .. " (" .. math.floor(value) .. (suffix or "") .. ")"
+			DescLabel.Text = desc .. " (" .. Fmt(value) .. (suffix or "") .. ")"
 		end
 
 		Display(defaultVal)
@@ -2572,6 +2735,173 @@ do
 				dragging = false
 			end
 		end)
+
+		Lib.SearchAdd(parentCard, Item, title)
+		return Item
+	end
+
+	function Lib.CreateSettingChoiceItem(parentCard, title, options, default, onChange, isLast, multi)
+		local entries = {}
+		for i, option in ipairs(options) do
+			entries[i] = type(option) == "table" and option or { option, option }
+		end
+		local cycle = not multi and #entries > 4
+		local selected, current = {}, entries[1][2]
+		if multi then
+			for _, value in ipairs(default or {}) do selected[value] = true end
+		elseif default ~= nil then
+			current = default
+		end
+
+		local Item = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 46), BackgroundTransparency = 1, Parent = parentCard })
+
+		local titleLabel = Lib.Create("TextLabel", {
+			Size = UDim2.new(1, -28, 1, 0),
+			Position = UDim2.fromOffset(14, 0),
+			BackgroundTransparency = 1,
+			Text = title,
+			TextColor3 = Color3.fromRGB(240, 240, 240),
+			TextSize = 13,
+			Font = Enum.Font.GothamBold,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Parent = Item
+		})
+		Lib.RegisterThemeText(titleLabel, "Primary")
+
+		local holder = Lib.Create("Frame", {
+			Size = UDim2.fromOffset(0, 24),
+			AutomaticSize = Enum.AutomaticSize.X,
+			AnchorPoint = Vector2.new(1, 0.5),
+			Position = UDim2.new(1, -14, 0.5, 0),
+			BackgroundTransparency = 1,
+			Parent = Item,
+			Lib.Create("UIListLayout", {
+				FillDirection = Enum.FillDirection.Horizontal,
+				Padding = UDim.new(0, 4),
+				SortOrder = Enum.SortOrder.LayoutOrder,
+				VerticalAlignment = Enum.VerticalAlignment.Center
+			})
+		})
+
+		local pills = {}
+
+		local function Active(value)
+			if multi then return selected[value] == true end
+			return current == value
+		end
+
+		local function Label(value)
+			for _, entry in ipairs(entries) do
+				if entry[2] == value then return entry[1] end
+			end
+			return tostring(value)
+		end
+
+		local function Snapshot()
+			local copy = {}
+			for key in pairs(selected) do copy[key] = true end
+			return copy
+		end
+
+		local function Paint()
+			if cycle then
+				pills[1].Text = Label(current)
+				return
+			end
+			local on, off = Lib.Palette.SwitchOn, Lib.Palette.SwitchOff
+			for i, pill in ipairs(pills) do
+				local active = Active(entries[i][2])
+				Lib.Tween(pill, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, {
+					BackgroundColor3 = active and on or off,
+					TextColor3 = active and Color3.new(1, 1, 1) or Color3.fromRGB(170, 170, 170)
+				})
+			end
+		end
+
+		for i = 1, cycle and 1 or #entries do
+			local pill = Lib.Create("TextButton", {
+				Size = UDim2.fromOffset(0, 24),
+				AutomaticSize = Enum.AutomaticSize.X,
+				LayoutOrder = i,
+				AutoButtonColor = false,
+				BackgroundColor3 = Lib.Palette.SwitchOff,
+				TextColor3 = cycle and Color3.new(1, 1, 1) or Color3.fromRGB(170, 170, 170),
+				Text = cycle and Label(current) or entries[i][1],
+				TextSize = 11,
+				Font = Enum.Font.GothamMedium,
+				Parent = holder,
+				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
+				Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
+			})
+			pills[i] = pill
+			if not cycle then
+				Lib.RegisterSwitch(pill, function() return Active(entries[i][2]) end, Paint)
+			end
+			pill.MouseButton1Click:Connect(function()
+				Lib.PlayClick()
+				if cycle then
+					local index = 1
+					for j, entry in ipairs(entries) do
+						if entry[2] == current then
+							index = j
+							break
+						end
+					end
+					current = entries[index % #entries + 1][2]
+					Paint()
+					onChange(current)
+				elseif multi then
+					local value = entries[i][2]
+					selected[value] = not selected[value] or nil
+					Paint()
+					onChange(Snapshot())
+				else
+					current = entries[i][2]
+					Paint()
+					onChange(current)
+				end
+			end)
+		end
+		Paint()
+
+		Lib.ChoiceControls[title] = {
+			Get = function()
+				if not multi then return current end
+				local list = {}
+				for _, entry in ipairs(entries) do
+					if selected[entry[2]] then list[#list + 1] = entry[2] end
+				end
+				return list
+			end,
+			Set = function(value)
+				if multi then
+					table.clear(selected)
+					for _, item in ipairs(type(value) == "table" and value or { value }) do selected[item] = true end
+					Paint()
+					onChange(Snapshot())
+					return
+				end
+				for _, entry in ipairs(entries) do
+					if entry[2] == value then
+						current = value
+						Paint()
+						onChange(value)
+						return
+					end
+				end
+			end
+		}
+
+		if not isLast then
+			Lib.Create("Frame", {
+				Size = UDim2.new(1, -28, 0, 1),
+				Position = UDim2.new(0, 14, 1, -1),
+				BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+				BackgroundTransparency = 0.9,
+				BorderSizePixel = 0,
+				Parent = Item
+			})
+		end
 
 		Lib.SearchAdd(parentCard, Item, title)
 		return Item
@@ -2641,7 +2971,7 @@ do
 	end
 end
 
-function Lib.BuildFeatureSearch(section, sideBar)
+function Lib.BuildFeatureSearch(section, sideBar, tabs)
 	local list = Lib.SearchItems
 	local shown = {}
 	local active = false
@@ -2705,7 +3035,7 @@ function Lib.BuildFeatureSearch(section, sideBar)
 	end
 
 	local box = Lib.MakeSearchBox(sideBar, "Search features", UDim2.fromOffset(15, 46), UDim2.new(1, -30, 0, 28), 0, Apply)
-	for _, button in ipairs(sideBar:GetChildren()) do
+	for _, button in ipairs(tabs:GetChildren()) do
 		if button:IsA("TextButton") then
 			button.MouseButton1Click:Connect(function()
 				task.defer(function() box.Text = "" end)
@@ -2784,6 +3114,244 @@ function Lib.BuildBrowseSearch(view, scroll, bottom, placeholder, onQuery)
 	end
 
 	Layout(false)
+	return api
+end
+
+
+function Lib.MakeStore(file, limit)
+	local Http = Services.HttpService
+	local list, store = {}, {}
+	if isfile and readfile then
+		pcall(function()
+			if isfile(file) then
+				local data = Http:JSONDecode(readfile(file))
+				if type(data) == "table" then list = data end
+			end
+		end)
+	end
+	local function Commit()
+		if not writefile then return end
+		pcall(function() writefile(file, Http:JSONEncode(list)) end)
+	end
+	function store.List() return list end
+	function store.Find(key)
+		for index, entry in ipairs(list) do
+			if entry.key == key then return index end
+		end
+	end
+	function store.Has(key) return store.Find(key) ~= nil end
+	function store.Add(key, data)
+		local index = store.Find(key)
+		if index then table.remove(list, index) end
+		table.insert(list, 1, { key = key, data = data })
+		if limit and #list > limit then table.remove(list) end
+		Commit()
+	end
+	function store.Remove(key)
+		local index = store.Find(key)
+		if index then
+			table.remove(list, index)
+			Commit()
+		end
+	end
+	function store.Toggle(key, data)
+		if store.Has(key) then
+			store.Remove(key)
+			return false
+		end
+		store.Add(key, data)
+		return true
+	end
+	return store
+end
+
+function Lib.MakeStar(parent, position, saved, onToggle)
+	local gold, white = Color3.fromRGB(255, 200, 40), Color3.new(1, 1, 1)
+	local star = Lib.Create("TextButton", {
+		Size = UDim2.fromOffset(24, 24), Position = position, BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.5,
+		AutoButtonColor = false, Text = "\u{2605}", TextSize = 15, Font = Enum.Font.GothamBold, TextColor3 = saved and gold or white,
+		ZIndex = 9, Parent = parent,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
+	})
+	star.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		Lib.Tween(star, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { TextColor3 = onToggle() and gold or white })
+	end)
+	return star
+end
+
+function Lib.MakeCardList(view, emptyText, cell, gap, padX)
+	local scroll = Lib.Create("ScrollingFrame", {
+		Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, ScrollBarThickness = 2, ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100),
+		BorderSizePixel = 0, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = view,
+		Lib.Create("UIGridLayout", { CellSize = cell, CellPadding = gap, SortOrder = Enum.SortOrder.LayoutOrder }),
+		Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 5), PaddingLeft = UDim.new(0, padX), PaddingRight = UDim.new(0, padX), PaddingBottom = UDim.new(0, 15) })
+	})
+	local empty = Lib.Create("TextLabel", {
+		Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = emptyText, TextColor3 = Color3.fromRGB(150, 150, 150),
+		TextSize = 14, Font = Enum.Font.GothamMedium, Visible = false, Parent = view
+	})
+	Lib.RegisterThemeText(empty, "Secondary")
+	return scroll, empty
+end
+
+function Lib.MakeFilterButton(sideBar, onClick)
+	local api, hover = {}, false
+	local function Idle() return State.LightTheme and Color3.fromRGB(100, 100, 100) or Color3.fromRGB(150, 150, 150) end
+	local button = Lib.Create("TextButton", {
+		Size = UDim2.new(1, -30, 0, 34), Position = UDim2.new(0, 15, 1, -74), BackgroundColor3 = Lib.Palette.Primary, BackgroundTransparency = 1,
+		Text = "", AutoButtonColor = false, Parent = sideBar,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 7) })
+	})
+	local label = Lib.Create("TextLabel", {
+		Size = UDim2.new(1, -72, 1, 0), Position = UDim2.fromOffset(38, 0), BackgroundTransparency = 1, Text = "Filters", TextSize = 14,
+		Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Idle(), Parent = button
+	})
+	local pieces = {}
+	local function Piece(size, position, round)
+		local piece = Lib.Create("Frame", { Size = size, Position = position, BackgroundColor3 = Idle(), BorderSizePixel = 0, Parent = button })
+		if round then Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0), Parent = piece }) end
+		pieces[#pieces + 1] = piece
+	end
+	Piece(UDim2.fromOffset(14, 2), UDim2.fromOffset(12, 11))
+	Piece(UDim2.fromOffset(14, 2), UDim2.fromOffset(12, 21))
+	Piece(UDim2.fromOffset(6, 6), UDim2.fromOffset(21, 9), true)
+	Piece(UDim2.fromOffset(6, 6), UDim2.fromOffset(13, 19), true)
+
+	local badge = Lib.Create("TextLabel", {
+		Size = UDim2.fromOffset(20, 18), Position = UDim2.new(1, -28, 0.5, -9), BackgroundColor3 = Lib.Palette.Primary, Text = "0",
+		TextColor3 = Color3.new(0, 0, 0), TextSize = 11, Font = Enum.Font.GothamBold, Visible = false, Parent = button,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) })
+	})
+
+	local function Paint()
+		local color = hover and Lib.Palette.Primary or Idle()
+		local info = { Enum.EasingStyle.Quad, Enum.EasingDirection.Out }
+		Lib.Tween(label, 0.15, info[1], info[2], { TextColor3 = color })
+		for _, piece in ipairs(pieces) do Lib.Tween(piece, 0.15, info[1], info[2], { BackgroundColor3 = color }) end
+		Lib.Tween(button, 0.15, info[1], info[2], { BackgroundColor3 = Lib.Palette.Primary, BackgroundTransparency = hover and 0.92 or 1 })
+		badge.BackgroundColor3 = Lib.Palette.Primary
+		badge.TextColor3 = State.LightTheme and Color3.new(1, 1, 1) or Color3.new(0, 0, 0)
+	end
+
+	button.MouseEnter:Connect(function() hover = true Paint() end)
+	button.MouseLeave:Connect(function() hover = false Paint() end)
+	button.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		onClick()
+	end)
+	table.insert(Lib.ThemeHooks, Paint)
+	Paint()
+
+	function api.SetCount(count)
+		badge.Text = tostring(count)
+		badge.Visible = count > 0
+	end
+	return api
+end
+
+function Lib.MakeFilterChips(parent, title, options, isOn, onPick, order, cellWidth, disabled)
+	local section = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = order, Parent = parent })
+	local heading = Lib.Create("TextLabel", {
+		Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, Text = title, TextColor3 = Color3.fromRGB(200, 200, 200), TextSize = 12,
+		Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = section
+	})
+	Lib.RegisterThemeText(heading, "Primary")
+	local grid = Lib.Create("Frame", {
+		Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Position = UDim2.fromOffset(0, 22), BackgroundColor3 = Color3.fromRGB(22, 22, 22), Parent = section,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 9) }),
+		Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6) }),
+		Lib.Create("UIGridLayout", { CellSize = UDim2.fromOffset(cellWidth, 28), CellPadding = UDim2.fromOffset(6, 6), SortOrder = Enum.SortOrder.LayoutOrder })
+	})
+	Lib.RegisterThemeElement(grid, "BackgroundColor3", 0.7)
+
+	local buttons = {}
+	local function Refresh()
+		local light = State.LightTheme
+		for option, button in pairs(buttons) do
+			local on = isOn(option)
+			local off = disabled and disabled[option]
+			Lib.Tween(button, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, {
+				BackgroundColor3 = Lib.Palette.Primary,
+				BackgroundTransparency = on and 0 or 1,
+				TextColor3 = on and (light and Color3.new(1, 1, 1) or Color3.new(0, 0, 0)) or (off and Color3.fromRGB(85, 85, 85) or Color3.fromRGB(150, 150, 150))
+			})
+		end
+	end
+	for index, option in ipairs(options) do
+		local button = Lib.Create("TextButton", {
+			BackgroundColor3 = Lib.Palette.Primary, BackgroundTransparency = 1, Text = option, TextSize = 12, Font = Enum.Font.GothamMedium,
+			TextColor3 = Color3.fromRGB(150, 150, 150), AutoButtonColor = false, LayoutOrder = index, Parent = grid,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 7) })
+		})
+		buttons[option] = button
+		button.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			onPick(option)
+			Refresh()
+		end)
+	end
+	Refresh()
+	table.insert(Lib.ThemeHooks, Refresh)
+	return Refresh
+end
+
+function Lib.BuildFilterModal(title, subtitle)
+	local api, busy = {}, false
+	local backdrop = Lib.Create("TextButton", {
+		Name = "FilterBackdrop", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 1,
+		Text = "", AutoButtonColor = false, Visible = false, ZIndex = 30, Parent = UI.Main
+	})
+	local window = Lib.Create("Frame", {
+		Size = UDim2.fromOffset(400, 470), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundColor3 = Color3.fromRGB(16, 16, 16), ClipsDescendants = true, Active = true, ZIndex = 31, Parent = backdrop,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 12) }),
+		Lib.Create("UIStroke", { Color = Color3.fromRGB(60, 60, 60), Thickness = 1, Transparency = 0.5 })
+	})
+	Lib.RegisterThemeElement(window, "BackgroundColor3", 0.7)
+
+	local heading = Lib.Create("TextLabel", {
+		Size = UDim2.new(1, -70, 0, 22), Position = UDim2.fromOffset(18, 14), BackgroundTransparency = 1, Text = title, TextSize = 17,
+		Font = Enum.Font.GothamBold, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 32, Parent = window
+	})
+	Lib.RegisterThemeText(heading, "Primary")
+	local sub = Lib.Create("TextLabel", {
+		Size = UDim2.new(1, -70, 0, 16), Position = UDim2.fromOffset(18, 37), BackgroundTransparency = 1, Text = subtitle, TextSize = 12,
+		Font = Enum.Font.GothamMedium, TextColor3 = Color3.fromRGB(130, 130, 130), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 32, Parent = window
+	})
+	Lib.RegisterThemeText(sub, "Secondary")
+	local close = Lib.Create("TextButton", {
+		Size = UDim2.fromOffset(28, 28), Position = UDim2.new(1, -42, 0, 14), BackgroundTransparency = 1, Text = "\u{00D7}", TextSize = 20,
+		Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(150, 150, 150), AutoButtonColor = false, ZIndex = 32, Parent = window
+	})
+	Lib.RegisterThemeText(close, "Secondary")
+
+	api.Content = Lib.Create("ScrollingFrame", {
+		Size = UDim2.new(1, 0, 1, -70), Position = UDim2.fromOffset(0, 70), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 2,
+		ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ZIndex = 32, Parent = window,
+		Lib.Create("UIListLayout", { Padding = UDim.new(0, 14), SortOrder = Enum.SortOrder.LayoutOrder }),
+		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 18), PaddingRight = UDim.new(0, 18), PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 18) })
+	})
+
+	function api.Open()
+		if backdrop.Visible then return end
+		Lib.GlassOpen(backdrop)
+		window.Size = UDim2.fromOffset(380, 450)
+		Lib.Tween(window, 0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out, { Size = UDim2.fromOffset(400, 470) })
+	end
+	function api.Close()
+		if not backdrop.Visible or busy then return end
+		busy = true
+		Lib.GlassClose(backdrop, function()
+			backdrop.Visible = false
+			busy = false
+		end)
+	end
+	close.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		api.Close()
+	end)
+	backdrop.MouseButton1Click:Connect(api.Close)
 	return api
 end
 
@@ -3694,7 +4262,7 @@ do
 			gearBtn = HeaderButton("", -94)
 			Lib.RegisterThemeImage(Lib.Create("ImageLabel", {
 				Size = UDim2.fromOffset(16, 16), Position = UDim2.new(0.5, -8, 0.5, -8), BackgroundTransparency = 1,
-				Image = "rbxassetid://72855116322935", ScaleType = Enum.ScaleType.Fit, ZIndex = 4, Parent = gearBtn
+				Image = "rbxassetid://119430435918970", ScaleType = Enum.ScaleType.Fit, ZIndex = 4, Parent = gearBtn
 			}))
 		end
 
@@ -3897,7 +4465,7 @@ function Lib.BuildBunnyHop(group)
 	end, true)
 	local gear = Lib.Create("ImageButton", {
 		Size = UDim2.fromOffset(28, 28), Position = UDim2.new(1, -98, 0.5, -14), BackgroundColor3 = Color3.fromRGB(22, 22, 22), AutoButtonColor = false,
-		Image = "rbxassetid://72855116322935", ImageColor3 = Color3.fromRGB(180, 180, 180), ScaleType = Enum.ScaleType.Fit, Parent = item,
+		Image = "rbxassetid://119430435918970", ImageColor3 = Color3.fromRGB(180, 180, 180), ScaleType = Enum.ScaleType.Fit, Parent = item,
 		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
 		Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5), PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5) })
 	})
@@ -3906,6 +4474,1125 @@ function Lib.BuildBunnyHop(group)
 		Lib.PlayClick()
 		modal.Open()
 	end)
+end
+
+function Lib.BuildCombat(scroll)
+	local Players, UIS, Workspace, Run = Services.Players, Services.UserInputService, Services.Workspace, Services.Run
+	local LocalPlayer = App.Player
+	local lookAt = CFrame.lookAt
+	local reg, live = {}, {}
+
+	local function Words(source)
+		local set = {}
+		for word in source:gmatch("%S+") do set[word] = true end
+		return set
+	end
+
+	local AMMO = Words([[
+			acsclientammoingun acsammoingun acsammo acsclipammo acsclip acsgunammo acsgunclip
+			acsbulletcount acsbullets acsrounds acsammoleft acsmagammo ammoingun ammoinmag ammoinclip
+			ammoinchamber ammoincylinder ammoinbarrel ammocount ammocountgun ammogun ammoleft ammoleftgun
+			ammoleftingun ammoremaining ammoremain ammoloaded ammochamber ammobarrel ammomag ammomagazine
+			ammoclip ammodrum ammopouch ammobelt currentammo currentclip currentrounds currentbullets
+			currentshot currentmag currentchamber currentloaded currentingun clipammo clipcount clipleft
+			cliprounds clipbullets clipcurrent clippingun clipmag clipmagazine magammo magcount magleft
+			magrounds magbullets magcurrent magazineammo magazinecount magazineleft magazinerounds
+			magazinebullets magazinecurrent magazineingun magazinemag bulletcount bulletsleft
+			bulletsremaining bulletsingun bulletmag bulletclip bulletchamber bulletinmag roundsleft
+			roundsremaining roundsingun roundsinmag roundsinclip roundsinchamber roundscount roundsloaded
+			shellleft shellsin shellcount shellchamber shellscount shellschamber shellsloaded chambered
+			chamberedbullet chambercount chamberhas chamberfull chamberloaded chamberround loadedammo
+			loadedbullets loadedrounds loadedshot loadedmag loadedclip loadedgun loadedweapon gunammo
+			gunbullets gunrounds gunmag gunclip guncurrent gunloaded gunshot shotsleft shotcount
+			shotremaining shotloaded shotsingun shotbullets weaponammo weaponbullets weaponrounds
+			weaponclip weaponmag weaponloaded weaponcurrent weaponshot патроныворужии патронывобойме
+			патронывмагазине патронывстволе заряженопатронов патроновзаряжено патроноввобойме
+			патроновворужии патроноввмагазине осталосьпатронов текущиепатроны текущийпатрон
+	]])
+	local AMMO_STOP = Words([[
+			storedammo maxstoredammo reserveammo ammostorage ammoreserve totalammo ammototal ammopool
+			ammobackup ammobank ammocache ammowarehouse ammoinventory ammosupply ammosupplies ammoreservoir
+			spareammo extraammo backupammo sparerounds extrarounds backuprrounds maxammo ammomax maxclip
+			maxmag clipmax magmax maxbullet maxround maxshell maxcartridge maxcapacity maxload maxstored
+			maxreserve clipcapacity magcapacity magazinecapacity gunmaxammo weaponmaxammo toolmaxammo
+			ammocapacity weaponcapacity clipmaxammo magmaxammo magazinemaxammo isreloading reloading
+			reloadtime reloadprogress reloadstate reloadspeed reloadstart reloadend hasammo noammo
+			outofammo emptygun ammotype ammoname ammoid ammokind ammodamage ammospeed ammopower ammoweight
+			ammosize ammocaliber ammogauge
+	]])
+	local JAM = Words([[
+			jammed isjammed isjam jam jamstate jamstatus gunjammed weaponjammed tooljammed playerjammed
+			gunjam weaponjam tooljam jammedstate jammedstatus jammedvalue jammedflag jamflag jamvalue
+			jamamount jamcount isgunjammed isweaponjammed istooljammed hasjam hasjammed getjammed setjammed
+			acsclientjammed acsjam acsjammed weaponisjammed gunisjammed toolisjammed isjamming jamming
+			jammedbool
+	]])
+	local JAM_STOP = Words([[
+			jammer jamsound jamanim jamsfx
+	]])
+	local ZERO = Words([[
+			recoil spread inaccuracy kickback kick recoilpower spreadpower recoilamount spreadamount
+			aiminaccuracy aimspread aimrecoil hipspread hiprecoil adsspread adsrecoil gunrecoil gunspread
+			camrecoil camspread weaponrecoil weaponspread minrecoil maxrecoil minspread maxspread recoilup
+			recoildown recoilleft recoilright recoiltilt recoilx recoily recoilhorizontal recoilvertical
+			spreadx spready spreadhorizontal spreadvertical inaccuracystep inaccuracydecrease
+			aiminaccuracystep aiminaccuracydecrease recoilpowerstep recoilpowerstepamount recoilstep
+			recoilstepamount spreadstep spreadstepamount recoilreduction spreadreduction recoildecrease
+			spreaddecrease recoilrecovery spreadrecovery recoildecay spreaddecay recoilcontrol
+			spreadcontrol verticalrecoil horizontalrecoil verticalspread horizontalspread camerarecoil
+			cameraspread walkrecoil walkspread jumprecoil jumpspread crouchrecoil crouchspread pronerecoil
+			pronespread bulletspread bulletrecoil bulletinaccuracy
+	]])
+
+	local AMMO_ATTRS = {
+		"ACSClientAmmoInGun", "AmmoInGun", "CurrentAmmo", "ClipAmmo", "MagAmmo", "Ammo",
+		"AmmoCount", "BulletsInGun", "RoundsInGun", "BulletsLeft", "RoundsLeft", "ShellsInGun"
+	}
+	local JAM_ATTRS = { "ACSClientJammed", "Jammed", "IsJammed", "JammedState", "IsJam", "GunJammed", "WeaponJammed" }
+	local WALL_KEYS = Words("penetration penetrationpower wallpenetration penetrationamount penetrationdepth")
+	local FOLDERS = { "NPCs", "Npcs", "npcs", "Enemies", "Mobs", "Monsters", "Bots" }
+	local MUZZLE_ATTACHMENTS = { "Muzzle", "muzzle", "MuzzlePoint", "muzzlePoint", "BarrelPoint", "Tip", "tip" }
+	local MUZZLE_PARTS = { "Muzzle", "muzzle", "Barrel", "barrel", "Tip", "tip", "MuzzlePoint" }
+	local PARTS_ALL, PARTS_BOTH, PARTS_HEAD, PARTS_TORSO = { "Head", "Torso", "Center" }, { "Head", "Torso" }, { "Head" }, { "Torso" }
+
+	local ZPATHS = {}
+	for path in ([[
+		gunRecoil.gunRecoilUp.1 gunRecoil.gunRecoilUp.2 gunRecoil.gunRecoilLeft.1 gunRecoil.gunRecoilLeft.2
+		gunRecoil.gunRecoilRight.1 gunRecoil.gunRecoilRight.2 gunRecoil.gunRecoilTilt.1 gunRecoil.gunRecoilTilt.2
+		camRecoil.camRecoilUp.1 camRecoil.camRecoilUp.2 camRecoil.camRecoilLeft.1 camRecoil.camRecoilLeft.2
+		camRecoil.camRecoilRight.1 camRecoil.camRecoilRight.2 camRecoil.camRecoilTilt.1 camRecoil.camRecoilTilt.2
+		MinSpread MaxSpread MinRecoilPower MaxRecoilPower RecoilPowerStepAmount AimInaccuracyStepAmount AimInaccuracyDecrease
+	]]):gmatch("%S+") do
+		local parts = {}
+		for piece in path:gmatch("[^%.]+") do parts[#parts + 1] = tonumber(piece) or piece end
+		ZPATHS[#ZPATHS + 1] = { parts = parts, spread = path:find("Spread", 1, true) ~= nil or path:find("Inaccuracy", 1, true) ~= nil }
+	end
+
+	local C = {
+		SA = false, AutoFire = true, BlockMouse = true, SnapDelay = 0.02, HoldAfter = 0.001, Clicks = 1, ClickInterval = 0.02,
+		LoopSpeed = 1, Repeat = "RPM", FixedTime = 0.5, TargetPart = "Head", WallCheck = true, ShowFOV = true, FOV = 300,
+		NPCs = true, Players = false, TeamCheck = true, MaxDistance = 1000, AimCheck = true, AimKey = Enum.UserInputType.MouseButton2,
+		CheckAmmo = true, CheckJammed = true, ZeroRecoil = false, ZeroSpread = false,
+		WallMode = "muzzle", WallMult = 1, WallOverride = false, WallOverrideVal = 10, MaxThickness = 10,
+		TB = false, TBHold = 0.02, TBCooldown = 0.1, TBWall = true, TBParts = { Head = true }
+	}
+	local function NewAim(speed)
+		return { On = false, Speed = speed, Loop = false, Locked = nil, Targets = { Player = true }, Part = "Head", Predict = "Custom", Ms = 50, Wall = true, Buf = {} }
+	end
+	local Cf, Ms = NewAim(50), NewAim(25)
+
+	local kinds = {}
+	local function Kind(name)
+		local kind = kinds[name]
+		if kind == nil then
+			local key = name:lower():gsub("[%s_%-]", "")
+			if AMMO[key] and not AMMO_STOP[key] then
+				kind = "ammo"
+			elseif JAM[key] and not JAM_STOP[key] then
+				kind = "jam"
+			elseif ZERO[key] then
+				kind = (key:find("spread", 1, true) or key:find("inaccuracy", 1, true)) and "spread" or "recoil"
+			else
+				kind = false
+			end
+			kinds[name] = kind
+		end
+		return kind
+	end
+
+	local function Dig(tbl, parts)
+		local cur = tbl
+		for i = 1, #parts do
+			if type(cur) ~= "table" then return nil end
+			cur = cur[parts[i]]
+		end
+		return cur
+	end
+
+	local function Put(tbl, parts, value)
+		local cur = tbl
+		for i = 1, #parts - 1 do
+			cur = cur[parts[i]]
+			if type(cur) ~= "table" then return end
+		end
+		local key = parts[#parts]
+		if cur[key] ~= nil then cur[key] = value end
+	end
+
+	local function WallScan(tbl, depth)
+		if depth > 4 then return nil end
+		for key, value in pairs(tbl) do
+			if type(key) == "string" and type(value) == "number" then
+				local name = key:lower():gsub("[%s_%-]", "")
+				if not name:find("bulletpen", 1, true) and (name:find("wallbang", 1, true) or WALL_KEYS[name]) then return value, key end
+			end
+			if type(value) == "table" then
+				local found, foundKey = WallScan(value, depth + 1)
+				if found then return found, foundKey end
+			end
+		end
+		return nil
+	end
+
+	local cache = setmetatable({}, { __mode = "k" })
+
+	local function Build(tool)
+		local data = { Zero = {}, Paths = {} }
+		for _, attr in ipairs(AMMO_ATTRS) do
+			if type(tool:GetAttribute(attr)) == "number" then
+				data.AmmoAttr = attr
+				break
+			end
+		end
+		for _, attr in ipairs(JAM_ATTRS) do
+			if tool:GetAttribute(attr) ~= nil then
+				data.JamAttr = attr
+				break
+			end
+		end
+		local roots = { tool }
+		local char = LocalPlayer.Character
+		local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+		if char then roots[#roots + 1] = char end
+		if backpack then roots[#roots + 1] = backpack end
+		local seen = {}
+		for _, root in ipairs(roots) do
+			for _, inst in ipairs(root:GetDescendants()) do
+				if not seen[inst] then
+					seen[inst] = true
+					local kind = Kind(inst.Name)
+					if kind == "ammo" then
+						if not data.AmmoAttr and not data.AmmoInst and (inst:IsA("IntValue") or inst:IsA("NumberValue")) then data.AmmoInst = inst end
+					elseif kind == "jam" then
+						if not data.JamAttr and not data.JamInst and inst:IsA("ValueBase") then data.JamInst = inst end
+					elseif kind and (inst:IsA("IntValue") or inst:IsA("NumberValue")) then
+						data.Zero[inst] = { inst.Value, kind == "spread" }
+					end
+				end
+			end
+		end
+		local module = tool:FindFirstChild("ACS_Settings")
+		if module then
+			local ok, settings = pcall(require, module)
+			if ok and type(settings) == "table" then
+				data.Settings = settings
+				data.RPM = settings.ShootRate or settings.FireRate or settings.RPM
+				for _, path in ipairs(ZPATHS) do
+					local value = Dig(settings, path.parts)
+					if value ~= nil then data.Paths[path] = { value, path.spread } end
+				end
+			end
+		end
+		cache[tool] = data
+		return data
+	end
+
+	local function Data(tool)
+		return cache[tool] or Build(tool)
+	end
+
+	local function Equipped()
+		local char = LocalPlayer.Character
+		return char and char:FindFirstChildOfClass("Tool")
+	end
+
+	local function Ammo(tool)
+		local data = Data(tool)
+		if data.AmmoAttr then
+			local value = tool:GetAttribute(data.AmmoAttr)
+			if type(value) == "number" then return value, "attr:" .. data.AmmoAttr end
+		end
+		local inst = data.AmmoInst
+		if inst and inst.Parent then return inst.Value, "val:" .. inst.Name end
+		return nil
+	end
+
+	local function Jammed(tool)
+		local data = Data(tool)
+		local value
+		if data.JamAttr then value = tool:GetAttribute(data.JamAttr) end
+		if value == nil and data.JamInst and data.JamInst.Parent then value = data.JamInst.Value end
+		if type(value) == "boolean" then return value end
+		if type(value) == "number" then return value ~= 0 end
+		return false
+	end
+
+	local function CanShoot(tool)
+		if not tool then return false end
+		if C.CheckJammed and Jammed(tool) then return false end
+		if C.CheckAmmo then
+			local ammo = Ammo(tool)
+			if ammo and ammo <= 0 then return false end
+		end
+		return true
+	end
+
+	local function Zero(tool)
+		local data = Data(tool)
+		local recoil, spread = C.ZeroRecoil, C.ZeroSpread
+		for inst, info in pairs(data.Zero) do
+			if inst.Parent and (info[2] and spread or not info[2] and recoil) then inst.Value = 0 end
+		end
+		if data.Settings then
+			for path, info in pairs(data.Paths) do
+				if info[2] and spread or not info[2] and recoil then pcall(Put, data.Settings, path.parts, 0) end
+			end
+		end
+	end
+
+	local function Restore(tool)
+		local data = cache[tool]
+		if not data then return end
+		for inst, info in pairs(data.Zero) do
+			if inst.Parent then inst.Value = info[1] end
+		end
+		if data.Settings then
+			for path, info in pairs(data.Paths) do pcall(Put, data.Settings, path.parts, info[1]) end
+		end
+		cache[tool] = nil
+	end
+
+	local zeroLinks = {}
+	local function UnlinkZero()
+		for _, link in ipairs(zeroLinks) do link:Disconnect() end
+		table.clear(zeroLinks)
+	end
+
+	local function HookChar(char)
+		zeroLinks[#zeroLinks + 1] = char.ChildAdded:Connect(function(child)
+			if child:IsA("Tool") then Zero(child) end
+		end)
+		zeroLinks[#zeroLinks + 1] = char.ChildRemoved:Connect(function(child)
+			if child:IsA("Tool") then Restore(child) end
+		end)
+	end
+
+	local function SyncZero()
+		local tool = Equipped()
+		if tool then
+			Restore(tool)
+			if C.ZeroRecoil or C.ZeroSpread then Zero(tool) end
+		end
+		UnlinkZero()
+		if C.ZeroRecoil or C.ZeroSpread then
+			local char = LocalPlayer.Character
+			if char then HookChar(char) end
+			zeroLinks[#zeroLinks + 1] = LocalPlayer.CharacterAdded:Connect(HookChar)
+		end
+	end
+
+	local blocked, savedBehavior, savedIcon = false, nil, nil
+	local function Block()
+		if blocked then return end
+		blocked = true
+		savedBehavior, savedIcon = UIS.MouseBehavior, UIS.MouseIconEnabled
+		pcall(function()
+			UIS.MouseBehavior = Enum.MouseBehavior.LockCurrentPosition
+			UIS.MouseIconEnabled = false
+		end)
+	end
+	local function Unblock()
+		if not blocked then return end
+		blocked = false
+		pcall(function()
+			UIS.MouseBehavior = savedBehavior
+			UIS.MouseIconEnabled = savedIcon
+		end)
+	end
+
+	local VIM
+	local function Click()
+		if type(mouse1click) == "function" then return mouse1click() end
+		if type(mouse1press) == "function" and type(mouse1release) == "function" then
+			mouse1press()
+			task.wait(0.01)
+			mouse1release()
+			return
+		end
+		VIM = VIM or game:GetService("VirtualInputManager")
+		local loc = UIS:GetMouseLocation()
+		pcall(VIM.SendMouseButtonEvent, VIM, loc.X, loc.Y, 0, true, game, 1)
+		task.wait(0.01)
+		pcall(VIM.SendMouseButtonEvent, VIM, loc.X, loc.Y, 0, false, game, 1)
+	end
+
+	local held = false
+	live[#live + 1] = UIS.InputBegan:Connect(function(input, processed)
+		if processed then return end
+		local key = C.AimKey
+		if input.UserInputType == key or input.KeyCode == key then held = true end
+	end)
+	live[#live + 1] = UIS.InputEnded:Connect(function(input)
+		local key = C.AimKey
+		if input.UserInputType == key or input.KeyCode == key then held = false end
+	end)
+	local function Held()
+		return not C.AimCheck or held
+	end
+
+	local npcs, npcOn = {}, false
+	local function Track(inst)
+		if inst.ClassName == "Humanoid" then
+			local model = inst.Parent
+			if model and model.ClassName == "Model" then npcs[model] = inst end
+		end
+	end
+	local function StartNpc()
+		if npcOn then return end
+		npcOn = true
+		for _, inst in ipairs(Workspace:GetDescendants()) do Track(inst) end
+		live[#live + 1] = Workspace.DescendantAdded:Connect(Track)
+	end
+
+	local folderModels, folderStamp = {}, 0
+	local function FolderModels()
+		local now = os.clock()
+		if now - folderStamp > 1 then
+			folderStamp = now
+			table.clear(folderModels)
+			for _, name in ipairs(FOLDERS) do
+				local folder = Workspace:FindFirstChild(name, true)
+				if folder then
+					for _, inst in ipairs(folder:GetDescendants()) do
+						if inst.ClassName == "Model" and inst:FindFirstChild("HumanoidRootPart") then folderModels[#folderModels + 1] = inst end
+					end
+				end
+			end
+		end
+		return folderModels
+	end
+
+	local function NpcLive(model, hum)
+		if hum.Parent ~= model or not model:IsDescendantOf(Workspace) then return nil end
+		if Players:GetPlayerFromCharacter(model) or model == LocalPlayer.Character then return false end
+		return hum.Health > 0
+	end
+
+	local function Alive(model)
+		if not model or not model.Parent then return false end
+		local hum = model:FindFirstChildOfClass("Humanoid")
+		return hum ~= nil and hum.Health > 0
+	end
+
+	local function PartOf(model, kind)
+		if not model.Parent then return nil end
+		if kind == "Head" then return model:FindFirstChild("Head") end
+		local root = model:FindFirstChild("HumanoidRootPart")
+		local torso = model:FindFirstChild("Torso") or model:FindFirstChild("UpperTorso") or model:FindFirstChild("LowerTorso") or root
+		if kind == "Torso" then return torso end
+		return root or torso or model:FindFirstChild("Head")
+	end
+
+	local function Cam()
+		return Workspace.CurrentCamera
+	end
+
+	local rayParams = RaycastParams.new()
+	rayParams.FilterType = Enum.RaycastFilterType.Exclude
+	rayParams.IgnoreWater = true
+	local filterBuf = {}
+	local function Filter(a, b)
+		table.clear(filterBuf)
+		local char = LocalPlayer.Character
+		if char then filterBuf[#filterBuf + 1] = char end
+		if a then filterBuf[#filterBuf + 1] = a end
+		if b then filterBuf[#filterBuf + 1] = b end
+		rayParams.FilterDescendantsInstances = filterBuf
+	end
+
+	local function Clear(from, part)
+		Filter(part.Parent)
+		return Workspace:Raycast(from, part.Position - from, rayParams) == nil
+	end
+
+	local function Predict(part, mode, ms)
+		local velocity = part.AssemblyLinearVelocity
+		local time = mode == "Custom" and ms or math.clamp(velocity.Magnitude * 4, 0, 200)
+		return part.Position + velocity * (time / 1000)
+	end
+
+	local function AimTargets(aim)
+		local out, T = aim.Buf, aim.Targets
+		table.clear(out)
+		if T.Player then
+			for _, plr in ipairs(Players:GetPlayers()) do
+				local char = plr.Character
+				if plr ~= LocalPlayer and char then
+					local hum = char:FindFirstChildOfClass("Humanoid")
+					if hum and hum.Health > 0 then out[#out + 1] = char end
+				end
+			end
+		end
+		if T.Npc_Humanoid then
+			StartNpc()
+			for model, hum in pairs(npcs) do
+				local alive = NpcLive(model, hum)
+				if alive == nil then
+					npcs[model] = nil
+				elseif alive and model:FindFirstChild("HumanoidRootPart") and model:FindFirstChild("Head")
+					and (model:FindFirstChild("Torso") or model:FindFirstChild("UpperTorso") or model:FindFirstChild("LowerTorso")) then
+					out[#out + 1] = model
+				end
+			end
+		end
+		if T.Npc_Workspace then
+			for _, model in ipairs(FolderModels()) do out[#out + 1] = model end
+		end
+		return out
+	end
+
+	local function Valid(aim, part)
+		local model = part.Parent
+		if not model then return false end
+		local hum = model:FindFirstChildOfClass("Humanoid")
+		if hum and hum.Health <= 0 then return false end
+		local cam = Cam()
+		if not cam then return false end
+		local origin = cam.CFrame.Position
+		if aim.Wall and not Clear(origin, part) then return false end
+		local _, onScreen = cam:WorldToViewportPoint(part.Position)
+		return onScreen and (part.Position - origin).Magnitude <= 1000
+	end
+
+	local function Best(aim)
+		if aim.Loop and aim.Locked then
+			if Valid(aim, aim.Locked) then return aim.Locked end
+			aim.Locked = nil
+		end
+		local cam = Cam()
+		if not cam then return nil end
+		local list = AimTargets(aim)
+		local origin, size = cam.CFrame.Position, cam.ViewportSize
+		local cx, cy = size.X / 2, size.Y / 2
+		local best, bestDist = nil, math.huge
+		for i = 1, #list do
+			local part = PartOf(list[i], aim.Part)
+			if part then
+				local point, onScreen = cam:WorldToViewportPoint(part.Position)
+				if onScreen then
+					local dx, dy = point.X - cx, point.Y - cy
+					local dist = dx * dx + dy * dy
+					if dist < bestDist and (not aim.Wall or Clear(origin, part)) then best, bestDist = part, dist end
+				end
+			end
+		end
+		if best and aim.Loop then aim.Locked = best end
+		return best
+	end
+
+	local aimLink
+	local function AimStep()
+		local cam = Cam()
+		if not cam then return end
+		if Cf.On then
+			local part = Best(Cf)
+			if part then
+				local current = cam.CFrame
+				cam.CFrame = current:Lerp(CFrame.new(current.Position, Predict(part, Cf.Predict, Cf.Ms)), math.clamp(Cf.Speed / 100, 0.001, 1))
+			end
+		end
+		if Ms.On then
+			local part = Best(Ms)
+			if part then
+				local point, onScreen = cam:WorldToViewportPoint(Predict(part, Ms.Predict, Ms.Ms))
+				if onScreen then
+					local size = cam.ViewportSize
+					local factor = math.clamp(Ms.Speed / 50, 0.001, 1)
+					local dx, dy = (point.X - size.X / 2) * factor, (point.Y - size.Y / 2) * factor
+					if mousemoverel then
+						mousemoverel(dx, dy)
+					elseif mousemoveabs then
+						mousemoveabs(size.X / 2 + dx, size.Y / 2 + dy)
+					end
+				end
+			end
+		end
+	end
+	local function RefreshAim()
+		local need = Cf.On or Ms.On
+		if need and not aimLink then
+			aimLink = Run.RenderStepped:Connect(AimStep)
+		elseif not need and aimLink then
+			aimLink:Disconnect()
+			aimLink = nil
+		end
+	end
+
+	local candList, candStamp = {}, 0
+	local function Cands()
+		local now = os.clock()
+		if now - candStamp > 0.05 then
+			candStamp = now
+			table.clear(candList)
+			if C.NPCs then
+				StartNpc()
+				for model, hum in pairs(npcs) do
+					local alive = NpcLive(model, hum)
+					if alive == nil then
+						npcs[model] = nil
+					elseif alive then
+						candList[#candList + 1] = model
+					end
+				end
+			end
+			if C.Players then
+				local team = C.TeamCheck and LocalPlayer.Team
+				for _, plr in ipairs(Players:GetPlayers()) do
+					local char = plr.Character
+					if plr ~= LocalPlayer and char and char ~= LocalPlayer.Character and not (team and plr.Team == team) then
+						local hum = char:FindFirstChildOfClass("Humanoid")
+						if hum and hum.Health > 0 then candList[#candList + 1] = char end
+					end
+				end
+			end
+		end
+		return candList
+	end
+
+	local function Root()
+		local char = LocalPlayer.Character
+		return char and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head"))
+	end
+
+	local function FindMuzzle(tool)
+		for _, name in ipairs(MUZZLE_ATTACHMENTS) do
+			local found = tool:FindFirstChild(name, true)
+			if found and found:IsA("Attachment") then return found end
+		end
+		for _, name in ipairs(MUZZLE_PARTS) do
+			local found = tool:FindFirstChild(name, true)
+			if found and found:IsA("BasePart") then return found end
+		end
+		local handle = tool:FindFirstChild("Handle")
+		if handle and handle:IsA("BasePart") then return handle end
+		return nil
+	end
+
+	local function MuzzlePos(tool)
+		local data = Data(tool)
+		local ref = data.Muzzle
+		if ref == nil then
+			ref = FindMuzzle(tool) or false
+			data.Muzzle = ref
+		end
+		if not ref or not ref.Parent then return nil end
+		if ref:IsA("Attachment") then return ref.WorldPosition end
+		if ref.Name == "Handle" then return ref.Position + ref.CFrame.LookVector * 1.5 end
+		return ref.Position
+	end
+
+	local function Thickness(enter, dir, hit, owner)
+		local unit = dir.Unit
+		Filter(owner, hit)
+		local exit = Workspace:Raycast(enter + unit * 0.05, unit * 50, rayParams)
+		if not exit then return 50 end
+		return (exit.Position - enter).Magnitude
+	end
+
+	local function Walls(root, part)
+		local owner = part.Parent
+		local origin = root.Position
+		if C.WallMode == "muzzle" then
+			local tool = Equipped()
+			local pos = tool and MuzzlePos(tool)
+			if pos then origin = pos end
+		elseif C.WallMode == "camera" then
+			origin = Cam().CFrame.Position
+		end
+		local target = part.Position
+		local dir = target - origin
+		local total, single, last = 0, 0, nil
+		for _ = 1, 32 do
+			Filter(owner)
+			local result = Workspace:Raycast(origin, dir, rayParams)
+			if not result then break end
+			local inst = result.Instance
+			if inst == last then
+				local skip = result.Position + dir.Unit * 0.5
+				dir = target - skip
+				if dir.Magnitude < 0.1 then break end
+				origin = skip
+			else
+				last = inst
+				local thick = Thickness(result.Position, dir, inst, owner)
+				if thick > single then single = thick end
+				if thick > C.MaxThickness then return total, true, single end
+				total = total + thick
+				local nextOrigin = result.Position + dir.Unit * (thick + 0.2) + result.Normal * 0.05
+				dir = target - nextOrigin
+				if dir.Magnitude < 0.1 then break end
+				origin = nextOrigin
+			end
+		end
+		return total, false, single
+	end
+
+	local function WallPower(tool)
+		if C.WallOverride then return C.WallOverrideVal, "override" end
+		if not tool then return 0, "0" end
+		local data = Data(tool)
+		if not data.Settings then return 0, "0" end
+		if data.WallBase == nil then
+			local value, key = WallScan(data.Settings, 0)
+			data.WallBase, data.WallKey = type(value) == "number" and value or 0, key or "0"
+		end
+		return data.WallBase * C.WallMult, data.WallKey
+	end
+
+	local function CanHit(part)
+		if not C.WallCheck then return true, 0, "wallcheck_off" end
+		local root = Root()
+		if not root then return false, 0, "no_root" end
+		local total, thick, single = Walls(root, part)
+		if thick then return false, total, "too_thick_wall", single end
+		if total <= 0.01 then return true, 0, "clear" end
+		local power = WallPower(Equipped())
+		if power <= 0 then return false, total, "no_wallbang" end
+		if total <= power then return true, total, "wb_ok" end
+		return false, total, "too_thick"
+	end
+
+	local lastTarget, lastInfo = nil, "—"
+	local function FindSilent()
+		local root, cam = Root(), Cam()
+		if not root or not cam then return nil end
+		local mouse = UIS:GetMouseLocation()
+		local origin = root.Position
+		local list = Cands()
+		local best, bestDist, reason, blockReason = nil, C.FOV, "—", nil
+		for i = 1, #list do
+			local model = list[i]
+			if Alive(model) then
+				local part = PartOf(model, C.TargetPart)
+				if part and (part.Position - origin).Magnitude <= C.MaxDistance then
+					local point, onScreen = cam:WorldToViewportPoint(part.Position)
+					if onScreen then
+						local dist = (Vector2.new(point.X, point.Y) - mouse).Magnitude
+						if dist < bestDist then
+							local ok, total, why, single = CanHit(part)
+							if ok then
+								best, bestDist, reason = part, dist, string.format("%s (%.1f)", why, total)
+							else
+								blockReason = single and string.format("%s (single=%.1f)", why, single) or why
+							end
+						end
+					end
+				end
+			end
+		end
+		lastTarget = best
+		lastInfo = (not best and blockReason) and ("BLOCKED: " .. blockReason) or reason
+		return best
+	end
+
+	local firing, savedCF = false, nil
+
+	local function Hold(part, seconds)
+		local stop = os.clock() + seconds
+		repeat
+			if State.Unloaded or not Alive(part.Parent) then return false end
+			local cam = Cam()
+			cam.CFrame = lookAt(cam.CFrame.Position, part.Position)
+			task.wait()
+		until os.clock() >= stop
+		return true
+	end
+
+	local function Fire(part)
+		if firing then return end
+		firing = true
+		local ok = pcall(function()
+			local model = part.Parent
+			if not Alive(model) or not CanShoot(Equipped()) then return end
+			local cam = Cam()
+			if C.BlockMouse then Block() end
+			savedCF = cam.CFrame
+			Hold(part, C.SnapDelay)
+			if Alive(model) and CanShoot(Equipped()) then
+				for _ = 1, C.Clicks do
+					if State.Unloaded or not Alive(model) then break end
+					cam.CFrame = lookAt(cam.CFrame.Position, part.Position)
+					task.wait(C.ClickInterval)
+					if State.Unloaded or not Alive(model) then break end
+					cam.CFrame = lookAt(cam.CFrame.Position, part.Position)
+					if C.AutoFire then Click() end
+				end
+				Hold(part, math.max(0.001, C.HoldAfter))
+				if C.ZeroRecoil or C.ZeroSpread then
+					local tool = Equipped()
+					if tool then Zero(tool) end
+				end
+			end
+			cam.CFrame = savedCF
+			savedCF = nil
+			Unblock()
+		end)
+		if not ok then
+			if savedCF then pcall(function() Cam().CFrame = savedCF end) end
+			savedCF = nil
+			Unblock()
+		end
+		firing = false
+	end
+
+	local function Pause(seconds, model)
+		local stop = os.clock() + seconds
+		while os.clock() < stop and C.SA and not State.Unloaded and Alive(model) do task.wait(0.02) end
+	end
+
+	local saActive = false
+	local function SilentLoop()
+		if saActive then return end
+		saActive = true
+		task.spawn(function()
+			while C.SA and not State.Unloaded do
+				local speed = math.max(0.1, C.LoopSpeed)
+				local part = Held() and not firing and FindSilent()
+				if part and Alive(part.Parent) then
+					local model = part.Parent
+					Fire(part)
+					if C.Repeat == "Time" then
+						if C.FixedTime <= 0 then
+							while C.SA and not State.Unloaded and Alive(model) do task.wait(0.02) end
+						else
+							Pause(C.FixedTime / speed, model)
+						end
+					else
+						local tool = Equipped()
+						local rpm = tool and Data(tool).RPM
+						if type(rpm) ~= "number" or rpm <= 0 then rpm = 600 end
+						Pause(60 / rpm / speed, model)
+					end
+				else
+					task.wait(0.1 / speed)
+				end
+				task.wait()
+			end
+			saActive = false
+		end)
+	end
+
+	local function OnCrosshair()
+		local root, cam = Root(), Cam()
+		if not root or not cam then return false end
+		local parts = C.TBParts
+		local kindsList = parts.All and PARTS_ALL or (parts.Head and parts.Torso and PARTS_BOTH) or (parts.Head and PARTS_HEAD) or (parts.Torso and PARTS_TORSO)
+		if not kindsList then return false end
+		local mouse = UIS:GetMouseLocation()
+		local origin = root.Position
+		local list = Cands()
+		for i = 1, #list do
+			local model = list[i]
+			if Alive(model) then
+				for j = 1, #kindsList do
+					local part = PartOf(model, kindsList[j])
+					if part and (part.Position - origin).Magnitude <= C.MaxDistance then
+						local point, onScreen = cam:WorldToViewportPoint(part.Position)
+						if onScreen and (Vector2.new(point.X, point.Y) - mouse).Magnitude < 30 and (not C.TBWall or Clear(origin, part)) then return true end
+					end
+				end
+			end
+		end
+		return false
+	end
+
+	local tbActive = false
+	local function TriggerLoop()
+		if tbActive then return end
+		tbActive = true
+		task.spawn(function()
+			while C.TB and not State.Unloaded do
+				if not Held() then
+					task.wait(0.05)
+				else
+					local tool = Equipped()
+					if tool and not CanShoot(tool) then
+						task.wait(0.05)
+					elseif OnCrosshair() then
+						task.wait(C.TBHold)
+						if State.Unloaded or not C.TB then break end
+						if OnCrosshair() then
+							Click()
+							task.wait(C.TBCooldown)
+						end
+					else
+						task.wait(0.02)
+					end
+				end
+			end
+			tbActive = false
+		end)
+	end
+
+	local fov = Lib.Create("Frame", {
+		Name = "CombatFOV", AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, Size = UDim2.fromOffset(600, 600),
+		Visible = false, ZIndex = 0, Parent = UI.Screen,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) }),
+		Lib.Create("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
+	})
+	local fovLink
+	local function RefreshFov()
+		local show = C.SA and C.ShowFOV
+		fov.Visible = show
+		fov.Size = UDim2.fromOffset(C.FOV * 2, C.FOV * 2)
+		if show and not fovLink then
+			fovLink = Run.RenderStepped:Connect(function()
+				local mouse = UIS:GetMouseLocation()
+				fov.Position = UDim2.fromOffset(mouse.X, mouse.Y)
+			end)
+		elseif not show and fovLink then
+			fovLink:Disconnect()
+			fovLink = nil
+		end
+	end
+
+	function Lib.StopCombat()
+		C.SA, C.TB, Cf.On, Ms.On = false, false, false, false
+		RefreshAim()
+		RefreshFov()
+		UnlinkZero()
+		if savedCF then pcall(function() Cam().CFrame = savedCF end) savedCF = nil end
+		Unblock()
+		for tool in pairs(cache) do Restore(tool) end
+		for _, link in ipairs(live) do link:Disconnect() end
+		table.clear(live)
+		fov:Destroy()
+	end
+
+	local function Toggle(group, title, desc, tbl, key, last, after)
+		local item = Lib.CreateSettingToggleItem(group, title, desc, tbl[key], function(value)
+			tbl[key] = value
+			if after then after(value) end
+		end, last)
+		reg[#reg + 1] = { title, "T", function() return tbl[key] end }
+		return item
+	end
+
+	local function Slider(group, title, desc, min, max, tbl, key, step, suffix, last, after)
+		local item = Lib.CreateSettingSliderItem(group, title, desc, min, max, tbl[key], function(value)
+			tbl[key] = value
+			if after then after(value) end
+		end, last, suffix, step)
+		reg[#reg + 1] = { title, "S", function() return tbl[key] end }
+		return item
+	end
+
+	local function Choice(group, title, options, default, apply, last, multi)
+		local item = Lib.CreateSettingChoiceItem(group, title, options, default, apply, last, multi)
+		reg[#reg + 1] = { title, "C" }
+		return item
+	end
+
+	local function Gear(item, modal)
+		local gear = Lib.Create("ImageButton", {
+			Size = UDim2.fromOffset(28, 28), Position = UDim2.new(1, -98, 0.5, -14), BackgroundColor3 = Color3.fromRGB(22, 22, 22), AutoButtonColor = false,
+			Image = "rbxassetid://119430435918970", ImageColor3 = Color3.fromRGB(180, 180, 180), ScaleType = Enum.ScaleType.Fit, Parent = item,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
+			Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5), PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5) })
+		})
+		Lib.RegisterThemeElement(gear, "BackgroundColor3", 0.7)
+		gear.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			modal.Open()
+		end)
+	end
+
+	local TARGET_OPTIONS = { { "Players", "Player" }, { "NPC Humanoid", "Npc_Humanoid" }, { "NPC Folders", "Npc_Workspace" } }
+	local PART_OPTIONS = { "Head", "Torso", "Center" }
+
+	local function AimModal(aim, name, maxSpeed)
+		local modal = Lib.CreateModal(name .. " Settings", 430, 460)
+		local behavior = Lib.CreateFeatureGroup(modal.Content, "Behavior", 1)
+		Slider(behavior, name .. " Speed", "Aim smoothing speed", 0, maxSpeed, aim, "Speed", 1, nil, false)
+		Toggle(behavior, name .. " Loop Target", "Keeps the locked target until it dies or leaves view", aim, "Loop", true, function(value)
+			if not value then aim.Locked = nil end
+		end)
+		local targets = Lib.CreateFeatureGroup(modal.Content, "Targets", 2)
+		Choice(targets, name .. " Targets", TARGET_OPTIONS, { "Player" }, function(set) aim.Targets = set end, false, true)
+		Choice(targets, name .. " Target Part", PART_OPTIONS, aim.Part, function(value) aim.Part = value end, true)
+		local prediction = Lib.CreateFeatureGroup(modal.Content, "Prediction", 3)
+		Choice(prediction, name .. " Predict Mode", { "Custom", "Auto" }, aim.Predict, function(value) aim.Predict = value end)
+		Slider(prediction, name .. " Predict", "Prediction time", 1, 100, aim, "Ms", 1, "ms", false)
+		Toggle(prediction, name .. " Wall Check", "Ignore targets behind walls", aim, "Wall", true)
+		return modal
+	end
+
+	local cfModal, msModal = AimModal(Cf, "Cframe", 100), AimModal(Ms, "Mouse", 50)
+
+	local saModal = Lib.CreateModal("Silent Aim Settings", 430, 520)
+	local firingGroup = Lib.CreateFeatureGroup(saModal.Content, "Firing", 1)
+	Toggle(firingGroup, "Block Mouse", "Locks the cursor while the shot is fired", C, "BlockMouse", false)
+	Slider(firingGroup, "Snap Delay", "Time the camera is held on target before the shot", 0.001, 5, C, "SnapDelay", 0.001, "s", false)
+	Slider(firingGroup, "Hold After Shot", "Time the camera stays on target after the shot", 0.001, 5, C, "HoldAfter", 0.001, "s", false)
+	Slider(firingGroup, "Clicks Count", "Clicks fired per cycle", 1, 5, C, "Clicks", 1, nil, false)
+	Slider(firingGroup, "Click Interval", "Pause before every click", 0.001, 1, C, "ClickInterval", 0.001, "s", true)
+	local loopGroup = Lib.CreateFeatureGroup(saModal.Content, "Loop", 2)
+	Slider(loopGroup, "Loop Speed", "Speed multiplier of the aim loop", 0.1, 5, C, "LoopSpeed", 0.1, "x", false)
+	Choice(loopGroup, "Repeat Mode", { "RPM", "Time" }, C.Repeat, function(value) C.Repeat = value end)
+	Slider(loopGroup, "Fixed Time", "Pause between shots in Time mode, 0 = until death", 0, 5, C, "FixedTime", 0.01, "s", true)
+	local aimGroupModal = Lib.CreateFeatureGroup(saModal.Content, "Targeting", 3)
+	Choice(aimGroupModal, "Silent Target Part", { "Head", "Torso" }, C.TargetPart, function(value) C.TargetPart = value end)
+	Toggle(aimGroupModal, "Wall Check", "Skips targets that cannot be hit through walls", C, "WallCheck", true)
+
+	local tbModal = Lib.CreateModal("Trigger Bot Settings", 430, 340)
+	local tbGroup = Lib.CreateFeatureGroup(tbModal.Content, "Trigger", 1)
+	Slider(tbGroup, "Hold Before Shot", "Delay between target detection and the shot", 0.001, 1, C, "TBHold", 0.001, "s", false)
+	Slider(tbGroup, "Shot Cooldown", "Pause between shots", 0.01, 2, C, "TBCooldown", 0.01, "s", false)
+	Toggle(tbGroup, "Trigger Wall Check", "Ignores targets behind walls", C, "TBWall", false)
+	Choice(tbGroup, "Trigger Parts", { "Head", "Torso", "All" }, { "Head" }, function(set) C.TBParts = set end, true, true)
+
+	local wbModal = Lib.CreateModal("Wallbang Settings", 430, 400)
+	local wbGroup = Lib.CreateFeatureGroup(wbModal.Content, "Wallbang", 1)
+	Slider(wbGroup, "Wallbang Multiplier", "Multiplies the weapon wallbang power", 0, 20, C, "WallMult", 0.5, "x", false)
+	Toggle(wbGroup, "Wallbang Override", "Replaces the weapon value with your own", C, "WallOverride", false)
+	Slider(wbGroup, "Override Value", "Custom wallbang power", 0, 100, C, "WallOverrideVal", 1, " studs", false)
+	Slider(wbGroup, "Max Wall Thickness", "Maximum thickness of a single wall", 0.1, 100, C, "MaxThickness", 0.5, " studs", false)
+	Choice(wbGroup, "Wall Origin", { "muzzle", "camera", "root" }, C.WallMode, function(value) C.WallMode = value end, true)
+
+	local diagModal = Lib.CreateModal("Combat Diagnostics", 380, 440)
+	local diagGroup = Lib.CreateFeatureGroup(diagModal.Content, "Live", 1)
+	local function InfoRow(title, last)
+		local row = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1, Parent = diagGroup })
+		local name = Lib.Create("TextLabel", {
+			Size = UDim2.new(0.4, -14, 1, 0), Position = UDim2.fromOffset(14, 0), BackgroundTransparency = 1, Text = title, TextColor3 = Color3.fromRGB(240, 240, 240),
+			TextSize = 12, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = row
+		})
+		Lib.RegisterThemeText(name, "Primary")
+		local value = Lib.Create("TextLabel", {
+			Size = UDim2.new(0.6, -14, 1, 0), Position = UDim2.new(0.4, 0, 0, 0), BackgroundTransparency = 1, Text = "—", TextColor3 = Color3.fromRGB(150, 150, 150),
+			TextSize = 12, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Right, TextTruncate = Enum.TextTruncate.AtEnd, Parent = row
+		})
+		Lib.RegisterThemeText(value, "Secondary")
+		if not last then
+			Lib.Create("Frame", {
+				Size = UDim2.new(1, -28, 0, 1), Position = UDim2.new(0, 14, 1, -1), BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+				BackgroundTransparency = 0.9, BorderSizePixel = 0, Parent = row
+			})
+		end
+		return value
+	end
+	local dTarget, dWall, dAmmo, dJam, dWb = InfoRow("Target"), InfoRow("Wall"), InfoRow("Ammo"), InfoRow("Jammed"), InfoRow("Wallbang")
+	local dNpc, dMouse, dTools, dAim, dTrigger = InfoRow("NPC"), InfoRow("Mouse"), InfoRow("Cached Tools"), InfoRow("Aim Check"), InfoRow("Trigger Bot", true)
+
+	local function Count(tbl)
+		local count = 0
+		for _ in pairs(tbl) do count += 1 end
+		return count
+	end
+
+	local function RefreshDiag()
+		dTarget.Text = lastTarget and lastTarget.Parent and (lastTarget.Parent.Name .. " → " .. lastTarget.Name) or "—"
+		dWall.Text = lastInfo
+		local tool = Equipped()
+		if tool then
+			local ammo, source = Ammo(tool)
+			dAmmo.Text = ammo and (ammo .. " (" .. source .. ")") or "—"
+			dJam.Text = tostring(Jammed(tool))
+			local power, key = WallPower(tool)
+			dWb.Text = string.format("%.1f studs (%s)", power, tostring(key))
+		else
+			dAmmo.Text, dJam.Text, dWb.Text = "—", "—", "—"
+		end
+		dNpc.Text = tostring(Count(npcs))
+		dMouse.Text = blocked and "LOCKED" or "free"
+		dTools.Text = tostring(Count(cache))
+		dAim.Text = C.AimCheck and (held and "HELD" or "NOT HELD") or "disabled"
+		dTrigger.Text = C.TB and "ENABLED" or "disabled"
+	end
+
+	local diagActive = false
+	local function OpenDiag()
+		diagModal.Open()
+		if diagActive then return end
+		diagActive = true
+		task.spawn(function()
+			while not State.Unloaded do
+				RefreshDiag()
+				task.wait(0.5)
+				if not diagModal.Backdrop.Visible then break end
+			end
+			diagActive = false
+		end)
+	end
+
+	local aimGroup = Lib.CreateFeatureGroup(scroll, "Aim Assist", 1)
+	Gear(Toggle(aimGroup, "Cframe Aim", "Smoothly rotates the camera towards the closest target", Cf, "On", false, function(value)
+		if not value then Cf.Locked = nil end
+		RefreshAim()
+	end), cfModal)
+	Gear(Toggle(aimGroup, "Mouse Aim", "Moves the mouse towards the closest target", Ms, "On", true, function(value)
+		if not value then Ms.Locked = nil end
+		RefreshAim()
+	end), msModal)
+
+	local silentGroup = Lib.CreateFeatureGroup(scroll, "Silent Aim", 2)
+	Gear(Toggle(silentGroup, "Silent Aim", "Snaps the camera to the target, fires and returns it back", C, "SA", false, function(value)
+		RefreshFov()
+		if value then SilentLoop() end
+	end), saModal)
+	Toggle(silentGroup, "Auto-Fire", "Clicks automatically when a target is locked", C, "AutoFire", false)
+	Toggle(silentGroup, "Show FOV Circle", "Draws the Silent Aim FOV around the cursor", C, "ShowFOV", false, RefreshFov)
+	Slider(silentGroup, "FOV Radius", "Silent Aim field of view radius", 10, 800, C, "FOV", 1, "px", true, RefreshFov)
+
+	local triggerGroup = Lib.CreateFeatureGroup(scroll, "Trigger Bot", 3)
+	Gear(Toggle(triggerGroup, "Trigger Bot", "Fires automatically when the crosshair is on a target", C, "TB", true, function(value)
+		if value then TriggerLoop() end
+	end), tbModal)
+
+	local weaponGroup = Lib.CreateFeatureGroup(scroll, "Weapon", 4)
+	Toggle(weaponGroup, "Zero Recoil", "Removes weapon recoil", C, "ZeroRecoil", false, SyncZero)
+	Toggle(weaponGroup, "Zero Spread", "Removes weapon spread and inaccuracy", C, "ZeroSpread", false, SyncZero)
+	Toggle(weaponGroup, "Check Ammo", "Does not shoot with an empty magazine", C, "CheckAmmo", false)
+	Toggle(weaponGroup, "Check Jammed", "Does not shoot with a jammed weapon", C, "CheckJammed", false)
+	Lib.CreateSettingButtonItem(weaponGroup, "Wallbang Settings", "Power, thickness limit and origin of wallbang checks", function() wbModal.Open() end, true)
+
+	local targetGroup = Lib.CreateFeatureGroup(scroll, "Targeting", 5)
+	Toggle(targetGroup, "Target NPCs", "Silent Aim and Trigger Bot target NPCs", C, "NPCs", false)
+	Toggle(targetGroup, "Target Players", "Silent Aim and Trigger Bot target players", C, "Players", false)
+	Toggle(targetGroup, "Team Check", "Ignores players from your team", C, "TeamCheck", false)
+	Slider(targetGroup, "Max Distance", "Maximum target distance", 100, 5000, C, "MaxDistance", 50, "m", false)
+	Toggle(targetGroup, "Aim Check", "Works only while the aim key is held", C, "AimCheck", false)
+	Choice(targetGroup, "Aim Key", { { "RMB", "MouseButton2" }, { "LMB", "MouseButton1" }, "E", "Q", "F", { "L-Alt", "LeftAlt" }, { "R-Alt", "RightAlt" }, { "L-Shift", "LeftShift" } }, "MouseButton2", function(name)
+		C.AimKey = name:find("MouseButton", 1, true) and Enum.UserInputType[name] or Enum.KeyCode[name]
+		held = false
+	end, true)
+
+	local toolsGroup = Lib.CreateFeatureGroup(scroll, "Tools", 6)
+	Lib.CreateSettingButtonItem(toolsGroup, "Combat Diagnostics", "Live target, ammo, wallbang and aim state", OpenDiag, true)
+
+	Lib.ConfigExtras = Lib.ConfigExtras or {}
+	Lib.ConfigExtras.Combat = {
+		Dump = function()
+			local dump = {}
+			for _, entry in ipairs(reg) do
+				local title, kind, getter = entry[1], entry[2], entry[3]
+				if kind == "C" then
+					dump[title] = Lib.ChoiceControls[title].Get()
+				else
+					dump[title] = getter()
+				end
+			end
+			return dump
+		end,
+		Apply = function(data)
+			for _, entry in ipairs(reg) do
+				local title, kind = entry[1], entry[2]
+				local value = data[title]
+				if value ~= nil then
+					if kind == "T" then
+						local control = Lib.ToggleControls[title]
+						if control and type(value) == "boolean" then control.Set(value) end
+					elseif kind == "S" then
+						local control = Lib.SliderControls[title]
+						if control and type(value) == "number" then control(value) end
+					else
+						local control = Lib.ChoiceControls[title]
+						if control then control.Set(value) end
+					end
+				end
+			end
+		end
+	}
 end
 
 function Lib.BuildDevConsole()
@@ -4999,7 +6686,7 @@ function Lib.BuildQoL(scroll)
 	local function RefreshButtons()
 		if not recordBtn then return end
 		recordBtn.Text = Macro.Recording and "Stop" or "Record"
-		playBtn.Text = Macro.Playing and "Stop" or "Play"
+		playBtn.Text = Macro.Playing and "\u{25A0}" or "\u{25B6}"
 		Style(recordBtn, Macro.Recording)
 		Style(playBtn, Macro.Playing)
 	end
@@ -5282,16 +6969,16 @@ function Lib.BuildQoL(scroll)
 	local SettingsBtn = MakeChip(MainRow, "", UDim2.fromOffset(30, 30), UDim2.new(1, -44, 0.5, -15))
 	local gearIcon = Lib.Create("ImageLabel", {
 		Size = UDim2.fromOffset(18, 18), Position = UDim2.new(0.5, -9, 0.5, -9), BackgroundTransparency = 1,
-		Image = "rbxassetid://72855116322935", ScaleType = Enum.ScaleType.Fit, Parent = SettingsBtn
+		Image = "rbxassetid://119430435918970", ScaleType = Enum.ScaleType.Fit, Parent = SettingsBtn
 	})
 	Lib.RegisterThemeImage(gearIcon)
 
 	playBtn = Lib.Create("TextButton", {
-		Size = UDim2.fromOffset(56, 30), Position = UDim2.new(1, -108, 0.5, -15), BackgroundColor3 = WHITE, Text = "Play", TextColor3 = BLACK,
+		Size = UDim2.fromOffset(30, 30), Position = UDim2.new(1, -82, 0.5, -15), BackgroundColor3 = WHITE, Text = "\u{25B6}", TextColor3 = BLACK,
 		TextSize = 12, Font = Enum.Font.GothamBold, Parent = MainRow, Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
 	})
 	recordBtn = Lib.Create("TextButton", {
-		Size = UDim2.fromOffset(64, 30), Position = UDim2.new(1, -178, 0.5, -15), BackgroundColor3 = WHITE, Text = "Record", TextColor3 = BLACK,
+		Size = UDim2.fromOffset(64, 30), Position = UDim2.new(1, -152, 0.5, -15), BackgroundColor3 = WHITE, Text = "Record", TextColor3 = BLACK,
 		TextSize = 12, Font = Enum.Font.GothamBold, Parent = MainRow, Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
 	})
 
@@ -5551,17 +7238,24 @@ do
 
 	local FeaturesSideBar = Lib.Create("Frame", { Size = UDim2.new(0, 180, 1, 0), BackgroundTransparency = 1, Parent = FeaturesSection, FeatTitle, FeatSub })
 
-	local MakeFeaturesTab
-	Lib.SwitchFeaturesTab, MakeFeaturesTab = Lib.CreateTabSystem(FeaturesSection, FeaturesSideBar, "CurrentFeaturesTab")
+	local FeaturesTabs = Lib.Create("ScrollingFrame", {
+		Size = UDim2.new(1, 0, 1, -122), Position = UDim2.fromOffset(0, 80), BackgroundTransparency = 1, BorderSizePixel = 0,
+		ScrollBarThickness = 2, ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), ScrollingDirection = Enum.ScrollingDirection.Y,
+		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = FeaturesSideBar,
+		Lib.Create("UIPadding", { PaddingBottom = UDim.new(0, 6) })
+	})
 
-	local View_Visuals = MakeFeaturesTab("Visuals", 84)
-	local View_Movement = MakeFeaturesTab("Movement", 124)
-	local View_Protect = MakeFeaturesTab("Protect", 164)
-	local View_Shaders = MakeFeaturesTab("Shaders", 204)
-	local View_Funny = MakeFeaturesTab("Funny", 244)
-	local View_Misc = MakeFeaturesTab("Misc", 284)
-	local View_Server = MakeFeaturesTab("Server", 324)
-	local View_Teleport = MakeFeaturesTab("Teleport", 364)
+	local MakeFeaturesTab
+	Lib.SwitchFeaturesTab, MakeFeaturesTab = Lib.CreateTabSystem(FeaturesSection, FeaturesTabs, "CurrentFeaturesTab")
+
+	local View_Visuals = MakeFeaturesTab("Visuals", 4)
+	local View_Movement = MakeFeaturesTab("Movement", 44)
+	local View_Protect = MakeFeaturesTab("Protect", 84)
+	local View_Shaders = MakeFeaturesTab("Shaders", 124)
+	local View_Funny = MakeFeaturesTab("Funny", 164)
+	local View_Misc = MakeFeaturesTab("Misc", 204)
+	local View_Server = MakeFeaturesTab("Server", 244)
+	local View_Teleport = MakeFeaturesTab("Teleport", 284)
 
 	local function MakeScroll(view)
 		local scr = Lib.Create("ScrollingFrame", {
@@ -5590,11 +7284,16 @@ do
 	local TeleportScroll = MakeScroll(View_Teleport)
 
 	do
-		local QoLView = MakeFeaturesTab("QoL", 404)
+		local QoLView = MakeFeaturesTab("QoL", 324)
 		Lib.BuildQoL(MakeScroll(QoLView))
 	end
 
-	Lib.BuildFeatureSearch(FeaturesSection, FeaturesSideBar)
+	do
+		local CombatView = MakeFeaturesTab("Combat", 364)
+		Lib.BuildCombat(MakeScroll(CombatView))
+	end
+
+	Lib.BuildFeatureSearch(FeaturesSection, FeaturesSideBar, FeaturesTabs)
 
 	local ESPGroup = Lib.CreateFeatureGroup(VisualsScroll, "ESP", 1)
 	Lib.CreateSettingToggleItem(ESPGroup, "Esp Name", "Display player display names with studs distance", State.ESP_Name, function(val) State.ESP_Name = val end)
@@ -6393,7 +8092,7 @@ do
 	local sListCardTitle = Lib.Create("TextLabel", { Size = UDim2.new(1, -20, 1, 0), Position = UDim2.new(0, 14, 0, 0), BackgroundTransparency = 1, Text = "Server List", TextColor3 = Color3.fromRGB(240, 240, 240), TextSize = 14, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = ServerListHeaderBtn })
 	Lib.RegisterThemeText(sListCardTitle, "Primary")
 
-	local ServerGearBtn = Lib.Create("ImageButton", { Size = UDim2.fromOffset(28, 28), Position = UDim2.new(1, -78, 0.5, -14), BackgroundColor3 = Color3.fromRGB(22, 22, 22), Image = "rbxassetid://10734944449", ImageColor3 = Color3.fromRGB(180, 180, 180), ScaleType = Enum.ScaleType.Fit, Parent = ServerListHeader, Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }), Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5), PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5) }) })
+	local ServerGearBtn = Lib.Create("ImageButton", { Size = UDim2.fromOffset(28, 28), Position = UDim2.new(1, -78, 0.5, -14), BackgroundColor3 = Color3.fromRGB(22, 22, 22), Image = "rbxassetid://119430435918970", ImageColor3 = Color3.fromRGB(180, 180, 180), ScaleType = Enum.ScaleType.Fit, Parent = ServerListHeader, Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }), Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5), PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5) }) })
 	Lib.RegisterThemeElement(ServerGearBtn, "BackgroundColor3", 0.7)
 
 	ServerGearBtn.MouseEnter:Connect(function() Lib.Tween(ServerGearBtn, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundColor3 = Lib.Lighten(Lib.Theme.Item, 0.056), ImageColor3 = Color3.fromRGB(255, 255, 255) }) end)
@@ -6591,21 +8290,20 @@ do
 		if State.CurrentScriptsTab == "Browse" then Lib.LoadScriptsPage(1) end
 	end
 
+	local Src = { Order = { "Rscripts", "ScriptBlox", "HaxHell", "Roblox Scripts" }, Off = { ["Roblox Scripts"] = true } }
+	Lib.ScriptStores = { Saved = Lib.MakeStore("SeptusHub_SavedScripts.json"), Recent = Lib.MakeStore("SeptusHub_RecentScripts.json", 40) }
+
 	local MakeScriptsTab
 	Lib.SwitchScriptsTab, MakeScriptsTab = Lib.CreateTabSystem(ScriptsSection, ScriptsSideBar, "CurrentScriptsTab", function(tabName)
 		if tabName == "Browse" and not State.ScriptsCache[1] and not State.ScriptsLoading then
 			Lib.LoadScriptsPage(1)
 		end
+		if Lib.OnScriptsTab then Lib.OnScriptsTab(tabName) end
 	end)
 
 	local View_Browse = MakeScriptsTab("Browse", 50)
-	local View_Settings = MakeScriptsTab("Settings", 90)
-
-	Lib.Create("UIListLayout", { Padding = UDim.new(0, 20), Parent = View_Settings })
-	Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 10), PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5), Parent = View_Settings })
-
-	Lib.MakeChipGroup(View_Settings, "API Provider", "ScriptsProvider", {"Rscripts", "ScriptBlox"}, function() ClearScriptsCache() end, 1)
-	Lib.MakeChipGroup(View_Settings, "Sort by", "ScriptsSort", {"Newest", "Most Views", "Most Likes"}, function() ClearScriptsCache() end, 2)
+	local View_Saved = MakeScriptsTab("Saved", 90)
+	local View_Recent = MakeScriptsTab("Recent", 130)
 
 	local BrowseScroll = Lib.Create("ScrollingFrame", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, ScrollBarThickness = 2, ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), BorderSizePixel = 0, Parent = View_Browse })
 	local BrowseGrid = Lib.Create("UIGridLayout", { CellSize = UDim2.fromOffset(185, 220), CellPadding = UDim2.fromOffset(15, 15), SortOrder = Enum.SortOrder.LayoutOrder, Parent = BrowseScroll })
@@ -6638,132 +8336,327 @@ do
 	RetryBtn.MouseEnter:Connect(function() Lib.Tween(RetryBtn, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundColor3 = Color3.fromRGB(210, 210, 210) }) end)
 	RetryBtn.MouseLeave:Connect(function() Lib.Tween(RetryBtn, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundColor3 = Color3.fromRGB(255, 255, 255) }) end)
 
-	local function FetchScripts(page)
-		local result = { success = false, data = {}, totalPages = 1 }
+	function Src.Decode(url)
+		local success, body = API.HTTPRequest(url)
+		if not (success and body) then return nil end
+		local decoded
+		local ok = pcall(function() decoded = Services.HttpService:JSONDecode(body) end)
+		return ok and type(decoded) == "table" and decoded or nil
+	end
 
-		local function ParseScriptBlox(decoded)
-			if decoded and decoded.result and decoded.result.scripts then
-				result.success = true
-				result.totalPages = decoded.result.totalPages or 1
-				for _, s in ipairs(decoded.result.scripts) do
-					local img = s.image
-					if img and img:sub(1, 1) == "/" then img = "https://scriptblox.com" .. img end
-					if (not img or img == "") and s.game and s.game.imageUrl then
-						img = s.game.imageUrl
-						if img:sub(1, 1) == "/" then img = "https://scriptblox.com" .. img end
-					end
-					table.insert(result.data, {
-						title = s.title,
-						game = s.game and s.game.name or "Universal",
-						imageUrl = img,
-						hasKey = s.key,
-						isVerified = s.verified,
-						script = s.script or s.code or ""
-					})
+	function Src.ParseBlox(decoded, result)
+		if decoded.result and decoded.result.scripts then
+			result.success = true
+			result.totalPages = decoded.result.totalPages or 1
+			for _, s in ipairs(decoded.result.scripts) do
+				local img = s.image
+				if img and img:sub(1, 1) == "/" then img = "https://scriptblox.com" .. img end
+				if (not img or img == "") and s.game and s.game.imageUrl then
+					img = s.game.imageUrl
+					if img:sub(1, 1) == "/" then img = "https://scriptblox.com" .. img end
 				end
-				return true
+				table.insert(result.data, {
+					title = s.title,
+					game = s.game and s.game.name or "Universal",
+					imageUrl = img,
+					hasKey = s.key,
+					isVerified = s.verified,
+					script = s.script or s.code or ""
+				})
 			end
-			return false
+			return true
+		end
+		return false
+	end
+
+	function Src.ParseR(decoded, result)
+		local rawScripts = nil
+		if type(decoded.data) == "table" then
+			rawScripts = decoded.data
+			result.totalPages = (decoded.meta and decoded.meta.totalPages) or 1
+		elseif type(decoded.scripts) == "table" then
+			rawScripts = decoded.scripts
+			result.totalPages = decoded.totalPages or (decoded.info and decoded.info.maxPages) or 1
 		end
 
-		local function ParseRscripts(decoded)
-			local rawScripts = nil
-			if type(decoded.data) == "table" then
-				rawScripts = decoded.data
-				result.totalPages = (decoded.meta and decoded.meta.totalPages) or 1
-			elseif type(decoded.scripts) == "table" then
-				rawScripts = decoded.scripts
-				result.totalPages = decoded.totalPages or (decoded.info and decoded.info.maxPages) or 1
-			end
-
-			if rawScripts and #rawScripts > 0 then
-				result.success = true
-				for _, s in ipairs(rawScripts) do
-					local img = s.imageUrl or s.image
-					if (not img or img == "") and s.game and (s.game.thumbnailUrl or s.game.imageUrl) then
-						img = s.game.thumbnailUrl or s.game.imageUrl
-					end
-					table.insert(result.data, {
-						title = s.title or s.name,
-						game = (s.game and (s.game.title or s.game.name)) or "Universal",
-						imageUrl = img,
-						hasKey = s.hasKey or s.keySystem or s.key,
-						isVerified = s.isVerified or (s.risk and s.risk.level == "Safe") or (s.creator and s.creator.isVerified),
-						script = s.script or s.rawScript or s.code or ""
-					})
+		if rawScripts and #rawScripts > 0 then
+			result.success = true
+			for _, s in ipairs(rawScripts) do
+				local img = s.imageUrl or s.image
+				if (not img or img == "") and s.game and (s.game.thumbnailUrl or s.game.imageUrl) then
+					img = s.game.thumbnailUrl or s.game.imageUrl
 				end
-				return true
+				local code = type(s.script) == "string" and s.script or type(s.code) == "string" and s.code or ""
+				if code:find("^https?://%S+$") then code = "" end
+				table.insert(result.data, {
+					title = s.title or s.name,
+					game = (s.game and (s.game.title or s.game.name)) or "Universal",
+					imageUrl = img,
+					hasKey = s.hasKey or s.keySystem or s.key,
+					isVerified = s.isVerified or (s.risk and s.risk.level == "Safe") or (s.creator and s.creator.isVerified),
+					script = code,
+					raw = type(s.rawScript) == "string" and s.rawScript or "",
+					id = s._id or s.id,
+					origin = "Rscripts"
+				})
 			end
-			return false
+			return true
 		end
+		return false
+	end
 
-		if State.ScriptsQuery ~= "" then
-			local encoded = Services.HttpService:UrlEncode(State.ScriptsQuery)
-			local urls = { "https://scriptblox.com/api/script/search?q=" .. encoded .. "&page=" .. tostring(page) }
-			if State.ScriptsProvider ~= "ScriptBlox" then
-				table.insert(urls, 1, "https://rscripts.net/api/v2/scripts?q=" .. encoded .. "&page=" .. tostring(page) .. "&orderBy=date&sort=desc")
-			end
-			for _, u in ipairs(urls) do
-				local success, body = API.HTTPRequest(u)
-				if success and body then
-					local decSuccess, decoded = pcall(Services.HttpService.JSONDecode, Services.HttpService, body)
-					if decSuccess and type(decoded) == "table" and (ParseScriptBlox(decoded) or ParseRscripts(decoded)) then break end
-				end
-			end
-			return result
+	function Src.ParseHax(decoded, result)
+		local rows = decoded.data
+		if type(rows) ~= "table" then return false end
+		result.success = true
+		local pg = decoded.pagination
+		if pg then
+			local current = pg.page or 1
+			result.totalPages = pg.totalPages or (pg.hasMore and current + 1) or current
 		end
-
-		if State.ScriptsProvider == "ScriptBlox" then
-			local url = "https://scriptblox.com/api/script/fetch?page=" .. tostring(page)
-			if State.ScriptsSort == "Most Views" then url = url .. "&sortBy=views&order=desc"
-			elseif State.ScriptsSort == "Most Likes" then url = url .. "&sortBy=likeCount&order=desc"
-			else url = url .. "&sortBy=createdAt&order=desc" end
-
-			local success, body = API.HTTPRequest(url)
-			if success and body then
-				local decSuccess, decoded = pcall(function() return Services.HttpService:JSONDecode(body) end)
-				if decSuccess then ParseScriptBlox(decoded) end
-			end
-		else
-			local urls = {
-				"https://rscripts.net/api/scripts?page=" .. tostring(page),
-				"https://api.rscripts.net/v1/scripts?limit=30&page=" .. tostring(page)
+		for _, s in ipairs(rows) do
+			local flags, game, media = s.flags or {}, s.game or {}, s.media or {}
+			result.data[#result.data + 1] = {
+				title = s.title,
+				game = game.name or "Universal",
+				imageUrl = media.thumbnailUrl or game.thumbnailUrl,
+				hasKey = flags.keySystem,
+				isVerified = flags.verified,
+				script = "",
+				slug = s.slug,
+				raw = s.links and s.links.raw or "",
+				origin = "HaxHell"
 			}
+		end
+		return true
+	end
 
-			for _, u in ipairs(urls) do
-				local sortParam = ""
-				if State.ScriptsSort == "Most Views" then sortParam = "&sort=views"
-				elseif State.ScriptsSort == "Most Likes" then sortParam = "&sort=likes" end
+	function Src.Wrap(value)
+		if type(value) ~= "string" or value == "" then return "" end
+		if value:find("^https?://%S+$") then return 'loadstring(game:HttpGet("' .. value .. '"))()' end
+		return value
+	end
 
-				local success, body = API.HTTPRequest(u .. sortParam)
-				if success and body then
-					local decSuccess, decoded = pcall(function() return Services.HttpService:JSONDecode(body) end)
-					if decSuccess and type(decoded) == "table" then
-						if ParseRscripts(decoded) then break end
-					end
-				end
-			end
+	Src.Hosts = { "rscripts.net", "rawscripts.net", "scriptblox.com" }
 
-			if not result.success or #result.data == 0 then
-				local fbUrl = "https://scriptblox.com/api/script/fetch?page=" .. tostring(page) .. "&sortBy=createdAt&order=desc"
-				local success, body = API.HTTPRequest(fbUrl)
-				if success and body then
-					local decSuccess, decoded = pcall(function() return Services.HttpService:JSONDecode(body) end)
-					if decSuccess then ParseScriptBlox(decoded) end
-				end
+	function Src.IsPublisher(url)
+		local host = url:match("^https?://([^/:]+)")
+		if not host then return false end
+		host = host:lower()
+		for _, known in ipairs(Src.Hosts) do
+			if host == known or host:sub(-#known - 1) == "." .. known then return true end
+		end
+		return false
+	end
+
+	function Src.Unwrap(code)
+		for _ = 1, 3 do
+			local url = code:match("^%s*loadstring%s*%(%s*game:HttpGet%w*%s*%(%s*[\"']([^\"']+)[\"'][^%)]*%)%s*%)%s*%(%s*%)%s*;?%s*$")
+				or code:match("^%s*(https?://%S+)%s*$")
+			if not url or not Src.IsPublisher(url) then break end
+			local ok, body = API.HTTPRequest(url)
+			body = ok and type(body) == "string" and body:match("^%s*(.-)%s*$") or ""
+			if body == "" then break end
+			code = body
+		end
+		return code
+	end
+
+	function Src.Resolve(data)
+		local code = ""
+		if data.origin == "HaxHell" and data.slug then
+			local decoded = Src.Decode("https://haxhell.com/api/v1/scripts/" .. data.slug)
+			local source = decoded and decoded.data and decoded.data.source
+			if source then
+				local inline = type(source.code) == "string" and source.code or ""
+				code = (source.displayAsRawLink or inline == "") and Src.Wrap(source.rawUrl) or inline
 			end
 		end
+		if code == "" and type(data.raw) == "string" and data.raw ~= "" then code = Src.Wrap(data.raw) end
+		if code == "" and type(data.script) == "string" and data.script ~= "" and not data.script:find("^https?://%S+$") then code = data.script end
+		if code == "" and data.origin == "Rscripts" and data.id then
+			local decoded = Src.Decode("https://rscripts.net/api/v2/script?id=" .. data.id)
+			local item = decoded and decoded.script
+			item = type(item) == "table" and (item[1] or item) or nil
+			if item and type(item.rawScript) == "string" then
+				data.raw = item.rawScript
+				code = Src.Wrap(item.rawScript)
+			end
+		end
+		if code ~= "" then code = Src.Unwrap(code) end
+		return code
+	end
 
+	function Src.Params()
+		local sort, show = State.ScriptsSort, State.ScriptsShow
+		local by = sort ~= "Relevance" and sort or (show == "Trending" and "Views") or (show == "New" and "Newest") or nil
+		return by, State.ScriptsOrder == "Descending" and "desc" or "asc"
+	end
+
+	function Src.ScriptBlox(page, q)
+		local result = { success = false, data = {}, totalPages = 1 }
+		local by, order = Src.Params()
+		local url
+		if q ~= "" then
+			url = "https://scriptblox.com/api/script/search?q=" .. Services.HttpService:UrlEncode(q) .. "&page=" .. page
+		else
+			url = "https://scriptblox.com/api/script/fetch?page=" .. page
+			if by then
+				url = url .. "&sortBy=" .. (by == "Views" and "views" or by == "Likes" and "likeCount" or "createdAt") .. "&order=" .. order
+			end
+		end
+		local decoded = Src.Decode(url)
+		if decoded then Src.ParseBlox(decoded, result) end
 		return result
 	end
 
-	local function CreateScriptCard(data, order)
+	function Src.Rscripts(page, q)
+		local result = { success = false, data = {}, totalPages = 1 }
+		local by, order = Src.Params()
+		local orderBy = by == "Views" and "views" or by == "Likes" and "likes" or by == "Newest" and "date" or nil
+		local query = "page=" .. page .. (orderBy and ("&orderBy=" .. orderBy .. "&sort=" .. order) or "") .. (q ~= "" and ("&q=" .. Services.HttpService:UrlEncode(q)) or "")
+		local urls = { "https://rscripts.net/api/v2/scripts?" .. query }
+		if q == "" then
+			local legacy = orderBy == "views" and "&sort=views" or orderBy == "likes" and "&sort=likes" or ""
+			urls[2] = "https://rscripts.net/api/scripts?page=" .. page .. legacy
+			urls[3] = "https://api.rscripts.net/v1/scripts?limit=30&page=" .. page .. legacy
+		end
+		for _, url in ipairs(urls) do
+			local decoded = Src.Decode(url)
+			if decoded and Src.ParseR(decoded, result) then break end
+		end
+		return result
+	end
+
+	function Src.HaxHell(page, q)
+		local result = { success = false, data = {}, totalPages = 1 }
+		local by = Src.Params()
+		local url
+		if q == "" and State.ScriptsShow == "Trending" and State.ScriptsSort == "Relevance" then
+			if page > 1 then return result end
+			url = "https://haxhell.com/api/v1/scripts/trending?limit=24"
+		else
+			url = "https://haxhell.com/api/v1/scripts?page=" .. page .. "&limit=30&patched=false&isPaid=false&sort=" .. (by == "Views" and "views" or "latest")
+			if #q >= 2 then url ..= "&q=" .. Services.HttpService:UrlEncode(q) end
+		end
+		local decoded = Src.Decode(url)
+		if decoded then Src.ParseHax(decoded, result) end
+		return result
+	end
+
+	function Src.Fetch(page)
+		local q = State.ScriptsQuery ~= "" and State.ScriptsQuery or State.ScriptsGame
+		local jobs = {}
+		for _, name in ipairs(Src.Order) do
+			if State.ScriptsSources[name] and Src[name] and not Src.Off[name] then jobs[#jobs + 1] = name end
+		end
+		local results, pending = {}, #jobs
+		for index, name in ipairs(jobs) do
+			task.spawn(function()
+				local ok, res = pcall(Src[name], page, q)
+				results[index] = ok and res or nil
+				pending -= 1
+			end)
+		end
+		local started = os.clock()
+		while pending > 0 and os.clock() - started < 45 do task.wait(0.05) end
+
+		local merged, lists, longest = { success = false, data = {}, totalPages = 1 }, {}, 0
+		for index = 1, #jobs do
+			local res = results[index]
+			if res and res.success then
+				merged.success = true
+				merged.totalPages = math.max(merged.totalPages, res.totalPages or 1)
+				lists[#lists + 1] = res.data
+				longest = math.max(longest, #res.data)
+			end
+		end
+		if not merged.success and State.ScriptsSources.Rscripts then
+			local fallback = Src.ScriptBlox(page, q)
+			if fallback.success then return fallback end
+		end
+		for index = 1, longest do
+			for _, list in ipairs(lists) do
+				if list[index] then merged.data[#merged.data + 1] = list[index] end
+			end
+		end
+		return merged
+	end
+
+	function Src.Count()
+		local sources, count = State.ScriptsSources, 0
+		for _, name in ipairs(Src.Order) do
+			if (sources[name] == true) ~= (name == "Rscripts") then
+				count += 1
+				break
+			end
+		end
+		if State.ScriptsGame ~= "" then count += 1 end
+		if State.ScriptsShow ~= "New" then count += 1 end
+		if State.ScriptsSort ~= "Relevance" then count += 1 end
+		if State.ScriptsOrder ~= "Descending" then count += 1 end
+		return count
+	end
+
+	Src.Modal = Lib.BuildFilterModal("Script Filters", "Refine how the hub is browsed")
+	Src.Button = Lib.MakeFilterButton(ScriptsSideBar, function() Src.Modal.Open() end)
+
+	function Src.Changed()
+		Src.Button.SetCount(Src.Count())
+		ClearScriptsCache()
+	end
+
+	Lib.MakeFilterChips(Src.Modal.Content, "Sources (pick one or more)", Src.Order, function(option)
+		return State.ScriptsSources[option] == true
+	end, function(option)
+		if Src.Off[option] then
+			Lib.Notify({ Title = "Sources", Text = option .. " is not connected yet" })
+			return
+		end
+		local sources, active = State.ScriptsSources, 0
+		for _, on in pairs(sources) do
+			if on then active += 1 end
+		end
+		if sources[option] and active == 1 then return end
+		sources[option] = not sources[option] or nil
+		Src.Changed()
+	end, 1, 172, Src.Off)
+
+	do
+		local section = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 56), BackgroundTransparency = 1, LayoutOrder = 2, Parent = Src.Modal.Content })
+		local heading = Lib.Create("TextLabel", {
+			Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, Text = "Game", TextColor3 = Color3.fromRGB(200, 200, 200), TextSize = 12,
+			Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = section
+		})
+		Lib.RegisterThemeText(heading, "Primary")
+		Lib.MakeSearchBox(section, "Search a Roblox game...", UDim2.fromOffset(0, 22), UDim2.new(1, 0, 0, 32), 0.6, function(text)
+			if State.ScriptsGame == text then return end
+			State.ScriptsGame = text
+			Src.Changed()
+		end)
+	end
+
+	for index, spec in ipairs({
+		{ "Show", "ScriptsShow", { "New", "Trending", "All" }, 112 },
+		{ "Sort by", "ScriptsSort", { "Relevance", "Views", "Newest", "Likes" }, 82 },
+		{ "Order", "ScriptsOrder", { "Descending", "Ascending" }, 172 }
+	}) do
+		Lib.MakeFilterChips(Src.Modal.Content, spec[1], spec[3], function(option)
+			return State[spec[2]] == option
+		end, function(option)
+			State[spec[2]] = option
+			Src.Changed()
+		end, index + 2, spec[4])
+	end
+	Src.Button.SetCount(Src.Count())
+
+	local function CreateScriptCard(data, order, parent, onChange)
 		local Card = Lib.Create("Frame", {
 			Size = UDim2.fromOffset(185, 220),
 			BackgroundColor3 = Color3.fromRGB(15, 15, 15),
 			LayoutOrder = order,
 			ClipsDescendants = true,
-			Parent = BrowseScroll,
+			Parent = parent or BrowseScroll,
 			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
 		})
 		Lib.RegisterThemeElement(Card, "BackgroundColor3", 0.5)
@@ -6816,6 +8709,13 @@ do
 
 		if data.hasKey then MakeBadge("Key System") end
 		if data.isVerified then MakeBadge("Verified") end
+
+		local key = tostring(data.game) .. "|" .. tostring(data.title)
+		Lib.MakeStar(Image, UDim2.new(1, -30, 0, 6), Lib.ScriptStores.Saved.Has(key), function()
+			local on = Lib.ScriptStores.Saved.Toggle(key, data)
+			if onChange then task.defer(onChange) end
+			return on
+		end)
 
 		local Overlay = Lib.Create("Frame", {
 			Size = UDim2.new(1, 0, 1, 0),
@@ -6893,26 +8793,33 @@ do
 			Lib.Tween(CopyBtn, 0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundColor3 = Color3.fromRGB(255, 255, 255) })
 		end)
 
-		local isCopied = false
+		local busy = false
 		CopyBtn.MouseButton1Click:Connect(function()
 			Lib.PlayClick()
-			if isCopied then return end
-			local scriptToCopy = (data.script and data.script ~= "") and data.script or ("-- No script source found for " .. tostring(data.title))
-			local copyFunc = setclipboard or toclipboard or set_clipboard
-			if copyFunc then copyFunc(scriptToCopy) end
-
-			isCopied = true
-			CopyBtn.Text = "Copied! ✓"
-			CopyBtn.BackgroundColor3 = Color3.fromRGB(80, 220, 120)
-			CopyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-
-			task.delay(1.5, function()
-				if CopyBtn and CopyBtn.Parent then
+			if busy then return end
+			busy = true
+			CopyBtn.Text = "Copying..."
+			task.spawn(function()
+				local ok, code = pcall(Src.Resolve, data)
+				local failed = not ok or code == ""
+				if failed then
+					Lib.Notify({ Title = "Scripts", Text = "Failed to get the script loadstring" })
+				else
+					local copyFunc = setclipboard or toclipboard or set_clipboard
+					if copyFunc then copyFunc(code) end
+					Lib.ScriptStores.Recent.Add(key, data)
+				end
+				if not CopyBtn.Parent then return end
+				CopyBtn.Text = failed and "Failed" or "Copied! ✓"
+				CopyBtn.BackgroundColor3 = failed and Color3.fromRGB(220, 80, 80) or Color3.fromRGB(80, 220, 120)
+				CopyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+				task.wait(1.5)
+				if CopyBtn.Parent then
 					CopyBtn.Text = "Copy Script"
 					CopyBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 					CopyBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
-					isCopied = false
 				end
+				busy = false
 			end)
 		end)
 	end
@@ -6939,20 +8846,23 @@ do
 		end
 
 		task.spawn(function()
-			local result = FetchScripts(page)
+			local result = Src.Fetch(page)
 			if gen ~= State.ScriptsGen then return end
 
 			LoadingLabel.Visible = false
 			MoreLabel.Visible = false
 
 			local query = State.ScriptsQuery:lower()
+			local gameQuery = State.ScriptsGame:lower()
+			local filtered = query ~= "" or gameQuery ~= ""
 			if first then
 				Lib.ScriptsSearch.SetSuggestions(query ~= "" and result.success and Lib.CollectPlaces(result.data, query) or nil)
 			end
-			if query ~= "" and result.success then
+			if filtered and result.success then
 				local kept = {}
 				for _, s in ipairs(result.data) do
-					if (s.game or ""):lower():find(query, 1, true) or (s.title or ""):lower():find(query, 1, true) then
+					local gameName, title = (s.game or ""):lower(), (s.title or ""):lower()
+					if (query == "" or gameName:find(query, 1, true) or title:find(query, 1, true)) and (gameQuery == "" or gameName:find(gameQuery, 1, true)) then
 						kept[#kept + 1] = s
 					end
 				end
@@ -6974,7 +8884,7 @@ do
 				State.ScriptsCount = base + #result.data
 				BrowseScroll.Visible = true
 			elseif first then
-				if query ~= "" and result.success then
+				if filtered and result.success then
 					LoadingLabel.Text = "No scripts found"
 					LoadingLabel.Visible = true
 				else
@@ -6983,7 +8893,7 @@ do
 				end
 			else
 				State.ScriptsBackoff = os.clock() + 4
-				if State.ScriptsCount == 0 and query ~= "" then
+				if State.ScriptsCount == 0 and filtered then
 					LoadingLabel.Text = "No scripts found"
 					LoadingLabel.Visible = true
 				end
@@ -6991,6 +8901,31 @@ do
 
 			State.ScriptsLoading = false
 		end)
+	end
+
+	do
+		local cell, gap = UDim2.fromOffset(185, 220), UDim2.fromOffset(15, 15)
+		local savedScroll, savedEmpty = Lib.MakeCardList(View_Saved, "No saved scripts yet\nTap the star on a script card to save it", cell, gap, 10)
+		local recentScroll, recentEmpty = Lib.MakeCardList(View_Recent, "No recent scripts yet\nScripts you copy will appear here", cell, gap, 10)
+
+		local function Fill(scroll, empty, store, onChange)
+			for _, child in ipairs(scroll:GetChildren()) do
+				if child:IsA("Frame") then child:Destroy() end
+			end
+			local list = store.List()
+			for index, entry in ipairs(list) do CreateScriptCard(entry.data, index, scroll, onChange) end
+			empty.Visible = #list == 0
+		end
+
+		local function FillSaved() Fill(savedScroll, savedEmpty, Lib.ScriptStores.Saved, FillSaved) end
+
+		function Lib.OnScriptsTab(tabName)
+			if tabName == "Saved" then
+				FillSaved()
+			elseif tabName == "Recent" then
+				Fill(recentScroll, recentEmpty, Lib.ScriptStores.Recent)
+			end
+		end
 	end
 
 	RetryBtn.MouseButton1Click:Connect(function()
@@ -7020,6 +8955,8 @@ do
 		if State.CurrentEmotesTab == "Browse" and Lib.LoadEmotesPage then Lib.LoadEmotesPage(1) end
 	end
 
+	Lib.EmoteStores = { Saved = Lib.MakeStore("SeptusHub_SavedEmotes.json"), Recent = Lib.MakeStore("SeptusHub_RecentEmotes.json", 40) }
+
 	local MakeEmotesTab
 	Lib.SwitchEmotesTab, MakeEmotesTab = Lib.CreateTabSystem(EmotesSection, EmotesSideBar, "CurrentEmotesTab", function(tabName)
 		if tabName == "Browse" and not State.EmotesLoading then
@@ -7028,16 +8965,38 @@ do
 				Lib.LoadEmotesPage(State.EmotesPage)
 			end
 		end
+		if Lib.OnEmotesTab then Lib.OnEmotesTab(tabName) end
 	end)
 
 	local View_EmotesBrowse = MakeEmotesTab("Browse", 50)
-	local View_EmotesSettings = MakeEmotesTab("Settings", 90)
+	local View_EmotesSaved = MakeEmotesTab("Saved", 90)
+	local View_EmotesRecent = MakeEmotesTab("Recent", 130)
 
-	Lib.Create("UIListLayout", { Padding = UDim.new(0, 20), Parent = View_EmotesSettings })
-	Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 10), PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5), Parent = View_EmotesSettings })
-
-	Lib.MakeChipGroup(View_EmotesSettings, "Category", "EmotesCategory", {"Emotes", "Animation Packs"}, function() ClearEmotesDataCache() end, 1)
-	Lib.MakeChipGroup(View_EmotesSettings, "Sort by", "EmotesSort", {"Most Liked", "Least Liked", "Most Viewed", "Least Viewed", "Newest", "Oldest"}, function() ClearEmotesDataCache() end, 2)
+	local EmFilter = {}
+	function EmFilter.Count()
+		local count = 0
+		if State.EmotesCategory ~= "Emotes" then count += 1 end
+		if State.EmotesSort ~= "Most Liked" then count += 1 end
+		return count
+	end
+	EmFilter.Modal = Lib.BuildFilterModal("Emote Filters", "Refine how the hub is browsed")
+	EmFilter.Button = Lib.MakeFilterButton(EmotesSideBar, function() EmFilter.Modal.Open() end)
+	function EmFilter.Changed()
+		EmFilter.Button.SetCount(EmFilter.Count())
+		ClearEmotesDataCache()
+	end
+	for index, spec in ipairs({
+		{ "Category", "EmotesCategory", { "Emotes", "Animation Packs" }, 172 },
+		{ "Sort by", "EmotesSort", { "Most Liked", "Least Liked", "Most Viewed", "Least Viewed", "Newest", "Oldest" }, 112 }
+	}) do
+		Lib.MakeFilterChips(EmFilter.Modal.Content, spec[1], spec[3], function(option)
+			return State[spec[2]] == option
+		end, function(option)
+			State[spec[2]] = option
+			EmFilter.Changed()
+		end, index, spec[4])
+	end
+	EmFilter.Button.SetCount(EmFilter.Count())
 
 	local EmotesScroll = Lib.Create("ScrollingFrame", { Size = UDim2.new(1, 0, 1, -40), Position = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1, ScrollBarThickness = 2, ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), BorderSizePixel = 0, Parent = View_EmotesBrowse })
 	local EmotesGrid = Lib.Create("UIGridLayout", { CellSize = UDim2.fromOffset(185, 230), CellPadding = UDim2.fromOffset(12, 12), SortOrder = Enum.SortOrder.LayoutOrder, Parent = EmotesScroll })
@@ -7071,14 +9030,21 @@ do
 	EmotesRetryBtn.MouseEnter:Connect(function() Lib.Tween(EmotesRetryBtn, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundColor3 = Color3.fromRGB(210, 210, 210) }) end)
 	EmotesRetryBtn.MouseLeave:Connect(function() Lib.Tween(EmotesRetryBtn, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundColor3 = Color3.fromRGB(255, 255, 255) }) end)
 
-	local function CreateEmoteCard(data, order)
-		local Card = Lib.Create("Frame", { Size = UDim2.fromOffset(185, 230), BackgroundColor3 = Color3.fromRGB(15, 15, 15), LayoutOrder = order, Parent = EmotesScroll, Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) }) })
+	local function CreateEmoteCard(data, order, parent, onChange)
+		local Card = Lib.Create("Frame", { Size = UDim2.fromOffset(185, 230), BackgroundColor3 = Color3.fromRGB(15, 15, 15), LayoutOrder = order, Parent = parent or EmotesScroll, Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) }) })
 		Lib.RegisterThemeElement(Card, "BackgroundColor3", 0.5)
 
 		local thumbType = (data.itemType == "Bundle") and "BundleThumbnail" or "Asset"
 		local thumbUrl = "rbxthumb://type=" .. thumbType .. "&id=" .. tostring(data.thumbnailId) .. "&w=420&h=420"
 
 		Lib.RegisterThemeElement(Lib.Create("ImageLabel", { Size = UDim2.new(1, -16, 0, 110), Position = UDim2.new(0, 8, 0, 8), BackgroundColor3 = Color3.fromRGB(22, 22, 22), Image = thumbUrl, ScaleType = Enum.ScaleType.Fit, Parent = Card, Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }) }), "BackgroundColor3", 0.7)
+		local key = tostring(data.id)
+		Lib.MakeStar(Card, UDim2.new(1, -36, 0, 14), Lib.EmoteStores.Saved.Has(key), function()
+			local on = Lib.EmoteStores.Saved.Toggle(key, { id = data.id, itemType = data.itemType, name = data.name, price = data.price, thumbnailId = data.thumbnailId })
+			if onChange then task.defer(onChange) end
+			return on
+		end)
+
 		local eName = Lib.Create("TextLabel", { Size = UDim2.new(1, -16, 0, 18), Position = UDim2.new(0, 8, 0, 124), BackgroundTransparency = 1, Text = data.name, TextColor3 = Color3.fromRGB(240, 240, 240), TextSize = 13, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = Card })
 		Lib.RegisterThemeText(eName, "Primary")
 
@@ -7100,8 +9066,36 @@ do
 
 		actionBtn.MouseButton1Click:Connect(function()
 			Lib.PlayClick()
+			if State.CurrentPlayingAssetId ~= data.id then
+				Lib.EmoteStores.Recent.Add(key, { id = data.id, itemType = data.itemType, name = data.name, price = data.price, thumbnailId = data.thumbnailId })
+			end
 			Lib.PlayEmote(data.id, data.itemType, actionBtn)
 		end)
+	end
+
+	do
+		local cell, gap = UDim2.fromOffset(185, 230), UDim2.fromOffset(12, 12)
+		local savedScroll, savedEmpty = Lib.MakeCardList(View_EmotesSaved, "No saved emotes yet\nTap the star on an emote card to save it", cell, gap, 8)
+		local recentScroll, recentEmpty = Lib.MakeCardList(View_EmotesRecent, "No recent emotes yet\nEmotes you play will appear here", cell, gap, 8)
+
+		local function Fill(scroll, empty, store, onChange)
+			for _, child in ipairs(scroll:GetChildren()) do
+				if child:IsA("Frame") then child:Destroy() end
+			end
+			local list = store.List()
+			for index, entry in ipairs(list) do CreateEmoteCard(entry.data, index, scroll, onChange) end
+			empty.Visible = #list == 0
+		end
+
+		local function FillSaved() Fill(savedScroll, savedEmpty, Lib.EmoteStores.Saved, FillSaved) end
+
+		function Lib.OnEmotesTab(tabName)
+			if tabName == "Saved" then
+				FillSaved()
+			elseif tabName == "Recent" then
+				Fill(recentScroll, recentEmpty, Lib.EmoteStores.Recent)
+			end
+		end
 	end
 
 	function Lib.LoadEmotesPage(page)
@@ -7755,8 +9749,8 @@ do
 	local MakeSettingsTab
 	Lib.SwitchSettingsTab, MakeSettingsTab = Lib.CreateTabSystem(SettingsSection, SettingsSideBar, "CurrentSettingsTab")
 
-	local View_Appearance = MakeSettingsTab("Appearance", 50)
-	local View_Config = MakeSettingsTab("Config", 90)
+	local View_Appearance = MakeSettingsTab("Appearance", 50, 92865789131206)
+	local View_Config = MakeSettingsTab("Config", 90, 92450542426061)
 
 	local AppearanceScroll = Lib.Create("ScrollingFrame", {
 		Size = UDim2.new(1, 0, 1, 0), Position = UDim2.new(0, 0, 0, 0),
@@ -8333,7 +10327,7 @@ do
 			Size = UDim2.fromOffset(18, 18),
 			Position = UDim2.new(0, 14, 0, 12),
 			BackgroundTransparency = 1,
-			Image = "rbxassetid://72855116322935",
+			Image = "rbxassetid://92865789131206",
 			ImageColor3 = Color3.fromRGB(220, 220, 220),
 			ScaleType = Enum.ScaleType.Fit,
 			Parent = ThemeSection
@@ -8719,7 +10713,17 @@ do
 	Lib.CreateSettingToggleItem(WindowStyleGroup, "Hide Name", "Hides the title next to the logo in the main window header", State.HideName, function(val)
 		State.HideName = val
 		Lib.ApplyHeader()
+	end)
+	Lib.CreateSettingChoiceItem(WindowStyleGroup, "Menu Animation", { "Standard", "Slide Up", "Unfold" }, State.MenuAnim, function(value)
+		State.MenuAnim = value
 	end, true)
+	Lib.ConfigExtras.MenuAnim = {
+		Dump = function() return { Value = State.MenuAnim } end,
+		Apply = function(data)
+			local control = Lib.ChoiceControls["Menu Animation"]
+			if control and data.Value then control.Set(data.Value) end
+		end
+	}
 
 	local NotificationSettingsGroup = Lib.CreateFeatureGroup(AppearanceScroll, "Notification System", 4)
 	Lib.CreateSettingToggleItem(NotificationSettingsGroup, "System Notifications", "Enable or disable custom GUI notifications popup", State.NotificationsEnabled, function(val)
@@ -9271,6 +11275,9 @@ end
 		for _, field in ipairs(ConfigFields) do
 			dump[field[1]] = State[field[2]]
 		end
+		local extras = {}
+		for name, hook in pairs(Lib.ConfigExtras) do extras[name] = hook.Dump() end
+		dump.Extras = extras
 		return dump
 	end
 
@@ -9294,6 +11301,11 @@ end
 				else
 					control(value)
 				end
+			end
+		end
+		if type(data.Extras) == "table" then
+			for name, hook in pairs(Lib.ConfigExtras) do
+				if type(data.Extras[name]) == "table" then hook.Apply(data.Extras[name]) end
 			end
 		end
 		if data.CustomBg ~= nil then
@@ -9467,7 +11479,8 @@ end
 Lib.FeatureToggles = {
 	"Bunny Hop", "Esp Name", "ESP Outline", "Box ESP", "Tracers", "Boost FPS", "FullBright", "Remove Texture", "Part Deleted",
 	"Fly", "Anti Fling", "Anti Sit", "Anti Void", "Anti Stun", "Anti Ragdoll", "RTX Realistic", "Cyberpunk Neon", "Silent Hill Fog",
-	"Stalk Active", "Complete Suspension", "Usual Lag", "Anti-AFK", "Noclip", "Invisibility", "Auto Reconnect", "Teleport Tool"
+	"Stalk Active", "Complete Suspension", "Usual Lag", "Anti-AFK", "Noclip", "Invisibility", "Auto Reconnect", "Teleport Tool",
+	"Cframe Aim", "Mouse Aim", "Silent Aim", "Trigger Bot", "Zero Recoil", "Zero Spread"
 }
 
 function Lib.Unload()
@@ -9481,7 +11494,7 @@ function Lib.Unload()
 	end
 
 	State.FlingTarget = nil
-	for _, name in ipairs({ "StopBring", "StopMacro", "StopCurrentEmote", "ClearAllESP", "StopMusic", "ReleaseBgSaturation" }) do
+	for _, name in ipairs({ "StopBring", "StopMacro", "StopCurrentEmote", "ClearAllESP", "StopMusic", "ReleaseBgSaturation", "StopCombat" }) do
 		local cleanup = Lib[name]
 		if cleanup then pcall(cleanup) end
 	end
