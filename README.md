@@ -23,6 +23,15 @@ By RS Project x Catalyst Team
 ● **Script Security** — улучшенные механизмы обхода проверок.  
 
 ### ⚙️ Как использовать
+
+New UI
+
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/CherryCalCor/Septus-HubRedesign/refs/heads/main/V3.Lua"))()
+```
+
+Old version
+
 ```lua
 loadstring(game:HttpGet("https://raw.githubusercontent.com/CherryCalCor/Septus-HubRedesign/refs/heads/main/Code.Lua"))()
 ```
