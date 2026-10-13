@@ -200,7 +200,6 @@ end
 local ClickSound = Instance.new("Sound")
 ClickSound.SoundId = "rbxassetid://6895079853"
 ClickSound.Volume = 0.5
-ClickSound.Parent = Services.SoundService
 
 function Lib.PlayClick()
 	pcall(function()
@@ -803,15 +802,20 @@ function Lib.Timed(fn, limit)
 	return ok, result
 end
 
-function API.HTTPRequest(url)
+function API.HTTPRequest(url, accept, extra)
 	local agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 	local headerSets = {
-		{ ["User-Agent"] = agent },
-		{ ["User-Agent"] = agent, ["Roblox-Place-Id"] = "", ["Roblox-Game-Id"] = "", ["Roblox-Universe-Id"] = "" }
+		{ ["User-Agent"] = agent, Accept = accept },
+		{ ["User-Agent"] = agent, Accept = accept, ["Roblox-Place-Id"] = "", ["Roblox-Game-Id"] = "", ["Roblox-Universe-Id"] = "" }
 	}
+	if extra then
+		for _, headers in ipairs(headerSets) do
+			for name, value in pairs(extra) do headers[name] = value end
+		end
+	end
 	local req = (syn and syn.request) or http_request or request or (fluxus and fluxus.request) or (http and http.request)
 	local hasGet, httpGet = pcall(function() return game.HttpGet end)
-	hasGet = hasGet and type(httpGet) == "function"
+	hasGet = hasGet and type(httpGet) == "function" and not extra
 	local reasons = {}
 
 	local function Note(host, text)
@@ -878,6 +882,201 @@ function API.HTTPRequest(url)
 	end
 
 	return false, nil, table.concat(reasons, "; ")
+end
+
+do
+	local ROOT, FOLDER = "SeptusHub", "SeptusHub/img"
+	local PLACEHOLDER = "rbxassetid://113533839488998"
+	local ACCEPT = "image/png,image/jpeg;q=0.9,*/*;q=0.1"
+	local MAX_ACTIVE, MAX_FILES, RETRY_AFTER = 6, 400, 20
+	local EXTENSIONS = { "png", "jpg" }
+	local HttpService, Run = Services.HttpService, Services.Run
+	local supported = type(writefile) == "function" and type(isfile) == "function" and type(getcustomasset) == "function"
+	local ready, failed, waiting, queue, spinners = {}, {}, {}, {}, {}
+	local active, beat = 0, nil
+	local ARC = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(0.72, 0.3),
+		NumberSequenceKeypoint.new(0.74, 1),
+		NumberSequenceKeypoint.new(1, 1)
+	})
+
+	if supported and type(makefolder) == "function" and type(isfolder) == "function" then
+		pcall(function()
+			if not isfolder(ROOT) then makefolder(ROOT) end
+			if not isfolder(FOLDER) then makefolder(FOLDER) end
+		end)
+		if type(listfiles) == "function" and type(delfile) == "function" then
+			task.spawn(pcall, function()
+				local files = listfiles(FOLDER)
+				for index = MAX_FILES + 1, #files do pcall(delfile, files[index]) end
+			end)
+		end
+	end
+
+	local function Hash(text)
+		local h = 5381
+		for i = 1, #text do h = (h * 33 + text:byte(i)) % 4294967296 end
+		return h
+	end
+
+	local function Extension(body)
+		if body:sub(1, 8) == "\137PNG\r\n\26\n" then return "png" end
+		if body:sub(1, 3) == "\255\216\255" then return "jpg" end
+	end
+
+	local function Sources(url)
+		local host, path = url:match("^https?://([^/]+)(/.*)$")
+		host = host and host:lower() or ""
+		local list = {}
+		if host:find("rbxcdn%.com$") then
+			local png = url:gsub("/[Ww]ebp/", "/Png/")
+			if png ~= url then list[#list + 1] = png end
+		end
+		if path and (host == "haxhell.com" or host:find("%.haxhell%.com$")) then
+			list[#list + 1] = "https://haxhell.com/_next/image?url=" .. HttpService:UrlEncode(path) .. "&w=640&q=75"
+		end
+		list[#list + 1] = url
+		list[#list + 1] = "https://wsrv.nl/?w=640&output=jpg&url=" .. HttpService:UrlEncode(url)
+		return list
+	end
+
+	local function Download(url)
+		local key = FOLDER .. "/" .. Hash(url)
+		local path
+		for _, ext in ipairs(EXTENSIONS) do
+			if isfile(key .. "." .. ext) then
+				path = key .. "." .. ext
+				break
+			end
+		end
+		if not path then
+			for _, source in ipairs(Sources(url)) do
+				local ok, body = API.HTTPRequest(source, ACCEPT)
+				local ext = ok and type(body) == "string" and Extension(body)
+				if ext then
+					path = key .. "." .. ext
+					if not pcall(writefile, path, body) then return nil end
+					break
+				end
+			end
+			if not path then return nil end
+		end
+		local ok, asset = pcall(getcustomasset, path)
+		return ok and asset or nil
+	end
+
+	local function Tick()
+		local angle = os.clock() * 420 % 360
+		for index = #spinners, 1, -1 do
+			local gradient = spinners[index]
+			if gradient.Parent then
+				gradient.Rotation = angle
+			else
+				table.remove(spinners, index)
+			end
+		end
+		if #spinners == 0 and beat then
+			beat:Disconnect()
+			beat = nil
+		end
+	end
+
+	local function Spin(label)
+		if label:FindFirstChild("SHSpinner") then return end
+		local gradient = Instance.new("UIGradient")
+		gradient.Transparency = ARC
+		Lib.Create("Frame", {
+			Name = "SHSpinner",
+			Size = UDim2.fromOffset(26, 26),
+			Position = UDim2.fromScale(0.5, 0.5),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			BackgroundTransparency = 1,
+			ZIndex = 2,
+			Parent = label,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) }),
+			Lib.Create("UIStroke", { Thickness = 3, Color = Color3.fromRGB(170, 170, 170), ApplyStrokeMode = Enum.ApplyStrokeMode.Border, gradient })
+		})
+		spinners[#spinners + 1] = gradient
+		if not beat then beat = Run.Heartbeat:Connect(Tick) end
+	end
+
+	local function Unspin(label)
+		local ring = label:FindFirstChild("SHSpinner")
+		if ring then ring:Destroy() end
+	end
+
+	local function Finish(url, labels, asset)
+		waiting[url] = nil
+		if asset then ready[url] = asset else failed[url] = os.clock() + RETRY_AFTER end
+		for _, label in ipairs(labels) do
+			if label.Parent then
+				Unspin(label)
+				label.Image = asset or PLACEHOLDER
+			end
+		end
+	end
+
+	local function Pump()
+		while active < MAX_ACTIVE and #queue > 0 do
+			local url = table.remove(queue, 1)
+			local labels = waiting[url]
+			local alive = false
+			for _, label in ipairs(labels) do
+				if label.Parent then
+					alive = true
+					break
+				end
+			end
+			if alive then
+				active += 1
+				task.spawn(function()
+					local ok, asset = pcall(Download, url)
+					Finish(url, labels, ok and asset or nil)
+					active -= 1
+					Pump()
+				end)
+			else
+				waiting[url] = nil
+			end
+		end
+	end
+
+	function Lib.LoadWebImage(label, url)
+		if type(url) ~= "string" or url == "" then
+			Unspin(label)
+			label.Image = PLACEHOLDER
+			return
+		end
+		if url:sub(1, 2) == "//" then url = "https:" .. url end
+		if not url:find("^https?://") then
+			Unspin(label)
+			label.Image = url
+			return
+		end
+		local asset = ready[url]
+		if asset then
+			Unspin(label)
+			label.Image = asset
+			return
+		end
+		local retry = failed[url]
+		if not supported or (retry and retry > os.clock()) then
+			Unspin(label)
+			label.Image = PLACEHOLDER
+			return
+		end
+		label.Image = ""
+		Spin(label)
+		local labels = waiting[url]
+		if labels then
+			labels[#labels + 1] = label
+			return
+		end
+		waiting[url] = { label }
+		queue[#queue + 1] = url
+		Pump()
+	end
 end
 
 do
@@ -1467,9 +1666,20 @@ UI.Screen = Lib.Create("ScreenGui", {
 	ResetOnSpawn = false,
 	IgnoreGuiInset = true,
 	ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-	DisplayOrder = 2147483647,
-	Parent = App.Player:WaitForChild("PlayerGui")
+	DisplayOrder = 2147483647
 })
+
+function Lib.MountGui(gui)
+	if syn and syn.protect_gui then pcall(syn.protect_gui, gui) end
+	for _, resolve in ipairs({ function() return gethui() end, function() return game:GetService("CoreGui") end }) do
+		local ok = pcall(function() gui.Parent = resolve() end)
+		if ok and gui.Parent then return end
+	end
+	gui.Parent = App.Player:WaitForChild("PlayerGui")
+end
+
+Lib.MountGui(UI.Screen)
+ClickSound.Parent = UI.Screen
 
 UI.NotifContainer = Lib.Create("Frame", {
 	Name = "NotifContainer",
@@ -2074,7 +2284,20 @@ end
 function Lib.BuildUpdateLog(view)
 	local releases = {
 		{
-			version = "V3.4", date = "Oct 10", latest = true,
+			version = "V3.4.1", date = "Oct 13", latest = true,
+			notes = {
+				"Correcting the display of images in the script.",
+				"A small visual update of the image upload.",
+				"Fixed script card images not loading when a site served WebP or relative image links.",
+				"Fixed the Scripts list getting stuck on loading after an error while building cards.",
+				"Fixed failed image downloads never being retried until the next launch.",
+				"Fixed the image cache folder growing without a limit.",
+				"Fixed the hub GUI and its sounds being visible to the game inside PlayerGui and SoundService.",
+				"Added support for the official Rscripts v1 API and its sorting options."
+			}
+		},
+		{
+			version = "V3.4", date = "Oct 10",
 			notes = {
 				"Visual change to certain objects.",
 				"Changing the settings icons and the Features icon.",
@@ -3080,9 +3303,10 @@ function Lib.BuildBrowseSearch(view, scroll, bottom, placeholder, onQuery)
 
 			local thumb = Lib.Create("ImageLabel", {
 				Size = UDim2.fromOffset(36, 36), Position = UDim2.fromOffset(7, 7), BackgroundColor3 = Color3.fromRGB(22, 22, 22),
-				Image = data.Image or "rbxassetid://113533839488998", ScaleType = Enum.ScaleType.Crop, Parent = card,
+				ScaleType = Enum.ScaleType.Crop, Parent = card,
 				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
 			})
+			Lib.LoadWebImage(thumb, data.Image)
 			Lib.RegisterThemeElement(thumb, "BackgroundColor3", 0.7)
 
 			local name = Lib.Create("TextLabel", {
@@ -8336,12 +8560,19 @@ do
 	RetryBtn.MouseEnter:Connect(function() Lib.Tween(RetryBtn, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundColor3 = Color3.fromRGB(210, 210, 210) }) end)
 	RetryBtn.MouseLeave:Connect(function() Lib.Tween(RetryBtn, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundColor3 = Color3.fromRGB(255, 255, 255) }) end)
 
-	function Src.Decode(url)
-		local success, body = API.HTTPRequest(url)
+	function Src.Decode(url, headers)
+		local success, body = API.HTTPRequest(url, nil, headers)
 		if not (success and body) then return nil end
 		local decoded
 		local ok = pcall(function() decoded = Services.HttpService:JSONDecode(body) end)
 		return ok and type(decoded) == "table" and decoded or nil
+	end
+
+	function Src.Abs(url, host)
+		if type(url) ~= "string" or url == "" then return nil end
+		if url:sub(1, 2) == "//" then return "https:" .. url end
+		if url:sub(1, 1) == "/" then return host .. url end
+		return url
 	end
 
 	function Src.ParseBlox(decoded, result)
@@ -8349,12 +8580,7 @@ do
 			result.success = true
 			result.totalPages = decoded.result.totalPages or 1
 			for _, s in ipairs(decoded.result.scripts) do
-				local img = s.image
-				if img and img:sub(1, 1) == "/" then img = "https://scriptblox.com" .. img end
-				if (not img or img == "") and s.game and s.game.imageUrl then
-					img = s.game.imageUrl
-					if img:sub(1, 1) == "/" then img = "https://scriptblox.com" .. img end
-				end
+				local img = Src.Abs(s.image, "https://scriptblox.com") or Src.Abs(s.game and s.game.imageUrl, "https://scriptblox.com")
 				table.insert(result.data, {
 					title = s.title,
 					game = s.game and s.game.name or "Universal",
@@ -8382,17 +8608,16 @@ do
 		if rawScripts and #rawScripts > 0 then
 			result.success = true
 			for _, s in ipairs(rawScripts) do
-				local img = s.imageUrl or s.image
-				if (not img or img == "") and s.game and (s.game.thumbnailUrl or s.game.imageUrl) then
-					img = s.game.thumbnailUrl or s.game.imageUrl
-				end
+				local place = type(s.game) == "table" and s.game or {}
+				local host = "https://rscripts.net"
+				local img = Src.Abs(s.imageUrl, host) or Src.Abs(s.image, host) or Src.Abs(place.thumbnailUrl, host) or Src.Abs(place.logoUrl, host) or Src.Abs(place.imageUrl, host)
 				local code = type(s.script) == "string" and s.script or type(s.code) == "string" and s.code or ""
 				if code:find("^https?://%S+$") then code = "" end
 				table.insert(result.data, {
 					title = s.title or s.name,
 					game = (s.game and (s.game.title or s.game.name)) or "Universal",
 					imageUrl = img,
-					hasKey = s.hasKey or s.keySystem or s.key,
+					hasKey = s.hasKey or s.isKeySystem or s.keySystem or s.key,
 					isVerified = s.isVerified or (s.risk and s.risk.level == "Safe") or (s.creator and s.creator.isVerified),
 					script = code,
 					raw = type(s.rawScript) == "string" and s.rawScript or "",
@@ -8419,7 +8644,7 @@ do
 			result.data[#result.data + 1] = {
 				title = s.title,
 				game = game.name or "Universal",
-				imageUrl = media.thumbnailUrl or game.thumbnailUrl,
+				imageUrl = Src.Abs(media.thumbnailUrl, "https://haxhell.com") or Src.Abs(game.thumbnailUrl, "https://haxhell.com") or Src.Abs(game.iconUrl, "https://haxhell.com"),
 				hasKey = flags.keySystem,
 				isVerified = flags.verified,
 				script = "",
@@ -8510,9 +8735,33 @@ do
 		return result
 	end
 
+	function Src.RscriptsKey()
+		if Src.RKey ~= nil then return Src.RKey end
+		local key = getgenv and getgenv().RscriptsKey
+		if type(key) ~= "string" or key == "" then
+			key = nil
+			if type(isfile) == "function" and type(readfile) == "function" and isfile("SeptusHub/rscripts.key") then
+				local ok, text = pcall(readfile, "SeptusHub/rscripts.key")
+				key = ok and type(text) == "string" and text:match("%S+") or nil
+			end
+		end
+		Src.RKey = key or false
+		return Src.RKey
+	end
+
 	function Src.Rscripts(page, q)
 		local result = { success = false, data = {}, totalPages = 1 }
 		local by, order = Src.Params()
+		local apiKey = Src.RscriptsKey()
+		if apiKey then
+			local sort = by == "Views" and (order == "desc" and "most-views" or "least-views")
+				or by == "Likes" and "most-likes"
+				or by == "Newest" and (order == "desc" and "newest" or "oldest")
+				or "recommended"
+			local url = "https://api.rscripts.net/v1/scripts?limit=30&page=" .. page .. "&sort=" .. sort .. (q ~= "" and ("&q=" .. Services.HttpService:UrlEncode(q)) or "")
+			local decoded = Src.Decode(url, { Authorization = "Bearer " .. apiKey })
+			if decoded and Src.ParseR(decoded, result) then return result end
+		end
 		local orderBy = by == "Views" and "views" or by == "Likes" and "likes" or by == "Newest" and "date" or nil
 		local query = "page=" .. page .. (orderBy and ("&orderBy=" .. orderBy .. "&sort=" .. order) or "") .. (q ~= "" and ("&q=" .. Services.HttpService:UrlEncode(q)) or "")
 		local urls = { "https://rscripts.net/api/v2/scripts?" .. query }
@@ -8669,17 +8918,15 @@ do
 			Parent = Card
 		})
 
-		local imgUrl = (data.imageUrl and data.imageUrl ~= "") and data.imageUrl or "rbxassetid://113533839488998"
-
 		local Image = Lib.Create("ImageLabel", {
 			Size = UDim2.new(1, 0, 0, 120),
 			BackgroundColor3 = Color3.fromRGB(20, 20, 20),
-			Image = imgUrl,
 			ScaleType = Enum.ScaleType.Crop,
 			ClipsDescendants = true,
 			Parent = Card,
 			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
 		})
+		Lib.LoadWebImage(Image, data.imageUrl)
 		Lib.RegisterThemeElement(Image, "BackgroundColor3", 0.7)
 
 		local Badges = Lib.Create("Frame", {
@@ -8846,60 +9093,73 @@ do
 		end
 
 		task.spawn(function()
-			local result = Src.Fetch(page)
-			if gen ~= State.ScriptsGen then return end
+			local ok = pcall(function()
+				local result = Src.Fetch(page)
+				if gen ~= State.ScriptsGen then return end
 
-			LoadingLabel.Visible = false
-			MoreLabel.Visible = false
+				LoadingLabel.Visible = false
+				MoreLabel.Visible = false
 
-			local query = State.ScriptsQuery:lower()
-			local gameQuery = State.ScriptsGame:lower()
-			local filtered = query ~= "" or gameQuery ~= ""
-			if first then
-				Lib.ScriptsSearch.SetSuggestions(query ~= "" and result.success and Lib.CollectPlaces(result.data, query) or nil)
-			end
-			if filtered and result.success then
-				local kept = {}
-				for _, s in ipairs(result.data) do
-					local gameName, title = (s.game or ""):lower(), (s.title or ""):lower()
-					if (query == "" or gameName:find(query, 1, true) or title:find(query, 1, true)) and (gameQuery == "" or gameName:find(gameQuery, 1, true)) then
-						kept[#kept + 1] = s
+				local query = State.ScriptsQuery:lower()
+				local gameQuery = State.ScriptsGame:lower()
+				local filtered = query ~= "" or gameQuery ~= ""
+				if first then
+					Lib.ScriptsSearch.SetSuggestions(query ~= "" and result.success and Lib.CollectPlaces(result.data, query) or nil)
+				end
+				if filtered and result.success then
+					local kept = {}
+					for _, s in ipairs(result.data) do
+						local gameName, title = (s.game or ""):lower(), (s.title or ""):lower()
+						if (query == "" or gameName:find(query, 1, true) or title:find(query, 1, true)) and (gameQuery == "" or gameName:find(gameQuery, 1, true)) then
+							kept[#kept + 1] = s
+						end
+					end
+					result.data = kept
+					if #kept == 0 and page < result.totalPages and page < 4 then
+						State.ScriptsLoading = false
+						return Lib.LoadScriptsPage(page + 1)
 					end
 				end
-				result.data = kept
-				if #kept == 0 and page < result.totalPages and page < 4 then
-					State.ScriptsLoading = false
-					return Lib.LoadScriptsPage(page + 1)
-				end
-			end
 
-			if result.success and #result.data > 0 then
-				local base = State.ScriptsCount
-				State.ScriptsCache[page] = true
-				State.ScriptsPage = page
-				State.ScriptsTotalPages = result.totalPages or 1
-				for i, sData in ipairs(result.data) do
-					CreateScriptCard(sData, base + i)
-				end
-				State.ScriptsCount = base + #result.data
-				BrowseScroll.Visible = true
-			elseif first then
-				if filtered and result.success then
-					LoadingLabel.Text = "No scripts found"
-					LoadingLabel.Visible = true
+				if result.success and #result.data > 0 then
+					local base = State.ScriptsCount
+					State.ScriptsCache[page] = true
+					State.ScriptsPage = page
+					State.ScriptsTotalPages = result.totalPages or 1
+					for i, sData in ipairs(result.data) do
+						CreateScriptCard(sData, base + i)
+					end
+					State.ScriptsCount = base + #result.data
+					BrowseScroll.Visible = true
+				elseif first then
+					if filtered and result.success then
+						LoadingLabel.Text = "No scripts found"
+						LoadingLabel.Visible = true
+					else
+						ErrorLabel.Visible = true
+						RetryBtn.Visible = true
+					end
 				else
+					State.ScriptsBackoff = os.clock() + 4
+					if State.ScriptsCount == 0 and filtered then
+						LoadingLabel.Text = "No scripts found"
+						LoadingLabel.Visible = true
+					end
+				end
+
+				State.ScriptsLoading = false
+			end)
+			if not ok and gen == State.ScriptsGen then
+				State.ScriptsLoading = false
+				LoadingLabel.Visible = false
+				MoreLabel.Visible = false
+				if first then
 					ErrorLabel.Visible = true
 					RetryBtn.Visible = true
-				end
-			else
-				State.ScriptsBackoff = os.clock() + 4
-				if State.ScriptsCount == 0 and filtered then
-					LoadingLabel.Text = "No scripts found"
-					LoadingLabel.Visible = true
+				else
+					State.ScriptsBackoff = os.clock() + 4
 				end
 			end
-
-			State.ScriptsLoading = false
 		end)
 	end
 
@@ -9271,7 +9531,7 @@ function Lib.BuildMusic(group)
 	local mode, cur, loading, failed, autoPaused, token = "Asset ID", nil, false, false, false, 0
 	local Refresh, Play, Toggle, Step, Rebuild
 
-	local sound = Lib.Create("Sound", { Name = "SeptusMusic", Volume = State.MusicVolume / 100, Parent = Services.SoundService })
+	local sound = Lib.Create("Sound", { Name = "SeptusMusic", Volume = State.MusicVolume / 100, Parent = UI.Screen })
 
 	if isfile and readfile then
 		pcall(function()
@@ -10962,7 +11222,7 @@ do
 		if not id or id == "" then return end
 		local sound = Instance.new("Sound")
 		sound.SoundId, sound.PlaybackSpeed, sound.Volume = id, speed, volume
-		sound.Parent = Services.SoundService
+		sound.Parent = UI.Screen
 		sound:Play()
 		Debris:AddItem(sound, 6)
 	end
@@ -10970,7 +11230,7 @@ do
 	local function Probe(id)
 		local probe = Instance.new("Sound")
 		probe.SoundId, probe.Volume = "rbxassetid://" .. id, 0
-		probe.Parent = Services.SoundService
+		probe.Parent = UI.Screen
 		local deadline = os.clock() + 5
 		while not probe.IsLoaded and os.clock() < deadline do task.wait(0.1) end
 		local loaded, length = probe.IsLoaded, probe.TimeLength
