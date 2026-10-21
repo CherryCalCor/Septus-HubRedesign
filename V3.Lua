@@ -90,10 +90,6 @@ local App = {
 		CurrentPlayingAssetId = nil,
 		CurrentEmoteButton = nil,
 
-		ESP_Name = false,
-		ESP_Outline = false,
-		ESP_Box = false,
-		ESP_Tracers = false,
 		BoostFPS = false,
 		FullBright = false,
 		Tool_RemoveTexture = false,
@@ -114,6 +110,7 @@ local App = {
 
 		Shader_RTX = false,
 		Shader_Cyberpunk = false,
+		CyberpunkColor = Color3.fromRGB(170, 60, 255),
 		Shader_SilentHill = false,
 
 		AntiAFK = false,
@@ -168,7 +165,6 @@ local App = {
 		ShaderFolder = nil,
 		OrigLighting = {},
 		OriginalAnims = nil,
-		ESP = {},
 		Tools = {},
 		IntroBlur = nil,
 		StalkConn = nil,
@@ -249,7 +245,7 @@ function Lib.ResolveImage(value)
 end
 
 do
-	local FontRoles = {}
+	local FontRoles = setmetatable({}, { __mode = "k" })
 	local BoldFonts = {
 		[Enum.Font.GothamBold] = true,
 		[Enum.Font.SourceSansBold] = true,
@@ -261,11 +257,21 @@ do
 
 	function Lib.StyleFont(inst)
 		local role = FontRoles[inst]
+		if role == 0 then return end
 		if not role then
 			role = BoldFonts[inst.Font] and 2 or 1
 			FontRoles[inst] = role
 		end
-		inst.Font = role == 2 and State.CurrentBoldFont or State.CurrentRegularFont
+		local face = role == 2 and State.CurrentBoldFace or State.CurrentRegularFace
+		if face then
+			inst.FontFace = face
+		else
+			inst.Font = role == 2 and State.CurrentBoldFont or State.CurrentRegularFont
+		end
+	end
+
+	function Lib.PinFont(inst)
+		FontRoles[inst] = 0
 	end
 end
 
@@ -360,8 +366,9 @@ Lib.HalloweenTheme = {
 	SwitchOff = Color3.fromRGB(60, 40, 54)
 }
 
-Lib.HalloweenAssets = { Pumpkin = "", Web = "", Bat = "", Ghost = "" }
-Lib.HalloweenEmoji = { Pumpkin = "🎃", Web = "🕸️", Bat = "🦇", Ghost = "👻" }
+Lib.HalloweenWeb = "rbxassetid://78965354526256"
+Lib.HalloweenHeader = { Logo = "rbxassetid://131395638826833", Icon = "rbxassetid://71225773476867" }
+Lib.DefaultHeaderIcon = "rbxassetid://74736110237331"
 
 function Lib.ThemeColor(factor)
 	if factor == 0.5 then return Lib.Theme.Card end
@@ -495,8 +502,14 @@ function Lib.ApplyTheme(spec, instant)
 		end
 	end
 
+	local halloween = typeof(spec) == "table" and spec.Halloween == true
+
 	if UI.HeaderLogo then
-		UI.HeaderLogo.Image = light and "rbxassetid://105446913647633" or "rbxassetid://97808676894113"
+		UI.HeaderLogo.Image = halloween and Lib.HalloweenHeader.Logo or (light and "rbxassetid://105446913647633" or "rbxassetid://97808676894113")
+	end
+
+	if UI.HeaderIcon then
+		UI.HeaderIcon.Image = halloween and Lib.HalloweenHeader.Icon or Lib.DefaultHeaderIcon
 	end
 
 	local animate = not instant and Lib.ThemeCount <= 150
@@ -561,9 +574,35 @@ do
 		})
 	end
 
+	local fitted = setmetatable({}, {__mode = "k"})
+
+	local function Fit(backdrop)
+		local update = fitted[backdrop]
+		if not update then
+			local window
+			for _, child in ipairs(backdrop:GetChildren()) do
+				if child:IsA("GuiObject") and child.AnchorPoint == Vector2.new(0.5, 0.5) and child.Size.X.Scale == 0 then
+					window = child
+					break
+				end
+			end
+			if not window then return end
+			local constraint = Instance.new("UISizeConstraint")
+			constraint.Parent = window
+			update = function()
+				local size = backdrop.AbsoluteSize
+				constraint.MaxSize = Vector2.new(math.max(size.X - 24, 160), math.max(size.Y - 24, 120))
+			end
+			fitted[backdrop] = update
+			Lib.C(backdrop:GetPropertyChangedSignal("AbsoluteSize"), update)
+		end
+		update()
+	end
+
 	function Lib.GlassOpen(backdrop)
 		users = users + 1
 		Prepare(backdrop)
+		Fit(backdrop)
 		local light = State.LightTheme
 		backdrop.BackgroundColor3 = light and Color3.new(1, 1, 1) or Lib.Theme.Main:Lerp(Color3.new(1, 1, 1), 0.2)
 		backdrop.BackgroundTransparency = 1
@@ -577,9 +616,11 @@ do
 	end
 end
 
-function Lib.ApplyGlobalFont(regularFont, boldFont)
+function Lib.ApplyGlobalFont(regularFont, boldFont, regularFace, boldFace)
 	State.CurrentRegularFont = regularFont
 	State.CurrentBoldFont = boldFont or regularFont
+	State.CurrentRegularFace = regularFace
+	State.CurrentBoldFace = boldFace
 	if not UI.Screen then return end
 	for _, inst in ipairs(UI.Screen:GetDescendants()) do
 		if Lib.TextClasses[inst.ClassName] then Lib.StyleFont(inst) end
@@ -1763,28 +1804,16 @@ UI.Main = Lib.Create("Frame", {
 })
 
 do
-	local Tween = Services.Tween
-	local container, motion, active = nil, {}, false
+	local container, active = nil, false
 
-	local function Piece(kind, size, alpha, props)
-		local id = Lib.HalloweenAssets[kind]
+	local function Web(props)
 		props.BackgroundTransparency = 1
-		props.Size = UDim2.fromOffset(size, size)
+		props.Size = UDim2.fromOffset(110, 110)
+		props.Image = Lib.HalloweenWeb
+		props.ImageTransparency = 0.15
+		props.ScaleType = Enum.ScaleType.Fit
 		props.Parent = container
-		if id ~= "" then
-			props.Image = (Lib.ResolveImage(id))
-			props.ImageTransparency = alpha
-			props.ScaleType = Enum.ScaleType.Fit
-			return Lib.Create("ImageLabel", props)
-		end
-		props.Text = Lib.HalloweenEmoji[kind]
-		props.TextSize = math.floor(size * 0.78)
-		props.TextTransparency = alpha
-		return Lib.Create("TextLabel", props)
-	end
-
-	local function Loop(piece, goal, duration)
-		motion[#motion + 1] = Tween:Create(piece, TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), goal)
+		return Lib.Create("ImageLabel", props)
 	end
 
 	local function Build()
@@ -1797,24 +1826,10 @@ do
 			Visible = false,
 			Parent = UI.Main
 		})
+		Lib.BindCorner(container, "DecorCorner")
 
-		Piece("Web", 96, 0.3, { Position = UDim2.fromOffset(0, 0) })
-		Piece("Web", 72, 0.4, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Rotation = 90 })
-
-		local pumpkin = Piece("Pumpkin", 58, 0.1, { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 8, 1, -4) })
-		Loop(pumpkin, { Position = UDim2.new(0, 8, 1, -9) }, 2.4)
-
-		local small = Piece("Pumpkin", 44, 0.1, { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -10, 1, -4) })
-		Loop(small, { Position = UDim2.new(1, -10, 1, -8) }, 2.9)
-
-		local ghost = Piece("Ghost", 40, 0.2, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.84, 0, 1, -6) })
-		Loop(ghost, { Position = UDim2.new(0.84, 0, 1, -16) }, 3.4)
-
-		local bat = Piece("Bat", 24, 0.15, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(-0.06, 0.07) })
-		Loop(bat, { Position = UDim2.fromScale(1.06, 0.07) }, 18)
-
-		local second = Piece("Bat", 20, 0.25, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(1.06, 0.16) })
-		Loop(second, { Position = UDim2.fromScale(-0.06, 0.16) }, 26)
+		Web({ Name = "WebTopLeft", Position = UDim2.fromOffset(0, 0) })
+		Web({ Name = "WebBottomRight", AnchorPoint = Vector2.new(1, 1), Position = UDim2.fromScale(1, 1), Rotation = 180 })
 	end
 
 	function Lib.SetHalloweenDecor(on)
@@ -1823,13 +1838,10 @@ do
 		if on then
 			if not container then Build() end
 			container.Visible = true
-			for _, tween in ipairs(motion) do tween:Play() end
 			Lib.Tween(container, 0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { GroupTransparency = 0 })
 		elseif container then
 			Lib.Tween(container, 0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { GroupTransparency = 1 }).Completed:Connect(function()
-				if active then return end
-				container.Visible = false
-				for _, tween in ipairs(motion) do tween:Pause() end
+				if not active then container.Visible = false end
 			end)
 		end
 	end
@@ -1888,6 +1900,8 @@ do
 		end)
 
 		btn.MouseButton1Click:Connect(function()
+			local report = Lib.CompatModal
+			if report and report.IsOpen() then return end
 			Lib.PlayClick()
 			callback()
 		end)
@@ -1998,6 +2012,7 @@ function Lib.ToggleMenu(force)
 
 	if show then
 		State.MenuHiding = false
+		if not State.Minimized then UI.ContentArea.Visible = true end
 		if mode == "Slide Up" then
 			scale.Scale = base * 0.9
 			main.Size, main.Position = size, below
@@ -2022,6 +2037,7 @@ function Lib.ToggleMenu(force)
 	end
 
 	State.MenuHiding = true
+	UI.ContentArea.Visible = false
 	if mode == "Slide Up" then
 		Lib.WindowTween = Lib.Tween(main, 0.45, quint, Enum.EasingDirection.In, { Position = below })
 		Lib.Tween(scale, 0.45, quint, Enum.EasingDirection.In, { Scale = base * 0.9 }).Completed:Connect(Finish)
@@ -2284,7 +2300,30 @@ end
 function Lib.BuildUpdateLog(view)
 	local releases = {
 		{
-			version = "V3.4.1", date = "Oct 13", latest = true,
+			version = "V3.5", date = "Oct 23", latest = true,
+			notes = {
+				"Adding flexible ESP settings [colors, gradients, and much more].",
+				"Adding a color change feature to the Cyberpunk shader.",
+				"Complete overhaul of the RTX shader.",
+				"Fixed loading of the config with a low-quality image.",
+				"Visual redesign of Script cards.",
+				"Adding custom fonts via Asset ID.",
+				"Adding the Info subsection to Home.",
+				"Added a check for injector compatibility with script functions. [BETA!]",
+				"Adding multiple visuals.",
+				"Detailed information about the script is available in the Script section.",
+				"Adding information about the developers.",
+				"Adding a gradient background with style presets, custom colors, strength, angle and slow animation.",
+				"Adding background effects: snowfall, twinkling stars, shooting stars and floating particles.",
+				"Adding a Discord button to Home.",
+				"Reworked the Halloween theme: new logo and icon, cobweb corner decorations.",
+				"Adding a live UI preview window to Appearance that shows every appearance setting before you apply it.",
+				"The theme editor now shows a preview of the theme before saving it.",
+				"Adding saving configs for a specific place, the saved list shows the place where each config was saved."
+			}
+		},
+		{
+			version = "V3.4.1", date = "Oct 13",
 			notes = {
 				"Correcting the display of images in the script.",
 				"A small visual update of the image upload.",
@@ -2402,6 +2441,450 @@ function Lib.BuildUpdateLog(view)
 	end
 end
 
+Lib.CompatCatalog = {
+	{ "Files", {
+		{ names = { "writefile" }, desc = "Saves configs, themes, macros, keybinds, playtime, custom fonts and image caches" },
+		{ names = { "readfile" }, desc = "Loads saved configs, themes, macros, keybinds, playtime and custom fonts" },
+		{ names = { "isfile" }, desc = "Checks that saved data and cached images exist" },
+		{ names = { "makefolder" }, desc = "Creates the config, macro, font and image cache folders" },
+		{ names = { "isfolder" }, desc = "Checks the config, macro, font and image cache folders" },
+		{ names = { "listfiles" }, desc = "Lists saved configs and macros and trims the image cache" },
+		{ names = { "getcustomasset" }, desc = "Displays downloaded script images, URL music and custom fonts" },
+		{ names = { "delfile" }, desc = "Deletes configs, macros and old cached images" }
+	} },
+	{ "Network", {
+		{ names = { "request", "http_request", "syn.request", "fluxus.request", "http.request" }, desc = "Downloads scripts, emotes, music and images" },
+		{ names = { "game.HttpGet" }, label = "game:HttpGet", desc = "Fetches Scripts browser sources and loadstring-based scripts" },
+		{ names = { "loadstring" }, desc = "Runs scripts from the Scripts details window and compiles Remote Spy spoof values and copied loadstring references" },
+		{ names = { "getgenv" }, optional = true, desc = "Reads the optional Rscripts API key" }
+	} },
+	{ "Interface", {
+		{ names = { "gethui" }, desc = "Mounts the hub in a hidden container the game cannot see" },
+		{ names = { "syn.protect_gui" }, optional = true, desc = "Legacy GUI protection on older Synapse-style executors" },
+		{ names = { "setclipboard", "toclipboard", "set_clipboard" }, desc = "Copy buttons, loadstring copying and Remote Spy code export" },
+		{ names = { "identifyexecutor" }, optional = true, desc = "Shows the executor name in the compatibility report" }
+	} },
+	{ "Visuals", {
+		{ names = { "Drawing.new" }, label = "Drawing", desc = "ESP tracers and box rendering" },
+		{ names = { "gethiddenproperty" }, desc = "Reads the Lighting technology before Boost FPS changes it" },
+		{ names = { "sethiddenproperty" }, desc = "Changes the Lighting technology for Boost FPS and lighting features" }
+	} },
+	{ "Input", {
+		{ names = { "mouse1click" }, optional = true, desc = "Combat auto-fire click (falls back to VirtualInputManager)" },
+		{ names = { "mouse1press" }, optional = true, desc = "Combat auto-fire press when mouse1click is missing" },
+		{ names = { "mouse1release" }, optional = true, desc = "Combat auto-fire release when mouse1click is missing" },
+		{ names = { "mousemoverel", "mousemoveabs" }, desc = "Aim assist mouse movement" }
+	} },
+	{ "Remote Spy", {
+		{ names = { "hookmetamethod" }, desc = "Hooks __namecall to log outgoing remotes and bindables" },
+		{ names = { "getnamecallmethod" }, desc = "Reads the method name inside the __namecall hook" },
+		{ names = { "setnamecallmethod" }, desc = "Restores the method name after the hook runs" },
+		{ names = { "newcclosure" }, desc = "Wraps the hook so it looks like a C function" },
+		{ names = { "checkcaller" }, desc = "Ignores calls made by the executor itself" },
+		{ names = { "getcallingscript" }, optional = true, desc = "Shows which script fired a remote" },
+		{ names = { "getcallbackvalue" }, optional = true, desc = "Reads OnClientInvoke and OnInvoke callbacks of remote functions" },
+		{ names = { "firesignal" }, desc = "Replays logged RemoteEvent calls to the client" },
+		{ names = { "getactors" }, optional = true, desc = "Finds actors to hook inside parallel Lua" },
+		{ names = { "run_on_actor" }, optional = true, desc = "Runs the spy hook inside each actor" },
+		{ names = { "create_comm_channel" }, optional = true, label = "create_comm_channel / get_comm_channel", desc = "Sends actor logs back to the main environment" }
+	} }
+}
+
+do
+	local CHECK_FILE, CHECK_DIR = "SeptusHub_compat.tmp", "SeptusHub_compat_dir"
+	local Lighting = Services.Lighting
+
+	Lib.CompatTests = {
+		writefile = function(fn) fn(CHECK_FILE, "septus") return true end,
+		readfile = function(fn) return fn(CHECK_FILE) == "septus" end,
+		isfile = function(fn) return fn(CHECK_FILE) == true and fn(CHECK_FILE .. ".none") == false end,
+		makefolder = function(fn) fn(CHECK_DIR) return true end,
+		isfolder = function(fn) return fn(CHECK_DIR) == true and fn(CHECK_DIR .. "_none") == false end,
+		listfiles = function(fn) return type(fn(CHECK_DIR)) == "table" end,
+		getcustomasset = function(fn)
+			local asset = fn(CHECK_FILE)
+			return type(asset) == "string" and asset ~= ""
+		end,
+		delfile = function(fn, resolve)
+			fn(CHECK_FILE)
+			return resolve("isfile")(CHECK_FILE) == false
+		end,
+		request = function(fn)
+			local response = fn({ Url = "https://example.com", Method = "GET" })
+			return type(response) == "table" and response.StatusCode == 200 and type(response.Body) == "string"
+		end,
+		["game.HttpGet"] = function(fn) return type(fn(game, "https://example.com")) == "string" end,
+		loadstring = function(fn)
+			local chunk = fn("return 7")
+			return type(chunk) == "function" and chunk() == 7
+		end,
+		getgenv = function(fn)
+			local env = fn()
+			env.__SeptusCompat = 1
+			local ok = env.__SeptusCompat == 1
+			env.__SeptusCompat = nil
+			return ok
+		end,
+		gethui = function(fn) return typeof(fn()) == "Instance" end,
+		identifyexecutor = function(fn) return type((fn())) == "string" end,
+		["Drawing.new"] = function(fn)
+			local object = fn("Line")
+			object.Visible = false
+			if object.Remove then object:Remove() else object:Destroy() end
+			return true
+		end,
+		gethiddenproperty = function(fn) return fn(Lighting, "Technology") ~= nil end,
+		sethiddenproperty = function(fn, resolve)
+			fn(Lighting, "Technology", resolve("gethiddenproperty")(Lighting, "Technology"))
+			return true
+		end,
+		newcclosure = function(fn) return fn(function(value) return value end)(5) == 5 end,
+		checkcaller = function(fn) return fn() == true end,
+		firesignal = function(fn)
+			local event = Instance.new("BindableEvent")
+			local received
+			event.Event:Connect(function(value) received = value end)
+			fn(event.Event, 7)
+			task.wait(0.1)
+			event:Destroy()
+			return received == 7
+		end,
+		getcallbackvalue = function(fn)
+			local bindable = Instance.new("BindableFunction")
+			local callback = function() end
+			bindable.OnInvoke = callback
+			local same = fn(bindable, "OnInvoke") == callback
+			bindable:Destroy()
+			return same
+		end,
+		getactors = function(fn) return type(fn()) == "table" end,
+		create_comm_channel = function(fn)
+			local id, event = fn()
+			return id ~= nil and event ~= nil
+		end
+	}
+
+	local function Resolve(path)
+		local value, rest = nil, path
+		if path:find("^game%.") then
+			value, rest = game, path:sub(6)
+		else
+			value = type(getgenv) == "function" and getgenv() or getfenv(1)
+		end
+		for part in rest:gmatch("[^.]+") do
+			local ok, nextValue = pcall(function() return value[part] end)
+			if not ok or nextValue == nil then return nil end
+			value = nextValue
+		end
+		return value
+	end
+
+	function Lib.RunCompat()
+		local report = { ok = {}, bad = {}, optional = {}, total = 0 }
+		local identify = Resolve("identifyexecutor")
+		report.executor = "Unknown executor"
+		if identify then
+			local ok, name, version = pcall(identify)
+			if ok and name then report.executor = tostring(name) .. (version and (" " .. tostring(version)) or "") end
+		end
+
+		for _, group in ipairs(Lib.CompatCatalog) do
+			for _, entry in ipairs(group[2]) do
+				local primary = entry.names[1]
+				local found
+				for _, name in ipairs(entry.names) do
+					local value = Resolve(name)
+					if type(value) == "function" then found = value break end
+				end
+				local test = Lib.CompatTests[primary]
+				local passed = found ~= nil
+				if found and test then
+					local ok, result = Lib.Timed(function() return test(found, Resolve) end, 8)
+					passed = ok and result == true
+				end
+				local record = { entry = entry, deep = test ~= nil and found ~= nil }
+				report.total += 1
+				if passed then
+					report.ok[#report.ok + 1] = record
+				elseif entry.optional then
+					report.optional[#report.optional + 1] = record
+				else
+					report.bad[#report.bad + 1] = record
+				end
+				entry.status = passed and "ok" or (entry.optional and "optional" or "bad")
+			end
+		end
+
+		local delFolder = Resolve("delfolder")
+		local delFile = Resolve("delfile")
+		if delFile then pcall(delFile, CHECK_FILE) end
+		if delFolder then pcall(delFolder, CHECK_DIR) end
+		return report
+	end
+end
+
+function Lib.ShowCompat(report)
+	if not Lib.CompatModal then Lib.CompatModal = Lib.CreateModal("Compatibility Report", 440, 480) end
+	local modal = Lib.CompatModal
+	for _, child in ipairs(modal.Content:GetChildren()) do
+		if child:IsA("GuiObject") then child:Destroy() end
+	end
+
+	local order = 0
+	local function Label(text, size, font, color, role, rich)
+		order += 1
+		local label = Lib.Create("TextLabel", {
+			Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = order,
+			Text = text, TextColor3 = color, TextSize = size, Font = font, RichText = rich or false,
+			TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true, ZIndex = 33, Parent = modal.Content
+		})
+		if role then Lib.RegisterThemeText(label, role) end
+	end
+
+	local white = Color3.new(1, 1, 1)
+	Label(string.format("%s  |  %d of %d compatible", report.executor, #report.ok, report.total), 13, Enum.Font.GothamBold, white, "Primary")
+
+	local function Section(title, color, hex, mark, list, details)
+		if #list == 0 then return end
+		Label(string.format("%s (%d)", title, #list), 13, Enum.Font.GothamBold, color)
+		for _, record in ipairs(list) do
+			local entry = record.entry
+			local note = (not details and not record.deep) and ' <font color="#8c8c8c">(detected only)</font>' or ""
+			local line = details and ("Affects: " .. entry.desc) or entry.desc
+			Label(
+				string.format('<font color="%s"><b>%s  %s</b></font>%s\n<font color="#8c8c8c">%s</font>', hex, mark, entry.label or entry.names[1], note, line),
+				12, Enum.Font.GothamMedium, white, "Primary", true
+			)
+		end
+	end
+
+	Section("Compatible", Color3.fromRGB(46, 213, 115), "#2ed573", "✓", report.ok, false)
+	Section("Incompatible", Color3.fromRGB(235, 87, 87), "#eb5757", "✕", report.bad, true)
+	Section("Optional, unavailable", Color3.fromRGB(230, 162, 60), "#e6a23c", "–", report.optional, true)
+	modal.Open()
+end
+
+function Lib.BuildInfo(view)
+	local scroll = Lib.Create("ScrollingFrame", {
+		Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 2,
+		ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(),
+		Parent = view,
+		Lib.Create("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+		Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 12), PaddingBottom = UDim.new(0, 14) })
+	})
+
+	local order = 0
+	local function Next()
+		order += 1
+		return order
+	end
+
+	local header = Lib.Create("Frame", {
+		Size = UDim2.new(1, 0, 0, 78), BackgroundColor3 = Color3.fromRGB(15, 15, 15), LayoutOrder = Next(), Parent = scroll,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
+	})
+	Lib.RegisterThemeElement(header, "BackgroundColor3", 0.5)
+
+	local title = Lib.Create("TextLabel", {
+		Size = UDim2.new(1, -140, 0, 20), Position = UDim2.fromOffset(14, 12), BackgroundTransparency = 1, Text = "Executor Functions",
+		TextColor3 = Color3.fromRGB(255, 255, 255), TextSize = 15, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = header
+	})
+	Lib.RegisterThemeText(title, "Primary")
+
+	local sub = Lib.Create("TextLabel", {
+		Size = UDim2.new(1, -140, 0, 36), Position = UDim2.fromOffset(14, 34), BackgroundTransparency = 1,
+		Text = "Every UNC / sUNC function used by this hub. Run the test to check your executor.",
+		TextColor3 = Color3.fromRGB(130, 130, 130), TextSize = 11, Font = Enum.Font.GothamMedium, TextWrapped = true,
+		TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, Parent = header
+	})
+	Lib.RegisterThemeText(sub, "Secondary")
+
+	local run = Lib.Create("TextButton", {
+		Size = UDim2.fromOffset(110, 34), Position = UDim2.new(1, -124, 0.5, -17), BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		Text = "Run Test", TextColor3 = Color3.fromRGB(0, 0, 0), TextSize = 12, Font = Enum.Font.GothamBold, AutoButtonColor = false, Parent = header,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
+	})
+
+	local chips = {}
+	local STATUS = {
+		ok = { "OK", Color3.fromRGB(46, 213, 115) },
+		bad = { "Missing", Color3.fromRGB(235, 87, 87) },
+		optional = { "Optional", Color3.fromRGB(230, 162, 60) }
+	}
+
+	for _, group in ipairs(Lib.CompatCatalog) do
+		local groupTitle = Lib.Create("TextLabel", {
+			Size = UDim2.new(1, 0, 0, 22), BackgroundTransparency = 1, LayoutOrder = Next(), Text = group[1],
+			TextColor3 = Color3.fromRGB(220, 220, 220), TextSize = 13, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = scroll
+		})
+		Lib.RegisterThemeText(groupTitle, "Primary")
+
+		for _, entry in ipairs(group[2]) do
+			local row = Lib.Create("Frame", {
+				Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = Color3.fromRGB(15, 15, 15), LayoutOrder = Next(), Parent = scroll,
+				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) }),
+				Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
+			})
+			Lib.RegisterThemeElement(row, "BackgroundColor3", 0.5)
+
+			local text = Lib.Create("Frame", {
+				Size = UDim2.new(1, -84, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = row,
+				Lib.Create("UIListLayout", { Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder })
+			})
+
+			local name = Lib.Create("TextLabel", {
+				Size = UDim2.new(1, 0, 0, 16), BackgroundTransparency = 1, LayoutOrder = 1, Text = entry.label or entry.names[1],
+				TextColor3 = Color3.fromRGB(245, 245, 245), TextSize = 13, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = text
+			})
+			Lib.RegisterThemeText(name, "Primary")
+
+			local alias = #entry.names > 1 and ("\nAlso accepts: " .. table.concat(entry.names, ", ", 2)) or ""
+			local desc = Lib.Create("TextLabel", {
+				Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 2,
+				Text = entry.desc .. alias, TextColor3 = Color3.fromRGB(145, 145, 145), TextSize = 11, Font = Enum.Font.GothamMedium, TextWrapped = true,
+				TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, Parent = text
+			})
+			Lib.RegisterThemeText(desc, "Secondary")
+
+			chips[entry] = Lib.Create("TextLabel", {
+				Size = UDim2.fromOffset(70, 22), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0),
+				BackgroundColor3 = Color3.fromRGB(128, 128, 128), BackgroundTransparency = 0.85, Text = entry.optional and "Optional" or "Required",
+				TextColor3 = Color3.fromRGB(150, 150, 150), TextSize = 10, Font = Enum.Font.GothamBold, Parent = row,
+				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
+			})
+		end
+	end
+
+	local busy = false
+	run.MouseButton1Click:Connect(function()
+		if busy then return end
+		busy = true
+		Lib.PlayClick()
+		run.Text = "Testing..."
+		task.spawn(function()
+			local ok, report = pcall(Lib.RunCompat)
+			busy = false
+			run.Text = "Run Test"
+			if not ok then
+				Lib.Notify({ Title = "Compatibility", Text = "Test failed: " .. tostring(report):sub(1, 80) })
+				return
+			end
+			for entry, chip in pairs(chips) do
+				local status = STATUS[entry.status]
+				if status then
+					chip.Text, chip.TextColor3 = status[1], status[2]
+					chip.BackgroundColor3, chip.BackgroundTransparency = status[2], 0.82
+				end
+			end
+			Lib.ShowCompat(report)
+		end)
+	end)
+end
+
+function Lib.BuildDiscordButton(parent)
+	local CODE = "GjMcEKnRQJ"
+	local URL = "https://discord.gg/" .. CODE
+	local ICON = ""
+	local UIS, Http, Gui = Services.UserInputService, Services.HttpService, Services.GuiService
+	local busy = false
+
+	local function Palette(hover)
+		if State.LightTheme then
+			return hover and Color3.fromRGB(30, 30, 30) or Color3.fromRGB(110, 110, 110), hover and 0.92 or 1, Color3.fromRGB(0, 0, 0)
+		end
+		return hover and Color3.fromRGB(210, 210, 210) or Color3.fromRGB(150, 150, 150), hover and 0.96 or 1, Color3.fromRGB(255, 255, 255)
+	end
+
+	local textColor, transparency, fill = Palette(false)
+
+	local button = Lib.Create("TextButton", {
+		Name = "DiscordButton", Size = UDim2.new(1, -30, 0, 34), AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 15, 1, -16), BackgroundColor3 = fill, BackgroundTransparency = transparency,
+		AutoButtonColor = false, Text = "Discord", TextColor3 = textColor, TextSize = 14, Font = Enum.Font.GothamMedium,
+		TextXAlignment = Enum.TextXAlignment.Left, Parent = parent,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 7) }),
+		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 12) })
+	})
+
+	local icon
+	if ICON ~= "" then
+		icon = Lib.Create("ImageLabel", {
+			Size = UDim2.fromOffset(16, 16), Position = UDim2.new(0, 0, 0.5, -8), BackgroundTransparency = 1,
+			Image = "rbxassetid://" .. ICON, ImageColor3 = textColor, ScaleType = Enum.ScaleType.Fit, Parent = button
+		})
+		local function Place() icon.Position = UDim2.new(0, button.TextBounds.X + 8, 0.5, -8) end
+		button:GetPropertyChangedSignal("TextBounds"):Connect(Place)
+		Place()
+	end
+
+	local function Apply(hover, time)
+		local color, alpha, base = Palette(hover)
+		Lib.Tween(button, time, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { TextColor3 = color, BackgroundTransparency = alpha, BackgroundColor3 = base })
+		if icon then
+			Lib.Tween(icon, time, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { ImageColor3 = color })
+		end
+	end
+
+	local function IsMobile()
+		local ok, platform = pcall(UIS.GetPlatform, UIS)
+		if ok and (platform == Enum.Platform.Android or platform == Enum.Platform.IOS) then return true end
+		return UIS.TouchEnabled and not UIS.KeyboardEnabled and not UIS.MouseEnabled
+	end
+
+	local function Copy()
+		local copy = setclipboard or toclipboard or set_clipboard
+		if not copy then return false end
+		return (pcall(copy, URL))
+	end
+
+	local function OpenViaClient()
+		local send = (syn and syn.request) or http_request or request or (fluxus and fluxus.request) or (http and http.request)
+		if not send then return false end
+		local body = Http:JSONEncode({ cmd = "INVITE_BROWSER", args = { code = CODE }, nonce = Http:GenerateGUID(false) })
+		for port = 6463, 6472 do
+			local ok, response = pcall(send, {
+				Url = "http://127.0.0.1:" .. port .. "/rpc?v=1", Method = "POST", Body = body,
+				Headers = { ["Content-Type"] = "application/json", Origin = "https://discord.com" }
+			})
+			if ok and type(response) == "table" and (response.Success or response.StatusCode == 200) then return true end
+		end
+		return false
+	end
+
+	local function Open()
+		if pcall(Gui.OpenBrowserWindow, Gui, URL) then return true end
+		return OpenViaClient()
+	end
+
+	button.MouseEnter:Connect(function() Apply(true, 0.15) end)
+	button.MouseLeave:Connect(function()
+		Apply(false, 0.15)
+		Lib.Tween(button, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { Size = UDim2.new(1, -30, 0, 34) })
+	end)
+	button.MouseButton1Down:Connect(function()
+		Lib.PlayClick()
+		Lib.Tween(button, 0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { Size = UDim2.new(1, -36, 0, 31) })
+	end)
+	button.MouseButton1Up:Connect(function()
+		Lib.Tween(button, 0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out, { Size = UDim2.new(1, -30, 0, 34) })
+	end)
+
+	button.MouseButton1Click:Connect(function()
+		if busy then return end
+		busy = true
+		task.spawn(function()
+			local opened = not IsMobile() and Open()
+			local copied = Copy()
+			Lib.Notify({
+				Title = "Discord",
+				Text = (opened or copied) and "Check your discord or clipboard." or ("Clipboard is unavailable: discord.gg/" .. CODE)
+			})
+			task.wait(1)
+			busy = false
+		end)
+	end)
+end
+
 do
 	local HomeSection = Lib.Create("Frame", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Visible = false, Parent = UI.ContentArea })
 	UI.HomeSection = HomeSection
@@ -2419,6 +2902,8 @@ do
 	local View_Achievements = MakeTab("Achievements", 130)
 	local View_Developers = MakeTab("Developers", 170)
 	Lib.BuildUpdateLog(MakeTab("Update Log", 210))
+	Lib.BuildInfo(MakeTab("Info", 250))
+	Lib.BuildDiscordButton(SideBar)
 
 	Lib.Create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 15), Parent = View_Overview })
 
@@ -2645,24 +3130,77 @@ do
 	RefreshAchievementUI()
 	UpdateDecorButtonState()
 
-	Lib.Create("UIListLayout", { Padding = UDim.new(0, 10), Parent = View_Developers })
+	local devScroll = Lib.Create("ScrollingFrame", {
+		Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 2,
+		ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = View_Developers,
+		Lib.Create("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
+		Lib.Create("UIPadding", { PaddingRight = UDim.new(0, 12), PaddingBottom = UDim.new(0, 10) })
+	})
+
 	local Devs = {
-		{"CherryCalcor", "Main Developer | UI Designer | The ideologist"},
-		{"HiveMango", "Deputy Chief Developer | UI Designer | Functions Developer"},
-		{"Adevihia", "Junior Developer | Functions Developer"},
-		{"GrenkiWaves", "Tester"}
+		{ "CherryCalcor", "Main Developer | UI Designer | The ideologist", {
+			Discord = "@cherrycalcor", Telegram = "-", Roblox = "CherryCalcor", Note = "Lead Developer.", Creation = "By himself."
+		} },
+		{ "HiveMango", "Deputy Chief Developer | UI Designer | Functions Developer" },
+		{ "Adevihia", "Junior Developer | Functions Developer" },
+		{ "Kirzzzza", "Function Developer", {
+			Discord = "@den02110", Telegram = "-", Roblox = "@Kirzzzza", Note = "<b>Helped:</b> ESP and Combat feature developer.", Creation = "Ai, Claude-Opus 5.5"
+		} },
+		{ "GrenkiWaves", "Tester" }
 	}
+
+	local COLLAPSED, LINE = 65, 15
+	local UIS = Services.UserInputService
+
 	for i, v in ipairs(Devs) do
-		local devName = Lib.Create("TextLabel", { Size = UDim2.new(1, -30, 0, 22), Position = UDim2.fromOffset(15, 12), BackgroundTransparency = 1, Text = v[1], TextColor3 = Color3.fromRGB(255, 255, 255), TextSize = 15, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left })
-		Lib.RegisterThemeText(devName, "Primary")
-
-		local devRole = Lib.Create("TextLabel", { Size = UDim2.new(1, -30, 0, 18), Position = UDim2.fromOffset(15, 34), BackgroundTransparency = 1, Text = v[2], TextColor3 = Color3.fromRGB(150, 150, 150), TextSize = 12, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left })
-		Lib.RegisterThemeText(devRole, "Secondary")
-
-		local devCard = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 65), BackgroundColor3 = Color3.fromRGB(15, 15, 15), LayoutOrder = i, Parent = View_Developers, Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) }),
-			devName, devRole
+		local info = v[3]
+		local devCard = Lib.Create("Frame", {
+			Size = UDim2.new(1, 0, 0, COLLAPSED), BackgroundColor3 = Color3.fromRGB(15, 15, 15), ClipsDescendants = true, LayoutOrder = i, Parent = devScroll,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
 		})
 		Lib.RegisterThemeElement(devCard, "BackgroundColor3", 0.5)
+
+		Lib.RegisterThemeText(Lib.Create("TextLabel", {
+			Size = UDim2.new(1, -30, 0, 22), Position = UDim2.fromOffset(15, 12), BackgroundTransparency = 1, Text = v[1], TextColor3 = Color3.fromRGB(255, 255, 255),
+			TextSize = 15, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = devCard
+		}), "Primary")
+
+		Lib.RegisterThemeText(Lib.Create("TextLabel", {
+			Size = UDim2.new(1, -30, 0, 18), Position = UDim2.fromOffset(15, 34), BackgroundTransparency = 1, Text = v[2], TextColor3 = Color3.fromRGB(150, 150, 150),
+			TextSize = 12, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, Parent = devCard
+		}), "Secondary")
+
+		if info then
+			local text = string.format(
+				"<b>Social Media:</b>\nDiscord: %s\nTelegram: %s\nRoblox: %s\n\n%s\n<b>Creation Type:</b> %s",
+				info.Discord, info.Telegram, info.Roblox, info.Note, info.Creation
+			)
+			local height = (select(2, text:gsub("\n", "")) + 1) * LINE
+			local expanded = COLLAPSED + height + 8
+
+			Lib.RegisterThemeText(Lib.Create("TextLabel", {
+				Size = UDim2.new(1, -30, 0, height), Position = UDim2.fromOffset(15, COLLAPSED - 2), BackgroundTransparency = 1, Text = text, RichText = true,
+				TextColor3 = Color3.fromRGB(150, 150, 150), TextSize = 12, LineHeight = LINE / 12, Font = Enum.Font.GothamMedium,
+				TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, Parent = devCard
+			}), "Secondary")
+
+			local hit = Lib.Create("TextButton", {
+				Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 5, Parent = devCard
+			})
+
+			local open = false
+			local function Set(state)
+				if open == state then return end
+				open = state
+				Lib.Tween(devCard, 0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.Out, { Size = UDim2.new(1, 0, 0, state and expanded or COLLAPSED) })
+			end
+
+			hit.MouseEnter:Connect(function() Set(true) end)
+			hit.MouseLeave:Connect(function() Set(false) end)
+			hit.MouseButton1Click:Connect(function()
+				if UIS.TouchEnabled and not UIS.MouseEnabled then Set(not open) end
+			end)
+		end
 	end
 end
 
@@ -3130,6 +3668,114 @@ do
 		return Item
 	end
 
+	function Lib.BindDrag(area, onMove)
+		area.InputBegan:Connect(function(input)
+			local kind = input.UserInputType
+			if kind ~= Enum.UserInputType.MouseButton1 and kind ~= Enum.UserInputType.Touch then return end
+			onMove(input.Position)
+			local UIS, moveConn, endConn = Services.UserInputService
+			moveConn = UIS.InputChanged:Connect(function(changed)
+				local moved = changed.UserInputType
+				if moved == Enum.UserInputType.MouseMovement or moved == Enum.UserInputType.Touch then onMove(changed.Position) end
+			end)
+			endConn = UIS.InputEnded:Connect(function(ended)
+				local released = ended.UserInputType
+				if released == Enum.UserInputType.MouseButton1 or released == Enum.UserInputType.Touch then
+					moveConn:Disconnect()
+					endConn:Disconnect()
+				end
+			end)
+		end)
+	end
+
+	function Lib.CreateColorItem(group, title, tbl, key, last, onChange)
+		local h, s, v = tbl[key]:ToHSV()
+		local open = false
+		local item = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 46), BackgroundTransparency = 1, ClipsDescendants = true, Parent = group })
+		local label = Lib.Create("TextLabel", {
+			Size = UDim2.new(1, -90, 0, 46), Position = UDim2.fromOffset(14, 0), BackgroundTransparency = 1, Text = title,
+			TextColor3 = Color3.fromRGB(240, 240, 240), TextSize = 13, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = item
+		})
+		Lib.RegisterThemeText(label, "Primary")
+		local swatch = Lib.Create("TextButton", {
+			Size = UDim2.fromOffset(44, 22), Position = UDim2.new(1, -58, 0, 12), BackgroundColor3 = tbl[key], Text = "", AutoButtonColor = false, Parent = item,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
+			Lib.Create("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1, Transparency = 0.8 })
+		})
+		local svArea = Lib.Create("Frame", {
+			Size = UDim2.new(1, -28, 0, 70), Position = UDim2.fromOffset(14, 52), BackgroundColor3 = Color3.fromHSV(h, 1, 1), Parent = item,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
+		})
+		Lib.Create("Frame", {
+			Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = svArea,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
+			Lib.Create("UIGradient", { Transparency = NumberSequence.new(0, 1) })
+		})
+		Lib.Create("Frame", {
+			Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BorderSizePixel = 0, Parent = svArea,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
+			Lib.Create("UIGradient", { Rotation = 90, Transparency = NumberSequence.new(1, 0) })
+		})
+		local svKnob = Lib.Create("Frame", {
+			Size = UDim2.fromOffset(12, 12), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(s, 1 - v), BackgroundTransparency = 1, Parent = svArea,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) }),
+			Lib.Create("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
+		})
+		local svHit = Lib.Create("TextButton", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, Parent = svArea })
+		local hueSteps = {}
+		for i = 0, 6 do hueSteps[#hueSteps + 1] = ColorSequenceKeypoint.new(i / 6, Color3.fromHSV(i / 6, 1, 1)) end
+		local hueBar = Lib.Create("Frame", {
+			Size = UDim2.new(1, -28, 0, 12), Position = UDim2.fromOffset(14, 130), BackgroundColor3 = Color3.new(1, 1, 1), Parent = item,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) }),
+			Lib.Create("UIGradient", { Color = ColorSequence.new(hueSteps) })
+		})
+		local hueKnob = Lib.Create("Frame", {
+			Size = UDim2.fromOffset(14, 14), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(h, 0, 0.5, 0), BackgroundColor3 = Color3.new(1, 1, 1), Parent = hueBar,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) }),
+			Lib.Create("UIStroke", { Color = Color3.new(0, 0, 0), Thickness = 1, Transparency = 0.6 })
+		})
+		local hueHit = Lib.Create("TextButton", {
+			Size = UDim2.new(1, 0, 0, 24), Position = UDim2.new(0, 0, 0.5, -12), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, Parent = hueBar
+		})
+		if not last then
+			Lib.Create("Frame", {
+				Size = UDim2.new(1, -28, 0, 1), Position = UDim2.new(0, 14, 1, -1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.9, BorderSizePixel = 0, Parent = item
+			})
+		end
+
+		local function Paint(exact)
+			local color = exact or Color3.fromHSV(h, s, v)
+			tbl[key] = color
+			swatch.BackgroundColor3 = color
+			svArea.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+			svKnob.Position = UDim2.fromScale(s, 1 - v)
+			hueKnob.Position = UDim2.new(h, 0, 0.5, 0)
+			if onChange then onChange(color) end
+		end
+
+		Lib.BindDrag(svHit, function(position)
+			s = math.clamp((position.X - svArea.AbsolutePosition.X) / svArea.AbsoluteSize.X, 0, 1)
+			v = 1 - math.clamp((position.Y - svArea.AbsolutePosition.Y) / svArea.AbsoluteSize.Y, 0, 1)
+			Paint()
+		end)
+		Lib.BindDrag(hueHit, function(position)
+			h = math.clamp((position.X - hueBar.AbsolutePosition.X) / hueBar.AbsoluteSize.X, 0, 1)
+			Paint()
+		end)
+		swatch.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			open = not open
+			Lib.Tween(item, 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { Size = UDim2.new(1, 0, 0, open and 154 or 46) })
+		end)
+
+		return item, function(color)
+			local nh, ns, nv = color:ToHSV()
+			if ns > 0 and nv > 0 then h = nh end
+			s, v = ns, nv
+			Paint(color)
+		end
+	end
+
 	function Lib.CreateSettingButtonItem(parentCard, title, desc, onClick, isLast)
 		local Item = Lib.Create("TextButton", {
 			Size = UDim2.new(1, 0, 0, 52),
@@ -3404,6 +4050,46 @@ function Lib.MakeStar(parent, position, saved, onToggle)
 	return star
 end
 
+function Lib.MiniIcon(kind, parent, position, color)
+	local box = Lib.Create("Frame", { Size = UDim2.fromOffset(14, 14), Position = position, BackgroundTransparency = 1, Parent = parent })
+	if kind == "eye" then
+		Lib.Create("Frame", {
+			Size = UDim2.fromOffset(14, 9), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundTransparency = 1, Parent = box,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) }),
+			Lib.Create("UIStroke", { Color = color, Thickness = 1.3 })
+		})
+		Lib.Create("Frame", {
+			Size = UDim2.fromOffset(4, 4), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundColor3 = color, BorderSizePixel = 0, Parent = box,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) })
+		})
+	else
+		Lib.Create("Frame", {
+			Size = UDim2.fromOffset(13, 13), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundTransparency = 1, Parent = box,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) }),
+			Lib.Create("UIStroke", { Color = color, Thickness = 1.3 })
+		})
+		Lib.Create("Frame", { Size = UDim2.fromOffset(1, 4), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.fromOffset(7, 7), BackgroundColor3 = color, BorderSizePixel = 0, Parent = box })
+		Lib.Create("Frame", { Size = UDim2.fromOffset(3, 1), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.fromOffset(7, 7), BackgroundColor3 = color, BorderSizePixel = 0, Parent = box })
+	end
+	return box
+end
+
+function Lib.TimeAgo(stamp)
+	local diff = math.max(os.time() - stamp, 0)
+	if diff < 60 then return "just now" end
+	if diff < 3600 then return diff // 60 .. "m ago" end
+	if diff < 86400 then return diff // 3600 .. "h ago" end
+	if diff < 2592000 then return diff // 86400 .. "d ago" end
+	if diff < 31536000 then return diff // 2592000 .. "mo ago" end
+	return diff // 31536000 .. "y ago"
+end
+
+function Lib.FormatViews(count)
+	if count >= 1e6 then return (string.format("%.1f", count / 1e6):gsub("%.0$", "")) .. "M" end
+	if count >= 1e3 then return (string.format("%.1f", count / 1e3):gsub("%.0$", "")) .. "K" end
+	return tostring(math.floor(count))
+end
+
 function Lib.MakeCardList(view, emptyText, cell, gap, padX)
 	local scroll = Lib.Create("ScrollingFrame", {
 		Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, ScrollBarThickness = 2, ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100),
@@ -3606,187 +4292,6 @@ end
 
 
 do
-	local function ClearPlayerESP(plr)
-		if Refs.ESP[plr] then
-			if Refs.ESP[plr].Highlight then pcall(function() Refs.ESP[plr].Highlight:Destroy() end) end
-			if Refs.ESP[plr].Billboard then pcall(function() Refs.ESP[plr].Billboard:Destroy() end) end
-			if Refs.ESP[plr].BoxLines then
-				for _, line in pairs(Refs.ESP[plr].BoxLines) do pcall(function() line:Remove() end) end
-			end
-			if Refs.ESP[plr].TracerLine then pcall(function() Refs.ESP[plr].TracerLine:Remove() end) end
-			Refs.ESP[plr] = nil
-		end
-	end
-
-	function Lib.ClearAllESP()
-		for plr in pairs(Refs.ESP) do ClearPlayerESP(plr) end
-	end
-
-	local function InitPlayerESP(plr)
-		if plr == App.Player then return end
-		ClearPlayerESP(plr)
-
-		local data = { Highlight = nil, Billboard = nil, BoxLines = nil, TracerLine = nil }
-
-		if Drawing and Drawing.new then
-			pcall(function()
-				local line = Drawing.new("Line")
-				line.Thickness = 1.5
-				line.Color = Color3.fromRGB(255, 255, 255)
-				line.Transparency = 0.85
-				line.Visible = false
-				data.TracerLine = line
-
-				local box = {
-					Top = Drawing.new("Line"),
-					Bottom = Drawing.new("Line"),
-					Left = Drawing.new("Line"),
-					Right = Drawing.new("Line")
-				}
-				for _, l in pairs(box) do
-					l.Thickness = 1.5
-					l.Color = Color3.fromRGB(255, 255, 255)
-					l.Transparency = 0.85
-					l.Visible = false
-				end
-				data.BoxLines = box
-			end)
-		end
-
-		Refs.ESP[plr] = data
-	end
-
-	for _, p in ipairs(Services.Players:GetPlayers()) do
-		if p ~= App.Player then InitPlayerESP(p) end
-	end
-	Lib.C(Services.Players.PlayerAdded, InitPlayerESP)
-	Lib.C(Services.Players.PlayerRemoving, ClearPlayerESP)
-
-	Lib.C(Services.Run.RenderStepped, function()
-		if not (State.ESP_Name or State.ESP_Outline or State.ESP_Box or State.ESP_Tracers) then
-			if Refs.ESPActive then
-				Refs.ESPActive = false
-				for _, esp in pairs(Refs.ESP) do
-					if esp.Billboard then esp.Billboard.Enabled = false end
-					if esp.Highlight then esp.Highlight.Enabled = false end
-					if esp.BoxLines then for _, l in pairs(esp.BoxLines) do l.Visible = false end end
-					if esp.TracerLine then esp.TracerLine.Visible = false end
-				end
-			end
-			return
-		end
-		Refs.ESPActive = true
-
-		for plr, esp in pairs(Refs.ESP) do
-			local char = plr.Character
-			local root = char and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso"))
-			local hum = char and char:FindFirstChildOfClass("Humanoid")
-
-			if char and root and hum and hum.Health > 0 then
-				local distance = math.floor((root.Position - App.Camera.CFrame.Position).Magnitude)
-				local screenPos, onScreen = App.Camera:WorldToViewportPoint(root.Position)
-
-				if State.ESP_Name then
-					if not esp.Billboard or esp.Billboard.Parent ~= char then
-						if esp.Billboard then esp.Billboard:Destroy() end
-						local head = char:FindFirstChild("Head") or root
-						local bb = Lib.Create("BillboardGui", {
-							Name = "Septus_NameESP",
-							Adornee = head,
-							Size = UDim2.fromOffset(180, 30),
-							StudsOffset = Vector3.new(0, 2.3, 0),
-							AlwaysOnTop = true,
-							Parent = char,
-							Lib.Create("TextLabel", {
-								Name = "ESPLabel",
-								Size = UDim2.new(1, 0, 1, 0),
-								BackgroundTransparency = 1,
-								TextColor3 = Color3.fromRGB(255, 255, 255),
-								TextStrokeTransparency = 0.2,
-								TextStrokeColor3 = Color3.fromRGB(0, 0, 0),
-								Font = Enum.Font.GothamBold,
-								TextSize = 13
-							})
-						})
-						esp.Billboard = bb
-					end
-					local lbl = esp.Billboard:FindFirstChild("ESPLabel")
-					if lbl then
-						lbl.Text = plr.DisplayName .. " [" .. tostring(distance) .. " studs]"
-					end
-					esp.Billboard.Enabled = true
-				else
-					if esp.Billboard then esp.Billboard.Enabled = false end
-				end
-
-				if State.ESP_Outline then
-					if not esp.Highlight or esp.Highlight.Parent ~= char then
-						if esp.Highlight then esp.Highlight:Destroy() end
-						esp.Highlight = Lib.Create("Highlight", {
-							Name = "Septus_OutlineESP",
-							FillColor = Color3.fromRGB(255, 255, 255),
-							FillTransparency = 0.6,
-							OutlineColor = Color3.fromRGB(255, 255, 255),
-							OutlineTransparency = 0,
-							DepthMode = Enum.HighlightDepthMode.AlwaysOnTop,
-							Adornee = char,
-							Parent = char
-						})
-					end
-					esp.Highlight.Enabled = true
-				else
-					if esp.Highlight then esp.Highlight.Enabled = false end
-				end
-
-				if onScreen then
-					local head = char:FindFirstChild("Head")
-					local headPos = head and App.Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0)) or App.Camera:WorldToViewportPoint(root.Position + Vector3.new(0, 2.5, 0))
-					local legPos = App.Camera:WorldToViewportPoint(root.Position - Vector3.new(0, 3, 0))
-
-					local height = math.abs(headPos.Y - legPos.Y)
-					local width = height * 0.65
-					local topLeft = Vector2.new(screenPos.X - width / 2, screenPos.Y - height / 2)
-
-					if State.ESP_Box and esp.BoxLines then
-						esp.BoxLines.Top.From = topLeft
-						esp.BoxLines.Top.To = Vector2.new(topLeft.X + width, topLeft.Y)
-						esp.BoxLines.Top.Visible = true
-
-						esp.BoxLines.Bottom.From = Vector2.new(topLeft.X, topLeft.Y + height)
-						esp.BoxLines.Bottom.To = Vector2.new(topLeft.X + width, topLeft.Y + height)
-						esp.BoxLines.Bottom.Visible = true
-
-						esp.BoxLines.Left.From = topLeft
-						esp.BoxLines.Left.To = Vector2.new(topLeft.X, topLeft.Y + height)
-						esp.BoxLines.Left.Visible = true
-
-						esp.BoxLines.Right.From = Vector2.new(topLeft.X + width, topLeft.Y)
-						esp.BoxLines.Right.To = Vector2.new(topLeft.X + width, topLeft.Y + height)
-						esp.BoxLines.Right.Visible = true
-					elseif esp.BoxLines then
-						for _, l in pairs(esp.BoxLines) do l.Visible = false end
-					end
-
-					if State.ESP_Tracers and esp.TracerLine then
-						esp.TracerLine.From = Vector2.new(App.Camera.ViewportSize.X / 2, App.Camera.ViewportSize.Y)
-						esp.TracerLine.To = Vector2.new(screenPos.X, screenPos.Y)
-						esp.TracerLine.Visible = true
-					elseif esp.TracerLine then
-						esp.TracerLine.Visible = false
-					end
-				else
-					if esp.BoxLines then for _, l in pairs(esp.BoxLines) do l.Visible = false end end
-					if esp.TracerLine then esp.TracerLine.Visible = false end
-				end
-			else
-				if esp.Billboard then esp.Billboard.Enabled = false end
-				if esp.Highlight then esp.Highlight.Enabled = false end
-				if esp.BoxLines then for _, l in pairs(esp.BoxLines) do l.Visible = false end end
-				if esp.TracerLine then esp.TracerLine.Visible = false end
-			end
-		end
-	end)
-
 	Refs.OrigLighting = {
 		Brightness = Services.Lighting.Brightness,
 		ClockTime = Services.Lighting.ClockTime,
@@ -3795,7 +4300,11 @@ do
 		FogColor = Services.Lighting.FogColor,
 		GlobalShadows = Services.Lighting.GlobalShadows,
 		OutdoorAmbient = Services.Lighting.OutdoorAmbient,
-		Ambient = Services.Lighting.Ambient
+		Ambient = Services.Lighting.Ambient,
+		ExposureCompensation = Services.Lighting.ExposureCompensation,
+		EnvironmentDiffuseScale = Services.Lighting.EnvironmentDiffuseScale,
+		EnvironmentSpecularScale = Services.Lighting.EnvironmentSpecularScale,
+		ShadowSoftness = Services.Lighting.ShadowSoftness
 	}
 
 	function Lib.ApplyBoostFPS()
@@ -4003,9 +4512,11 @@ do
 		if Refs.OrigHum ~= hum then
 			Refs.OrigHum, Refs.OrigWS, Refs.OrigJP, Refs.OrigUJP = hum, hum.WalkSpeed, hum.JumpPower, hum.UseJumpPower
 		end
-		if hum.WalkSpeed ~= State.WalkSpeed and not State.FakeLagSuspension then hum.WalkSpeed = State.WalkSpeed end
-		if not hum.UseJumpPower then hum.UseJumpPower = true end
-		if hum.JumpPower ~= State.JumpPower then hum.JumpPower = State.JumpPower end
+		if State.WalkSpeedTouched and hum.WalkSpeed ~= State.WalkSpeed and not State.FakeLagSuspension then hum.WalkSpeed = State.WalkSpeed end
+		if State.JumpPowerTouched then
+			if not hum.UseJumpPower then hum.UseJumpPower = true end
+			if hum.JumpPower ~= State.JumpPower then hum.JumpPower = State.JumpPower end
+		end
 
 		local root = char:FindFirstChild("HumanoidRootPart")
 		if not root then return end
@@ -4068,7 +4579,7 @@ do
 	Refs.ShaderFolder = Lib.Create("Folder", { Name = "Septus_Shaders", Parent = Services.Lighting })
 	Refs.LightApplied = {}
 
-	local LightProps = { "Brightness", "ClockTime", "FogStart", "FogEnd", "FogColor", "GlobalShadows", "OutdoorAmbient", "Ambient" }
+	local LightProps = { "Brightness", "ClockTime", "FogStart", "FogEnd", "FogColor", "GlobalShadows", "OutdoorAmbient", "Ambient", "ExposureCompensation", "EnvironmentDiffuseScale", "EnvironmentSpecularScale", "ShadowSoftness" }
 	local syncingLight = false
 
 	function Lib.SyncLighting()
@@ -4076,7 +4587,8 @@ do
 		syncingLight = true
 		local lighting = Services.Lighting
 		for _, prop in ipairs(LightProps) do
-			local value = Refs.LightFB and Refs.LightFB[prop]
+			local value = Refs.LightWorld and Refs.LightWorld[prop]
+			if value == nil and Refs.LightFB then value = Refs.LightFB[prop] end
 			if value == nil and Refs.LightShader then value = Refs.LightShader[prop] end
 			if value ~= nil then
 				Refs.LightApplied[prop] = true
@@ -4093,7 +4605,11 @@ do
 		Lib.C(Services.Lighting:GetPropertyChangedSignal(prop), Lib.SyncLighting)
 	end
 
-	local function SetShader(props, effects)
+	local function SetShader(kind, props, effects)
+		if Refs.ShaderKind == "RTX" and kind ~= "RTX" and Refs.OrigTech ~= nil then
+			pcall(sethiddenproperty, Services.Lighting, "Technology", Refs.OrigTech)
+		end
+		Refs.ShaderKind = kind
 		Refs.ShaderFolder:ClearAllChildren()
 		Refs.LightShader = props
 		Lib.SyncLighting()
@@ -4104,50 +4620,80 @@ do
 	end
 
 	function Lib.ResetShaders()
+		if Refs.ShaderKind == "RTX" and Refs.OrigTech ~= nil then
+			pcall(sethiddenproperty, Services.Lighting, "Technology", Refs.OrigTech)
+		end
+		Refs.ShaderKind = nil
 		Refs.ShaderFolder:ClearAllChildren()
 		Refs.LightShader = nil
 		Lib.SyncLighting()
 	end
 
 	function Lib.ApplyRTXShader()
-		pcall(function() sethiddenproperty(Services.Lighting, "Technology", 3) end)
-		SetShader({
+		if Refs.OrigTech == nil then
+			pcall(function() Refs.OrigTech = gethiddenproperty(Services.Lighting, "Technology") end)
+		end
+		pcall(sethiddenproperty, Services.Lighting, "Technology", Enum.Technology.Future)
+		SetShader("RTX", {
 			GlobalShadows = true,
-			Brightness = 2.8,
-			ClockTime = 14,
-			OutdoorAmbient = Color3.fromRGB(75, 75, 80),
-			Ambient = Color3.fromRGB(45, 45, 50),
-			FogStart = 100,
-			FogEnd = 1500,
-			FogColor = Color3.fromRGB(200, 215, 230)
+			Brightness = 3,
+			ClockTime = 14.5,
+			ExposureCompensation = 0.2,
+			EnvironmentDiffuseScale = 1,
+			EnvironmentSpecularScale = 1,
+			ShadowSoftness = 0.35,
+			OutdoorAmbient = Color3.fromRGB(80, 80, 86),
+			Ambient = Color3.fromRGB(50, 50, 56),
+			FogStart = 150,
+			FogEnd = 2500,
+			FogColor = Color3.fromRGB(190, 208, 228)
 		}, {
-			{ "SunRaysEffect", { Intensity = 0.16, Spread = 0.88 } },
-			{ "BloomEffect", { Intensity = 0.45, Size = 28, Threshold = 0.92 } },
-			{ "ColorCorrectionEffect", { Brightness = 0.03, Contrast = 0.22, Saturation = 0.15, TintColor = Color3.fromRGB(255, 252, 248) } },
-			{ "DepthOfFieldEffect", { FarIntensity = 0.35, FocusDistance = 35, InFocusRadius = 30, NearIntensity = 0.05 } },
-			{ "Atmosphere", { Density = 0.28, Offset = 0.25, Color = Color3.fromRGB(195, 215, 235), Decay = Color3.fromRGB(105, 120, 140), Glare = 0.35, Haze = 0.45 } }
+			{ "SunRaysEffect", { Intensity = 0.12, Spread = 0.8 } },
+			{ "BloomEffect", { Intensity = 0.35, Size = 32, Threshold = 1 } },
+			{ "ColorCorrectionEffect", { Brightness = 0, Contrast = 0.18, Saturation = 0.2, TintColor = Color3.fromRGB(255, 248, 240) } },
+			{ "DepthOfFieldEffect", { FarIntensity = 0.2, FocusDistance = 60, InFocusRadius = 55, NearIntensity = 0 } },
+			{ "Atmosphere", { Density = 0.3, Offset = 0.2, Color = Color3.fromRGB(190, 210, 235), Decay = Color3.fromRGB(100, 115, 135), Glare = 0.4, Haze = 0.6 } }
 		})
 	end
 
-	function Lib.ApplyCyberpunkShader()
-		SetShader({
+	function Lib.CyberpunkSpec(color)
+		local h, s = color:ToHSV()
+		return {
 			ClockTime = 0,
 			Brightness = 1.2,
-			OutdoorAmbient = Color3.fromRGB(45, 10, 65),
-			Ambient = Color3.fromRGB(25, 10, 35),
+			OutdoorAmbient = Color3.fromHSV(h, s, 0.26),
+			Ambient = Color3.fromHSV(h, s, 0.14),
 			FogStart = 50,
 			FogEnd = 500,
-			FogColor = Color3.fromRGB(30, 0, 50),
+			FogColor = Color3.fromHSV(h, s, 0.2),
 			GlobalShadows = true
 		}, {
 			{ "BloomEffect", { Intensity = 1.35, Size = 38, Threshold = 0.4 } },
-			{ "ColorCorrectionEffect", { Brightness = -0.02, Contrast = 0.38, Saturation = 0.55, TintColor = Color3.fromRGB(240, 190, 255) } },
-			{ "SunRaysEffect", { Intensity = 0.12, Spread = 0.9 } }
-		})
+			{ "ColorCorrectionEffect", { Brightness = -0.02, Contrast = 0.38, Saturation = 0.55, TintColor = Color3.fromHSV(h, s * 0.3, 1) } },
+			{ "SunRaysEffect", { Intensity = 0.12, Spread = 0.9 } },
+			{ "Atmosphere", { Density = 0.3, Offset = 0.1, Color = Color3.fromHSV(h, s * 0.8, 0.7), Decay = Color3.fromHSV(h, s, 0.3), Glare = 0.3, Haze = 1 } }
+		}
+	end
+
+	function Lib.ApplyCyberpunkShader()
+		SetShader("Cyberpunk", Lib.CyberpunkSpec(State.CyberpunkColor))
+	end
+
+	function Lib.RetintCyberpunk()
+		if Refs.ShaderKind ~= "Cyberpunk" then return end
+		local props, effects = Lib.CyberpunkSpec(State.CyberpunkColor)
+		for key, value in pairs(props) do Refs.LightShader[key] = value end
+		for _, effect in ipairs(effects) do
+			local inst = Refs.ShaderFolder:FindFirstChildOfClass(effect[1])
+			if inst then
+				for key, value in pairs(effect[2]) do inst[key] = value end
+			end
+		end
+		Lib.SyncLighting()
 	end
 
 	function Lib.ApplySilentHillShader()
-		SetShader({
+		SetShader("SilentHill", {
 			ClockTime = 6.2,
 			Brightness = 0.9,
 			FogStart = 5,
@@ -4410,6 +4956,10 @@ do
 
 		local isOpen = false
 		local modal = { Backdrop = backdrop, Window = window, Content = content }
+
+		function modal.IsOpen()
+			return isOpen
+		end
 
 		function modal.Open()
 			if isOpen then return end
@@ -5817,6 +6367,3869 @@ function Lib.BuildCombat(scroll)
 			end
 		end
 	}
+end
+
+function Lib.CreateEspCore()
+	local Players, RunService, Workspace, UserInputService = Services.Players, Services.Run, Services.Workspace, Services.UserInputService
+	local lp = App.Player
+	local objects = {}
+	local humModels = {}
+	local npcWorkspace = {}
+	local pools = {}
+	local frame = 0
+	local GT = 0
+
+	local fonts = {UI = 0, System = 1, Plex = 2, Monospace = 3}
+	local textKeys = {"Name", "Distance", "Tool", "HealthText", "Timer"}
+	local poolClasses = {"Line", "Triangle", "Circle"}
+	local black = Color3.new(0, 0, 0)
+	local white = Color3.new(1, 1, 1)
+
+	local cfg = {
+		Targets = {["Player"] = true},
+		MaxDistance = 2000,
+		TeamCheck = false,
+		Self = {Enabled = false, HideFirstPerson = true},
+		Text = {Font = 2, Bold = true},
+		Visible = {
+			Enabled = false,
+			Visible = Color3.fromRGB(80, 255, 120),
+			Hidden = Color3.fromRGB(255, 70, 70)
+		},
+		Gradient = {
+			Enabled = false,
+			Color1 = Color3.fromRGB(255, 70, 130),
+			Color2 = Color3.fromRGB(90, 120, 255),
+			Color3 = Color3.fromRGB(255, 220, 90),
+			ThreeColor = false,
+			Mode = "Scroll",
+			Shape = "Vertical",
+			FillType = "Smooth",
+			Speed = 2,
+			Scale = 1,
+			Bands = 0,
+			Reverse = false,
+			Fill = true,
+			Text = false,
+			Tracer = true,
+			Skeleton = true,
+			Chams = true,
+			Extras = true
+		},
+		Box = {
+			Enabled = false,
+			Style = "Corners",
+			Scale = 100,
+			Width = 50,
+			CornerW = 30,
+			CornerH = 20,
+			Color = Color3.fromRGB(255, 60, 60),
+			Thickness = 1,
+			Outline = true,
+			Filled = false,
+			Opacity = 0.15
+		},
+		Name = {Enabled = false, UseDisplay = true, Color = Color3.fromRGB(255, 255, 255), Size = 15},
+		Health = {
+			Enabled = false,
+			Number = true,
+			Thickness = 2,
+			Side = "Left",
+			Mode = "Gradient",
+			BlackZone = 1,
+			Color = Color3.fromRGB(0, 255, 0)
+		},
+		Distance = {Enabled = false, Color = Color3.fromRGB(210, 210, 210), Size = 14},
+		Tool = {Enabled = false, Color = Color3.fromRGB(255, 220, 90), Size = 14},
+		Tracer = {Enabled = false, Color = Color3.fromRGB(255, 60, 60), Thickness = 1, Origin = "Bottom"},
+		Skeleton = {Enabled = false, Color = Color3.fromRGB(255, 255, 255), Thickness = 1, Outline = true},
+		Chams = {
+			Enabled = false,
+			Mode = "Highlight",
+			Fill = Color3.fromRGB(255, 60, 60),
+			Outline = Color3.fromRGB(255, 255, 255),
+			FillTransparency = 0.5,
+			OutlineTransparency = 0,
+			ThroughWalls = true,
+			Pulse = false
+		},
+		Arrows = {Enabled = false, Style = "Dart", Radius = 200, Size = 14, Color = Color3.fromRGB(255, 60, 60), Outline = true, Filled = true, ShowDist = true, DistScale = true},
+		HeadDot = {Enabled = false, Size = 1, Color = Color3.fromRGB(255, 255, 255)},
+		ViewLine = {Enabled = false, Length = 8, Thickness = 1, Color = Color3.fromRGB(255, 200, 60)},
+		History = {
+			Enabled = false,
+			Time = 8,
+			TpDist = 120,
+			Triggers = {Left = true, Teleport = true, Death = true, Gone = false},
+			Color = Color3.fromRGB(215, 215, 215),
+			Timer = true,
+			TimerMode = "Countdown",
+			Fade = true
+		},
+		Hat = {
+			Enabled = false,
+			Type = "China Hat",
+			Style = "Filled",
+			Self = true,
+			Players = false,
+			PlayerDistance = 150,
+			Height = 1.1,
+			Radius = 1.5,
+			Offset = 0.15,
+			Scale = 1,
+			OffX = 0,
+			OffZ = 0,
+			HideDist = 2.5,
+			Segments = 18,
+			Spin = true,
+			SpinSpeed = 1,
+			Color1 = Color3.fromRGB(255, 80, 160),
+			Color2 = Color3.fromRGB(110, 90, 255),
+			Rainbow = false,
+			Opacity = 0.6,
+			Thickness = 1,
+			Outline = true
+		},
+		Mask = {
+			Enabled = false,
+			Style = "Visor",
+			Self = true,
+			Players = false,
+			PlayerDistance = 100,
+			Scale = 1,
+			OffX = 0,
+			OffY = 0,
+			OffZ = 0,
+			HideDist = 2.5,
+			Fill = true,
+			Outline = true,
+			Thickness = 1,
+			Opacity = 0.75,
+			Color1 = Color3.fromRGB(90, 200, 255),
+			Color2 = Color3.fromRGB(190, 90, 255),
+			Rainbow = false
+		},
+		Halo = {
+			Enabled = false,
+			Style = "Glow",
+			Radius = 1.1,
+			Offset = 0.7,
+			OffX = 0,
+			OffZ = 0,
+			HideDist = 2.5,
+			Thickness = 2,
+			Color = Color3.fromRGB(255, 230, 120),
+			Rainbow = false,
+			Bob = true
+		},
+		Orbit = {
+			Enabled = false,
+			Style = "Horizontal",
+			Count = 6,
+			Radius = 3.5,
+			Speed = 2,
+			Size = 4,
+			Offset = 0,
+			OffX = 0,
+			OffZ = 0,
+			Color1 = Color3.fromRGB(90, 200, 255),
+			Color2 = Color3.fromRGB(190, 90, 255),
+			Rainbow = false
+		},
+		Cross = {
+			Enabled = false,
+			Style = "Classic",
+			Size = 8,
+			Gap = 4,
+			Thickness = 2,
+			Color = Color3.fromRGB(255, 255, 255),
+			Color2 = Color3.fromRGB(255, 120, 190),
+			ColorMode = "Solid",
+			Opacity = 1,
+			Outline = true,
+			Dot = false,
+			DotSize = 2,
+			Dynamic = false,
+			DynAmount = 10,
+			Spin = false,
+			SpinSpeed = 2,
+			AtMouse = false,
+			OffX = 0,
+			OffY = 0
+		},
+		Mouse = {
+			Enabled = false,
+			Style = "Heart",
+			Size = 14,
+			Color1 = Color3.fromRGB(255, 130, 175),
+			Color2 = Color3.fromRGB(255, 205, 225),
+			ColorMode = "Solid",
+			Opacity = 1,
+			Outline = true,
+			Bounce = true,
+			Spin = false,
+			SpinSpeed = 2,
+			Trail = false,
+			TrailLength = 10,
+			HideSystem = true,
+			OffX = 0,
+			OffY = 0
+		}
+	}
+
+	local rayParams = RaycastParams.new()
+	rayParams.FilterType = Enum.RaycastFilterType.Exclude
+
+	local function pick(o)
+		if type(o) == "table" then
+			return o[1]
+		end
+		return o
+	end
+
+	local function v2(x, y)
+		return Vector2.new(math.floor(x + 0.5), math.floor(y + 0.5))
+	end
+
+	local function pp(f)
+		f = f % 1
+		if f < 0.5 then
+			return f * 2
+		end
+		return (1 - f) * 2
+	end
+
+	local function colorFn(c1, c2, rainbow, phase)
+		return function(f)
+			if rainbow then
+				return Color3.fromHSV((f + phase) % 1, 0.75, 1)
+			end
+			return c1:Lerp(c2, pp(f + phase))
+		end
+	end
+
+	local function lerp3(c1, c2, x)
+		local g = cfg.Gradient
+		if g.ThreeColor and not cfg.Visible.Enabled then
+			if x < 0.5 then
+				return c1:Lerp(g.Color3, x * 2)
+			end
+			return g.Color3:Lerp(c2, (x - 0.5) * 2)
+		end
+		return c1:Lerp(c2, x)
+	end
+
+	local function gcol(f, c1, c2, solid)
+		local g = cfg.Gradient
+		if not g.Enabled then
+			return solid
+		end
+		if g.Reverse then
+			f = 1 - f
+		end
+		f = math.clamp(f, 0, 1)
+		local t = GT * g.Speed
+		local s = g.Scale
+		local mode = g.Mode
+		local x
+		if mode == "Rainbow" then
+			return Color3.fromHSV(((f * s) * 0.6 + t * 0.08) % 1, 0.8, 1)
+		elseif mode == "Scroll" then
+			x = pp(f * s + t * 0.25)
+		elseif mode == "Reverse" then
+			x = pp(f * s - t * 0.25)
+		elseif mode == "Pulse" then
+			x = math.sin(t) * 0.5 + 0.5
+		elseif mode == "Wave" then
+			x = math.sin(f * s * math.pi * 2 + t) * 0.5 + 0.5
+		elseif mode == "Shine" then
+			local base = lerp3(c1, c2, f)
+			local band = (f * s - t * 0.25) % 1
+			local w = math.max(0, 1 - math.abs(band - 0.5) * 6)
+			return base:Lerp(white, w * 0.85)
+		else
+			x = f
+		end
+		if g.Bands > 1 then
+			x = math.min(math.floor(x * g.Bands), g.Bands - 1) / (g.Bands - 1)
+		end
+		return lerp3(c1, c2, x)
+	end
+
+	local function sf(nx, ny)
+		nx = math.clamp(nx, 0, 1)
+		ny = math.clamp(ny, 0, 1)
+		local s = cfg.Gradient.Shape
+		if s == "Horizontal" then
+			return nx
+		elseif s == "Diagonal" then
+			return (nx + ny) / 2
+		elseif s == "Radial" then
+			local dx, dy = nx - 0.5, ny - 0.5
+			return math.min(1, math.sqrt(dx * dx + dy * dy) * 2)
+		end
+		return ny
+	end
+
+	local function gc(pal, f, solid)
+		if pal.flat then
+			return pal.solid
+		end
+		return gcol(f, pal.c1, pal.c2, solid or pal.solid)
+	end
+
+	local function pc(flag, pal, f, own, useVis)
+		if pal.flat then
+			return own
+		end
+		if cfg.Gradient.Enabled and flag then
+			return gcol(f, pal.c1, pal.c2, own)
+		end
+		if useVis and pal.vis then
+			return pal.vis
+		end
+		return own
+	end
+
+	local HSEG = 24
+	local builders = {}
+	local nameGui
+
+	local function mk(obj, g, class, props)
+		local d = Drawing.new(class)
+		for k, v in pairs(props) do
+			d[k] = v
+		end
+		obj.all[#obj.all + 1] = d
+		g.list[#g.list + 1] = d
+		return d
+	end
+
+	builders.box = function(obj, g)
+		g.Outline = mk(obj, g, "Square", {Color = black, Thickness = 3, Filled = false, Visible = false, ZIndex = 1})
+		g.Box = mk(obj, g, "Square", {Thickness = 1, Filled = false, Visible = false, ZIndex = 2})
+		g.Fill = mk(obj, g, "Square", {Filled = true, Visible = false, ZIndex = 0})
+	end
+
+	builders.edges = function(obj, g)
+		g.T, g.B, g.L, g.R = {}, {}, {}, {}
+		for i = 1, 8 do
+			g.T[i] = mk(obj, g, "Line", {Visible = false, ZIndex = 2})
+			g.B[i] = mk(obj, g, "Line", {Visible = false, ZIndex = 2})
+			g.L[i] = mk(obj, g, "Line", {Visible = false, ZIndex = 2})
+			g.R[i] = mk(obj, g, "Line", {Visible = false, ZIndex = 2})
+		end
+	end
+
+	builders.corners = function(obj, g)
+		g.CO, g.C = {}, {}
+		for i = 1, 8 do
+			g.CO[i] = mk(obj, g, "Line", {Color = black, Thickness = 3, Visible = false, ZIndex = 1})
+			g.C[i] = mk(obj, g, "Line", {Thickness = 1, Visible = false, ZIndex = 2})
+		end
+	end
+
+	builders.fill = function(obj, g)
+		g.S = {}
+		for i = 1, 36 do
+			g.S[i] = mk(obj, g, "Square", {Filled = true, Visible = false, ZIndex = 0})
+		end
+	end
+
+	builders.cube = function(obj, g)
+		g.L, g.O = {}, {}
+		for i = 1, 12 do
+			g.O[i] = mk(obj, g, "Line", {Color = black, Thickness = 3, Visible = false, ZIndex = 1})
+			g.L[i] = mk(obj, g, "Line", {Thickness = 1, Visible = false, ZIndex = 2})
+		end
+	end
+
+	builders.health = function(obj, g)
+		g.Bg = mk(obj, g, "Line", {Color = black, Visible = false, ZIndex = 1})
+		g.S = {}
+		for i = 1, HSEG do
+			g.S[i] = mk(obj, g, "Line", {Visible = false, ZIndex = 2})
+		end
+	end
+
+	builders.tracer = function(obj, g)
+		g.Line = mk(obj, g, "Line", {Visible = false, ZIndex = 1})
+	end
+
+	builders.skel = function(obj, g)
+		g.O, g.L = {}, {}
+		for i = 1, 16 do
+			g.O[i] = mk(obj, g, "Line", {Color = black, Thickness = 3, Visible = false, ZIndex = 1})
+			g.L[i] = mk(obj, g, "Line", {Thickness = 1, Visible = false, ZIndex = 2})
+		end
+	end
+
+	builders.arrow = function(obj, g)
+		g.F, g.O = {}, {}
+		for i = 1, 4 do
+			g.O[i] = mk(obj, g, "Triangle", {Filled = false, Thickness = 3, Color = black, Visible = false, ZIndex = 2})
+			g.F[i] = mk(obj, g, "Triangle", {Filled = true, Visible = false, ZIndex = 3})
+		end
+		g.Txt = mk(obj, g, "Text", {Center = true, Outline = true, Size = 13, Color = white, Visible = false, ZIndex = 4})
+	end
+
+	builders.head = function(obj, g)
+		g.DotO = mk(obj, g, "Circle", {Filled = true, NumSides = 24, Color = black, Visible = false, ZIndex = 1})
+		g.Dot = mk(obj, g, "Circle", {Filled = true, NumSides = 24, Visible = false, ZIndex = 2})
+		g.VO = mk(obj, g, "Line", {Color = black, Thickness = 3, Visible = false, ZIndex = 1})
+		g.V = mk(obj, g, "Line", {Thickness = 1, Visible = false, ZIndex = 2})
+	end
+
+	builders.text = function(obj, g)
+		g.T = {}
+		for _, k in ipairs(textKeys) do
+			if k == "Name" then
+				if not nameGui or not nameGui.Parent then
+					nameGui = Instance.new("ScreenGui")
+					nameGui.Name = "HubEspNames"
+					nameGui.ResetOnSpawn = false
+					nameGui.IgnoreGuiInset = true
+					nameGui.DisplayOrder = 1
+					nameGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+					Lib.MountGui(nameGui)
+				end
+				local label = Instance.new("TextLabel")
+				label.BackgroundTransparency = 1
+				label.AnchorPoint = Vector2.new(0.5, 0)
+				label.Size = UDim2.fromOffset(300, 20)
+				label.TextXAlignment = Enum.TextXAlignment.Center
+				label.TextYAlignment = Enum.TextYAlignment.Top
+				label.TextStrokeColor3 = black
+				label.Visible = false
+				label.Parent = nameGui
+				obj.all[#obj.all + 1] = label
+				g.list[#g.list + 1] = label
+				g.Label = label
+			else
+				local b = mk(obj, g, "Text", {Center = true, Outline = true, Visible = false, ZIndex = 3})
+				local a = mk(obj, g, "Text", {Center = true, Outline = true, Visible = false, ZIndex = 4})
+				g.T[k] = {a, b}
+			end
+		end
+	end
+
+	local function createObject()
+		return {all = {}, G = {}, pal = {}}
+	end
+
+	local function drop(obj, name)
+		local g = obj.G[name]
+		if g and g.shown then
+			for _, d in ipairs(g.list) do
+				d.Visible = false
+			end
+			g.shown = false
+		end
+	end
+
+	local function use(obj, name, cond)
+		if cond then
+			local g = obj.G[name]
+			if not g then
+				g = {list = {}, shown = false}
+				obj.G[name] = g
+				builders[name](obj, g)
+			end
+			g.shown = true
+			return g
+		end
+		drop(obj, name)
+		return nil
+	end
+
+	local function hideObject(obj)
+		for name in pairs(obj.G) do
+			drop(obj, name)
+		end
+	end
+
+	local function removeObject(obj)
+		for _, d in ipairs(obj.all) do
+			pcall(typeof(d) == "Instance" and d.Destroy or d.Remove, d)
+		end
+	end
+
+	local function setText(g, key, text, size, color, x, y, alpha)
+		if key == "Name" then
+			local label = g.Label
+			local bold = cfg.Text.Bold
+			local face = bold and State.CurrentBoldFace or State.CurrentRegularFace
+			local font = face or (bold and State.CurrentBoldFont or State.CurrentRegularFont) or (bold and Enum.Font.GothamBold or Enum.Font.GothamMedium)
+			if g.fontRef ~= font then
+				g.fontRef = font
+				if face then
+					label.FontFace = face
+				else
+					label.Font = font
+				end
+			end
+			label.Text = text
+			label.TextSize = size
+			label.TextColor3 = color
+			label.TextTransparency = 1 - alpha
+			label.TextStrokeTransparency = 1 - alpha
+			label.Position = UDim2.fromOffset(math.floor(x + 0.5), math.floor(y + 0.5))
+			label.Visible = true
+			return
+		end
+		local pr = g.T[key]
+		local a, b = pr[1], pr[2]
+		local font = cfg.Text.Font
+		a.Font = font
+		a.Text = text
+		a.Size = size
+		a.Color = color
+		a.Position = v2(x, y)
+		a.Transparency = alpha
+		a.Visible = true
+		b.Font = font
+		b.Text = text
+		b.Size = size
+		b.Color = color
+		b.Position = v2(x + 1, y)
+		b.Transparency = alpha
+		b.Visible = cfg.Text.Bold
+	end
+
+	local function hideText(g, key)
+		if key == "Name" then
+			g.Label.Visible = false
+			return
+		end
+		local pr = g.T[key]
+		pr[1].Visible = false
+		pr[2].Visible = false
+	end
+
+	local function sl(l, x1, y1, x2, y2, col, th, alpha)
+		l.From = v2(x1, y1)
+		l.To = v2(x2, y2)
+		l.Color = col
+		l.Thickness = th
+		l.Transparency = alpha
+		l.Visible = true
+	end
+
+	local function isLocalCharacter(model)
+		return lp.Character ~= nil and model == lp.Character
+	end
+
+	local function addHumanoid(h)
+		local model = h.Parent
+		if model and model:IsA("Model") and not isLocalCharacter(model) then
+			humModels[model] = true
+		end
+	end
+
+	local function addWorkspaceModel(m)
+		if m:IsA("Model") and not isLocalCharacter(m) then
+			npcWorkspace[m] = true
+		end
+	end
+
+	local function playerOf(model)
+		local pl = Players:GetPlayerFromCharacter(model)
+		if pl then
+			return pl
+		end
+		local byName = Players:FindFirstChild(model.Name)
+		if byName and byName:IsA("Player") then
+			return byName
+		end
+		return nil
+	end
+
+	local function labelFor(pl)
+		return cfg.Name.UseDisplay and pl.DisplayName or pl.Name
+	end
+
+	local function teamBlocked(pl)
+		return cfg.TeamCheck and lp.Team ~= nil and pl.Team == lp.Team
+	end
+
+	local function collectTargets()
+		local list = {}
+		local T = cfg.Targets
+		if T["Player"] then
+			for _, p in ipairs(Players:GetPlayers()) do
+				if p ~= lp and p.Character and not teamBlocked(p) then
+					list[p.Character] = {Name = labelFor(p), Player = p}
+				end
+			end
+		end
+		if T["Player Humanoid"] or T["Npc Humanoid (better)"] then
+			for m in pairs(humModels) do
+				if m.Parent and not isLocalCharacter(m) and not list[m] then
+					local pl = playerOf(m)
+					if pl then
+						if T["Player Humanoid"] and pl ~= lp and not teamBlocked(pl) then
+							list[m] = {Name = labelFor(pl), Player = pl}
+						end
+					elseif T["Npc Humanoid (better)"] then
+						list[m] = {Name = m.Name}
+					end
+				end
+			end
+		end
+		if T["Npc WorkSpace"] then
+			for m in pairs(npcWorkspace) do
+				if m.Parent and not isLocalCharacter(m) and not list[m] and not playerOf(m) then
+					list[m] = {Name = m.Name}
+				end
+			end
+		end
+		if cfg.Self.Enabled and lp.Character then
+			list[lp.Character] = {Name = labelFor(lp), Player = lp, Self = true}
+		end
+		return list
+	end
+
+	local function findRoot(model)
+		local r = model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("UpperTorso") or model:FindFirstChild("Torso") or model.PrimaryPart
+		if r and r:IsA("BasePart") then
+			return r
+		end
+		return nil
+	end
+
+	local function snapGeneric(model)
+		local minX, minY, minZ = math.huge, math.huge, math.huge
+		local maxX, maxY, maxZ = -math.huge, -math.huge, -math.huge
+		local count = 0
+
+		local function add(p)
+			local cf = p.CFrame
+			local s = p.Size
+			local r, u, l = cf.RightVector, cf.UpVector, cf.LookVector
+			local hx = 0.5 * (math.abs(r.X) * s.X + math.abs(u.X) * s.Y + math.abs(l.X) * s.Z)
+			local hy = 0.5 * (math.abs(r.Y) * s.X + math.abs(u.Y) * s.Y + math.abs(l.Y) * s.Z)
+			local hz = 0.5 * (math.abs(r.Z) * s.X + math.abs(u.Z) * s.Y + math.abs(l.Z) * s.Z)
+			local pos = cf.Position
+			minX = math.min(minX, pos.X - hx)
+			maxX = math.max(maxX, pos.X + hx)
+			minY = math.min(minY, pos.Y - hy)
+			maxY = math.max(maxY, pos.Y + hy)
+			minZ = math.min(minZ, pos.Z - hz)
+			maxZ = math.max(maxZ, pos.Z + hz)
+			count = count + 1
+		end
+
+		for _, p in ipairs(model:GetChildren()) do
+			if p:IsA("BasePart") then
+				add(p)
+			end
+		end
+		if count == 0 then
+			for _, p in ipairs(model:GetDescendants()) do
+				if p:IsA("BasePart") then
+					add(p)
+				end
+			end
+		end
+		if count == 0 then
+			return nil
+		end
+
+		local wh = maxY - minY
+		if wh <= 0.1 or wh > 80 then
+			return nil
+		end
+		local ww = ((maxX - minX) + (maxZ - minZ)) / 2
+		local cx, cz = (minX + maxX) / 2, (minZ + maxZ) / 2
+		local c = Vector3.new(cx, (minY + maxY) / 2, cz)
+		return {
+			pos = c,
+			top = Vector3.new(cx, maxY, cz),
+			bot = Vector3.new(cx, minY, cz),
+			cf = CFrame.new(c),
+			wh = wh,
+			wr = ww / wh
+		}
+	end
+
+	local function getSnap(model, humanoid)
+		if not humanoid then
+			return snapGeneric(model)
+		end
+		local root = findRoot(model)
+		if not root then
+			return nil
+		end
+		local pos = root.Position
+		local hip = humanoid.HipHeight > 0 and (humanoid.HipHeight + root.Size.Y / 2) or (3 * math.clamp(root.Size.Y / 2, 0.4, 6))
+		local topW = Vector3.new(pos.X, pos.Y + hip * 0.87, pos.Z)
+		local botW = Vector3.new(pos.X, pos.Y - hip, pos.Z)
+		local mid = (topW + botW) / 2
+		return {
+			pos = pos,
+			top = topW,
+			bot = botW,
+			cf = CFrame.new(mid) * (root.CFrame - root.CFrame.Position),
+			wh = hip * 1.87,
+			wr = nil
+		}
+	end
+
+	local function project(snap, camera)
+		local top = camera:WorldToViewportPoint(snap.top)
+		local bot = camera:WorldToViewportPoint(snap.bot)
+		if top.Z <= 0 or bot.Z <= 0 then
+			return nil
+		end
+		local hpx = bot.Y - top.Y
+		if hpx <= 2 then
+			return nil
+		end
+		local mid = camera:WorldToViewportPoint((snap.top + snap.bot) / 2)
+		local scale = cfg.Box.Scale / 100
+		local h = hpx * scale
+		local w = hpx * (snap.wr or (cfg.Box.Width / 100)) * scale
+		return mid.X - w / 2, mid.Y - h / 2, mid.X + w / 2, mid.Y + h / 2
+	end
+
+	local function isVisible(model, pos, camera)
+		rayParams.FilterDescendantsInstances = {lp.Character, model, camera}
+		local origin = camera.CFrame.Position
+		return Workspace:Raycast(origin, pos - origin, rayParams) == nil
+	end
+
+	local function anyEnabled()
+		return cfg.Box.Enabled or cfg.Name.Enabled or cfg.Health.Enabled or cfg.Distance.Enabled or cfg.Tool.Enabled or cfg.Tracer.Enabled
+			or cfg.Skeleton.Enabled or cfg.Chams.Enabled or cfg.Arrows.Enabled or cfg.HeadDot.Enabled or cfg.ViewLine.Enabled or cfg.History.Enabled
+	end
+
+	local trackConns = {}
+	local humTracked, wsTracked = false, false
+
+	local function syncTracking()
+		local T = cfg.Targets
+		local active = anyEnabled()
+		local needHum = active and (T["Player Humanoid"] or T["Npc Humanoid (better)"]) and true or false
+		local needWs = active and T["Npc WorkSpace"] and true or false
+		if needHum and not humTracked then
+			humTracked = true
+			for _, v in ipairs(Workspace:GetDescendants()) do
+				if v:IsA("Humanoid") then
+					addHumanoid(v)
+				end
+			end
+			trackConns.hAdd = Workspace.DescendantAdded:Connect(function(v)
+				if v:IsA("Humanoid") then
+					task.defer(addHumanoid, v)
+				end
+			end)
+			trackConns.hRem = Workspace.DescendantRemoving:Connect(function(v)
+				if v:IsA("Humanoid") then
+					local m = v.Parent
+					if m then
+						humModels[m] = nil
+					end
+				elseif v:IsA("Model") then
+					humModels[v] = nil
+				end
+			end)
+		elseif not needHum and humTracked then
+			humTracked = false
+			trackConns.hAdd:Disconnect()
+			trackConns.hRem:Disconnect()
+			table.clear(humModels)
+		end
+		if needWs and not wsTracked then
+			wsTracked = true
+			for _, v in ipairs(Workspace:GetChildren()) do
+				addWorkspaceModel(v)
+			end
+			trackConns.wAdd = Workspace.ChildAdded:Connect(addWorkspaceModel)
+			trackConns.wRem = Workspace.ChildRemoved:Connect(function(m)
+				npcWorkspace[m] = nil
+			end)
+		elseif not needWs and wsTracked then
+			wsTracked = false
+			trackConns.wAdd:Disconnect()
+			trackConns.wRem:Disconnect()
+			table.clear(npcWorkspace)
+		end
+	end
+
+	local function getTracerOrigin(viewport)
+		local o = cfg.Tracer.Origin
+		if o == "Center" then
+			return Vector2.new(viewport.X / 2, viewport.Y / 2)
+		elseif o == "Top" then
+			return Vector2.new(viewport.X / 2, 0)
+		elseif o == "Mouse" then
+			return UserInputService:GetMouseLocation()
+		end
+		return Vector2.new(viewport.X / 2, viewport.Y)
+	end
+
+	local cubeEdges = {{1, 2}, {3, 4}, {5, 6}, {7, 8}, {1, 3}, {2, 4}, {5, 7}, {6, 8}, {1, 5}, {2, 6}, {3, 7}, {4, 8}}
+	local CD = {}
+	for i = 1, 8 do
+		CD[i] = {0, 0, 0, 0}
+	end
+	local CP = {}
+
+	local function setCD(i, a, b, c, d)
+		local t = CD[i]
+		t[1], t[2], t[3], t[4] = a, b, c, d
+	end
+
+	local function drawBox(obj, minX, minY, maxX, maxY, pal, alpha, forceOn, snap, camera)
+		local b, g = cfg.Box, cfg.Gradient
+		local on = forceOn or b.Enabled
+		local style = b.Style
+		local w, h = maxX - minX, maxY - minY
+		local rw, rh = math.floor(w + 0.5), math.floor(h + 0.5)
+		local th = b.Thickness
+		local outl = b.Outline
+		local gradOn = g.Enabled and not pal.flat
+
+		local full = on and style == "Full"
+		local plain = full and not gradOn
+		local seg = on and ((style == "Full" and gradOn) or style == "Dashed")
+		local corner = on and (style == "Corners" or style == "Brackets")
+		local diamond = on and style == "Diamond"
+		local cube = on and style == "3D" and snap ~= nil
+
+		local fillOn = on and b.Filled
+		local gridFill = fillOn and gradOn and g.Fill and g.FillType ~= "Solid"
+		local singleFill = fillOn and not gridFill
+
+		local bg = use(obj, "box", plain or singleFill)
+		if bg then
+			bg.Outline.Position = v2(minX, minY)
+			bg.Outline.Size = Vector2.new(rw, rh)
+			bg.Outline.Thickness = th + 2
+			bg.Outline.Transparency = alpha
+			bg.Outline.Visible = plain and outl
+			bg.Box.Position = v2(minX, minY)
+			bg.Box.Size = Vector2.new(rw, rh)
+			bg.Box.Color = pal.solid
+			bg.Box.Thickness = th
+			bg.Box.Transparency = alpha
+			bg.Box.Visible = plain
+			bg.Fill.Position = v2(minX, minY)
+			bg.Fill.Size = Vector2.new(rw, rh)
+			bg.Fill.Color = (gradOn and g.Fill) and gc(pal, 0.5) or pal.solid
+			bg.Fill.Transparency = b.Opacity * alpha
+			bg.Fill.Visible = singleFill
+		end
+
+		local eg = use(obj, "edges", seg)
+		if eg then
+			local dash = style == "Dashed"
+			for i = 1, 8 do
+				local t, bt, l, r = eg.T[i], eg.B[i], eg.L[i], eg.R[i]
+				if not dash or i % 2 == 1 then
+					local x0, x1 = minX + (i - 1) * w / 8, minX + i * w / 8
+					local y0, y1 = minY + (i - 1) * h / 8, minY + i * h / 8
+					local f = (i - 0.5) / 8
+					sl(t, x0, minY, x1, minY, gc(pal, sf(f, 0)), th, alpha)
+					sl(bt, x0, maxY, x1, maxY, gc(pal, sf(f, 1)), th, alpha)
+					sl(l, minX, y0, minX, y1, gc(pal, sf(0, f)), th, alpha)
+					sl(r, maxX, y0, maxX, y1, gc(pal, sf(1, f)), th, alpha)
+				else
+					t.Visible = false
+					bt.Visible = false
+					l.Visible = false
+					r.Visible = false
+				end
+			end
+		end
+
+		local cg = use(obj, "corners", corner or diamond)
+		if cg then
+			local count = 8
+			if diamond then
+				count = 4
+				local mx, my = minX + w / 2, minY + h / 2
+				setCD(1, mx, minY, maxX, my)
+				setCD(2, maxX, my, mx, maxY)
+				setCD(3, mx, maxY, minX, my)
+				setCD(4, minX, my, mx, minY)
+			else
+				local cw = w * b.CornerW / 100
+				local ch = style == "Brackets" and (h / 2) or (h * b.CornerH / 100)
+				if style == "Brackets" then
+					cw = w * 0.25
+				end
+				setCD(1, minX, minY, minX + cw, minY)
+				setCD(2, minX, minY, minX, minY + ch)
+				setCD(3, maxX, minY, maxX - cw, minY)
+				setCD(4, maxX, minY, maxX, minY + ch)
+				setCD(5, minX, maxY, minX + cw, maxY)
+				setCD(6, minX, maxY, minX, maxY - ch)
+				setCD(7, maxX, maxY, maxX - cw, maxY)
+				setCD(8, maxX, maxY, maxX, maxY - ch)
+			end
+			for i = 1, 8 do
+				local main, out = cg.C[i], cg.CO[i]
+				if i <= count then
+					local d = CD[i]
+					local nx = ((d[1] + d[3]) / 2 - minX) / math.max(w, 1)
+					local ny = ((d[2] + d[4]) / 2 - minY) / math.max(h, 1)
+					sl(main, d[1], d[2], d[3], d[4], gc(pal, sf(nx, ny)), th, alpha)
+					if outl then
+						sl(out, d[1], d[2], d[3], d[4], black, th + 2, alpha)
+					else
+						out.Visible = false
+					end
+				else
+					main.Visible = false
+					out.Visible = false
+				end
+			end
+		end
+
+		local qg = use(obj, "cube", cube)
+		if qg then
+			local s = b.Scale / 100
+			local wr = snap.wr or (b.Width / 100)
+			local sx, sy, sz = snap.wh * wr * s / 2, snap.wh * s / 2, snap.wh * wr * s * 0.75 / 2
+			for idx = 0, 7 do
+				local ax = (idx % 2 == 1) and sx or -sx
+				local ay = (math.floor(idx / 2) % 2 == 1) and sy or -sy
+				local az = (math.floor(idx / 4) % 2 == 1) and sz or -sz
+				CP[idx + 1] = camera:WorldToViewportPoint(snap.cf:PointToWorldSpace(Vector3.new(ax, ay, az)))
+			end
+			for i, e in ipairs(cubeEdges) do
+				local a, c = CP[e[1]], CP[e[2]]
+				local l, o = qg.L[i], qg.O[i]
+				if a.Z > 0 and c.Z > 0 then
+					local nx = ((a.X + c.X) / 2 - minX) / math.max(w, 1)
+					local ny = ((a.Y + c.Y) / 2 - minY) / math.max(h, 1)
+					if outl then
+						sl(o, a.X, a.Y, c.X, c.Y, black, th + 2, alpha)
+					else
+						o.Visible = false
+					end
+					sl(l, a.X, a.Y, c.X, c.Y, gc(pal, sf(nx, ny)), th, alpha)
+				else
+					l.Visible = false
+					o.Visible = false
+				end
+			end
+		end
+
+		local fg = use(obj, "fill", gridFill)
+		if fg then
+			local ft, shape = g.FillType, g.Shape
+			local cols, rows
+			if ft == "Stripes" then
+				if shape == "Horizontal" then
+					cols, rows = 12, 1
+				else
+					cols, rows = 1, 12
+				end
+			elseif ft == "Checker" then
+				cols, rows = 6, 6
+			elseif shape == "Vertical" then
+				cols, rows = 1, 12
+			elseif shape == "Horizontal" then
+				cols, rows = 12, 1
+			else
+				cols, rows = 6, 6
+			end
+			local cw, ch = w / cols, h / rows
+			local k = 0
+			for r = 1, rows do
+				for c = 1, cols do
+					k = k + 1
+					local sq = fg.S[k]
+					local vis = true
+					if ft == "Stripes" then
+						vis = ((shape == "Horizontal") and c or r) % 2 == 1
+					elseif ft == "Checker" then
+						vis = (r + c) % 2 == 0
+					end
+					if vis then
+						local x0 = math.floor(minX + (c - 1) * cw + 0.5)
+						local y0 = math.floor(minY + (r - 1) * ch + 0.5)
+						local x1 = math.floor(minX + c * cw + 0.5)
+						local y1 = math.floor(minY + r * ch + 0.5)
+						sq.Position = Vector2.new(x0, y0)
+						sq.Size = Vector2.new(math.max(1, x1 - x0), math.max(1, y1 - y0))
+						sq.Color = gc(pal, sf((c - 0.5) / cols, (r - 0.5) / rows))
+						sq.Transparency = b.Opacity * alpha
+						sq.Visible = true
+					else
+						sq.Visible = false
+					end
+				end
+			end
+			for j = k + 1, 36 do
+				fg.S[j].Visible = false
+			end
+		end
+	end
+
+	local arrowShapes = {
+		Triangle = {{{1, 0}, {-0.7, 0.75}, {-0.7, -0.75}}},
+		Dart = {{{1, 0}, {-0.8, 0.75}, {-0.3, 0}}, {{1, 0}, {-0.3, 0}, {-0.8, -0.75}}},
+		Chevron = {
+			{{1, 0}, {-0.1, 0.85}, {0.25, 0}}, {{-0.1, 0.85}, {-0.5, 0.5}, {0.25, 0}},
+			{{1, 0}, {0.25, 0}, {-0.1, -0.85}}, {{-0.1, -0.85}, {0.25, 0}, {-0.5, -0.5}}
+		},
+		Needle = {{{1.3, 0}, {-0.6, 0.38}, {-0.2, 0}}, {{1.3, 0}, {-0.2, 0}, {-0.6, -0.38}}},
+		Double = {{{1, 0}, {0.2, 0.6}, {0.2, -0.6}}, {{0.05, 0}, {-0.75, 0.6}, {-0.75, -0.6}}}
+	}
+
+	local function drawArrow(obj, snap, camera, viewport, pal, dist)
+		local a = cfg.Arrows
+		local sp = camera:WorldToViewportPoint(snap.pos)
+		local onScreen = sp.Z > 0 and sp.X > 0 and sp.X < viewport.X and sp.Y > 0 and sp.Y < viewport.Y
+		local ag = use(obj, "arrow", a.Enabled and not onScreen)
+		if not ag then
+			return
+		end
+		local rel = camera.CFrame:PointToObjectSpace(snap.pos)
+		local dx, dy = rel.X, -rel.Y
+		local len = math.sqrt(dx * dx + dy * dy)
+		if len < 0.001 then
+			dx, dy, len = 0, 1, 1
+		end
+		dx, dy = dx / len, dy / len
+		local px, py = -dy, dx
+		local cx, cy = viewport.X / 2, viewport.Y / 2
+		local S = a.Size * (a.DistScale and math.clamp(1.5 - dist / math.max(cfg.MaxDistance, 1), 0.6, 1.3) or 1)
+		local rx = math.max(30, math.min(a.Radius * 1.4, cx - S * 1.6 - 6))
+		local ry = math.max(30, math.min(a.Radius, cy - S * 1.6 - 6))
+		local k = 1 / math.sqrt((dx / rx) ^ 2 + (dy / ry) ^ 2)
+		local bx, by = cx + dx * k, cy + dy * k
+		local col = pc(cfg.Gradient.Extras, pal, 0.5, a.Color, false)
+		local shape = arrowShapes[a.Style] or arrowShapes.Dart
+		local function at(u, v)
+			return Vector2.new(bx + (dx * u + px * v) * S, by + (dy * u + py * v) * S)
+		end
+		for i = 1, 4 do
+			local f, o, tri = ag.F[i], ag.O[i], shape[i]
+			if tri then
+				local A, B, C = at(tri[1][1], tri[1][2]), at(tri[2][1], tri[2][2]), at(tri[3][1], tri[3][2])
+				f.PointA, f.PointB, f.PointC = A, B, C
+				f.Color = col
+				f.Visible = a.Filled
+				o.PointA, o.PointB, o.PointC = A, B, C
+				o.Color = a.Filled and black or col
+				o.Visible = a.Outline or not a.Filled
+			else
+				f.Visible = false
+				o.Visible = false
+			end
+		end
+		ag.Txt.Visible = a.ShowDist
+		if a.ShowDist then
+			ag.Txt.Text = math.floor(dist) .. "m"
+			ag.Txt.Position = v2(bx - dx * (S * 1.3 + 10), by - dy * (S * 1.3 + 10))
+		end
+	end
+
+	local hpB, hpCol, hpBZ = {}, {}, -1
+
+	local function hpColor(t, bz)
+		if t <= bz then
+			return black:Lerp(Color3.fromRGB(255, 0, 0), t / bz)
+		end
+		return Color3.fromHSV(((t - bz) / (1 - bz)) * 0.3333, 1, 1)
+	end
+
+	local function rebuildHp(bz)
+		hpBZ = bz
+		hpB[0] = 0
+		hpB[1] = bz
+		for i = 2, HSEG do
+			hpB[i] = bz + (1 - bz) * (i - 1) / (HSEG - 1)
+		end
+		for i = 1, HSEG do
+			hpCol[i] = hpColor((hpB[i - 1] + hpB[i]) / 2, bz)
+		end
+	end
+
+	local function drawHealth(hg, x, minY, maxY, h, pct)
+		local hp = cfg.Health
+		local bz = hp.BlackZone / 100
+		if bz ~= hpBZ then
+			rebuildHp(bz)
+		end
+		hg.Bg.Thickness = hp.Thickness + 2
+		hg.Bg.From = v2(x, maxY + 1)
+		hg.Bg.To = v2(x, minY - 1)
+		hg.Bg.Visible = true
+		local mode = hp.Mode
+		local dyn = hpColor(pct, bz)
+		for i = 1, HSEG do
+			local s = hg.S[i]
+			local lo, hi = hpB[i - 1], hpB[i]
+			if pct > lo then
+				local top = math.min(hi, pct)
+				s.From = v2(x, maxY - h * lo)
+				s.To = v2(x, maxY - h * top)
+				s.Thickness = hp.Thickness
+				if mode == "Gradient" then
+					s.Color = hpCol[i]
+				elseif mode == "Dynamic" then
+					s.Color = dyn
+				else
+					s.Color = hp.Color
+				end
+				s.Visible = true
+			else
+				s.Visible = false
+			end
+		end
+	end
+
+	local R15Pairs = {
+		{"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"},
+		{"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"},
+		{"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightLowerArm", "RightHand"},
+		{"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"},
+		{"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"}
+	}
+	local SA, SB = {}, {}
+
+	local function bodyPart(model, name)
+		local p = model:FindFirstChild(name)
+		if p and p:IsA("BasePart") then
+			return p
+		end
+		return nil
+	end
+
+	local function fillSkeleton(model)
+		local n = 0
+		if model:FindFirstChild("UpperTorso") then
+			for _, pr in ipairs(R15Pairs) do
+				local a, b = bodyPart(model, pr[1]), bodyPart(model, pr[2])
+				if a and b then
+					n = n + 1
+					SA[n], SB[n] = a.Position, b.Position
+				end
+			end
+			return n
+		end
+		local torso, head = bodyPart(model, "Torso"), bodyPart(model, "Head")
+		if not (torso and head) then
+			return 0
+		end
+		local sy = torso.Size.Y / 2
+		local neck = torso.CFrame:PointToWorldSpace(Vector3.new(0, sy, 0))
+		local hip = torso.CFrame:PointToWorldSpace(Vector3.new(0, -sy, 0))
+		n = n + 1
+		SA[n], SB[n] = head.Position, neck
+		n = n + 1
+		SA[n], SB[n] = neck, hip
+		for _, nm in ipairs({"Left Arm", "Right Arm"}) do
+			local limb = bodyPart(model, nm)
+			if limb then
+				local ly = limb.Size.Y / 2
+				local top = limb.CFrame:PointToWorldSpace(Vector3.new(0, ly * 0.8, 0))
+				local bot = limb.CFrame:PointToWorldSpace(Vector3.new(0, -ly, 0))
+				n = n + 1
+				SA[n], SB[n] = neck, top
+				n = n + 1
+				SA[n], SB[n] = top, bot
+			end
+		end
+		for _, nm in ipairs({"Left Leg", "Right Leg"}) do
+			local limb = bodyPart(model, nm)
+			if limb then
+				local ly = limb.Size.Y / 2
+				local top = limb.CFrame:PointToWorldSpace(Vector3.new(0, ly, 0))
+				local bot = limb.CFrame:PointToWorldSpace(Vector3.new(0, -ly, 0))
+				n = n + 1
+				SA[n], SB[n] = hip, top
+				n = n + 1
+				SA[n], SB[n] = top, bot
+			end
+		end
+		return n
+	end
+
+	local function drawSkeleton(sg, model, camera, pal, minX, minY, w, h)
+		local sk = cfg.Skeleton
+		local n = math.min(fillSkeleton(model), 16)
+		for i = 1, 16 do
+			local o, l = sg.O[i], sg.L[i]
+			local shown = false
+			if i <= n then
+				local a = camera:WorldToViewportPoint(SA[i])
+				local c = camera:WorldToViewportPoint(SB[i])
+				if a.Z > 0 and c.Z > 0 then
+					shown = true
+					local nx = ((a.X + c.X) / 2 - minX) / math.max(w, 1)
+					local ny = ((a.Y + c.Y) / 2 - minY) / math.max(h, 1)
+					if sk.Outline then
+						sl(o, a.X, a.Y, c.X, c.Y, black, sk.Thickness + 2, 1)
+					else
+						o.Visible = false
+					end
+					sl(l, a.X, a.Y, c.X, c.Y, pc(cfg.Gradient.Skeleton, pal, sf(nx, ny), sk.Color, true), sk.Thickness, 1)
+				end
+			end
+			if not shown then
+				o.Visible = false
+				l.Visible = false
+			end
+		end
+	end
+
+	local chamData = {}
+
+	local function getContainer()
+		local ok, ui = pcall(function()
+			return gethui and gethui()
+		end)
+		if ok and typeof(ui) == "Instance" then
+			return ui
+		end
+		return game:GetService("CoreGui")
+	end
+
+	local chamsFolder = Instance.new("Folder")
+	chamsFolder.Name = "HubChams"
+	pcall(function()
+		chamsFolder.Parent = getContainer()
+	end)
+	if not chamsFolder.Parent then
+		chamsFolder.Parent = Workspace
+	end
+
+	local function removeChams(model)
+		local d = chamData[model]
+		if not d then
+			return
+		end
+		if d.hl then
+			pcall(function()
+				d.hl:Destroy()
+			end)
+		end
+		for _, a in pairs(d.adorns) do
+			pcall(function()
+				a:Destroy()
+			end)
+		end
+		chamData[model] = nil
+	end
+
+	local function updateChams(model, pal, snap)
+		local ch, g = cfg.Chams, cfg.Gradient
+		local d = chamData[model]
+		if not d then
+			d = {adorns = {}}
+			chamData[model] = d
+		end
+		local gradOn = g.Enabled and g.Chams
+		local pulse = ch.Pulse and (math.sin(GT * 3) * 0.5 + 0.5) * 0.35 or 0
+		local ft = math.clamp(ch.FillTransparency + pulse, 0, 1)
+		local fillSolid = pal.vis or ch.Fill
+
+		if ch.Mode == "Highlight" then
+			for part, a in pairs(d.adorns) do
+				pcall(function()
+					a:Destroy()
+				end)
+				d.adorns[part] = nil
+			end
+			local hl = d.hl
+			if not hl or not hl.Parent then
+				hl = Instance.new("Highlight")
+				hl.Parent = chamsFolder
+				d.hl = hl
+			end
+			hl.Adornee = model
+			hl.DepthMode = ch.ThroughWalls and Enum.HighlightDepthMode.AlwaysOnTop or Enum.HighlightDepthMode.Occluded
+			hl.FillTransparency = ft
+			hl.OutlineTransparency = ch.OutlineTransparency
+			if gradOn then
+				hl.FillColor = gcol(0.5, pal.c1, pal.c2, fillSolid)
+				hl.OutlineColor = gcol(0.85, pal.c1, pal.c2, ch.Outline)
+			else
+				hl.FillColor = fillSolid
+				hl.OutlineColor = ch.Outline
+			end
+		else
+			if d.hl then
+				pcall(function()
+					d.hl:Destroy()
+				end)
+				d.hl = nil
+			end
+			local minY = snap.bot.Y
+			local span = math.max(snap.top.Y - minY, 0.1)
+			local seen = {}
+			for _, part in ipairs(model:GetChildren()) do
+				if part:IsA("BasePart") and part.Transparency < 1 then
+					seen[part] = true
+					local a = d.adorns[part]
+					if not a or not a.Parent then
+						a = Instance.new("BoxHandleAdornment")
+						a.Adornee = part
+						a.ZIndex = 1
+						a.Parent = chamsFolder
+						d.adorns[part] = a
+					end
+					a.Size = part.Size + Vector3.new(0.05, 0.05, 0.05)
+					a.AlwaysOnTop = ch.ThroughWalls
+					a.Transparency = ft
+					local f = 1 - math.clamp((part.Position.Y - minY) / span, 0, 1)
+					a.Color3 = gradOn and gcol(f, pal.c1, pal.c2, fillSolid) or fillSolid
+				end
+			end
+			for part, a in pairs(d.adorns) do
+				if not seen[part] then
+					pcall(function()
+						a:Destroy()
+					end)
+					d.adorns[part] = nil
+				end
+			end
+		end
+	end
+
+	local tracked = {}
+	local ghosts = {}
+	local tagText = {Left = "LEFT", Teleport = "TP", Death = "DEAD", Gone = "GONE"}
+
+	local function clearGhosts()
+		for _, gh in ipairs(ghosts) do
+			removeObject(gh.obj)
+		end
+		table.clear(ghosts)
+	end
+
+	local function addGhost(tr, tag)
+		local H = cfg.History
+		if not H.Enabled or not H.Triggers[tag] or not tr.snap then
+			return
+		end
+		if #ghosts >= 40 then
+			removeObject(ghosts[1].obj)
+			table.remove(ghosts, 1)
+		end
+		ghosts[#ghosts + 1] = {obj = createObject(), name = tr.name, snap = tr.snap, born = tick(), tag = tag}
+	end
+
+	local function track(model, info, snap, alive)
+		local tr = tracked[model]
+		if not tr then
+			if snap and alive then
+				tracked[model] = {name = info.Name, snap = snap, player = info.Player}
+			end
+			return
+		end
+		tr.name = info.Name
+		tr.player = info.Player
+		if not alive then
+			if not tr.dead then
+				tr.dead = true
+				addGhost(tr, "Death")
+			end
+			return
+		end
+		tr.dead = false
+		if snap then
+			if (snap.pos - tr.snap.pos).Magnitude > cfg.History.TpDist then
+				addGhost(tr, "Teleport")
+			end
+			tr.snap = snap
+		end
+	end
+
+	local function trackCleanup(targets)
+		for model, tr in pairs(tracked) do
+			if not targets[model] then
+				if not tr.dead then
+					if tr.player and not tr.player.Parent then
+						addGhost(tr, "Left")
+					elseif not model.Parent then
+						addGhost(tr, "Gone")
+					end
+				end
+				tracked[model] = nil
+			end
+		end
+	end
+
+	local function drawGhosts(camera, camPos, viewport)
+		local H = cfg.History
+		local now = tick()
+		for i = #ghosts, 1, -1 do
+			local gh = ghosts[i]
+			local age = now - gh.born
+			local obj = gh.obj
+			if age >= H.Time then
+				removeObject(obj)
+				table.remove(ghosts, i)
+			else
+				local snap = gh.snap
+				local dist = (snap.pos - camPos).Magnitude
+				local minX, minY, maxX, maxY
+				if dist <= cfg.MaxDistance then
+					minX, minY, maxX, maxY = project(snap, camera)
+				end
+				if not minX then
+					hideObject(obj)
+				else
+					local alpha = H.Fade and math.clamp(1 - age / H.Time, 0.2, 1) or 1
+					local pal = obj.pal
+					pal.flat, pal.vis = true, nil
+					pal.c1, pal.c2, pal.solid = H.Color, H.Color, H.Color
+					local cx = (minX + maxX) / 2
+					drawBox(obj, minX, minY, maxX, maxY, pal, alpha, true, snap, camera)
+
+					local tg = use(obj, "text", true)
+					local n = cfg.Name
+					setText(tg, "Name", gh.name .. " [" .. tagText[gh.tag] .. "]", n.Size, H.Color, cx, minY - n.Size - 4, alpha)
+					hideText(tg, "Tool")
+					hideText(tg, "HealthText")
+					local below = maxY + 2
+					if cfg.Distance.Enabled then
+						setText(tg, "Distance", math.floor(dist) .. "m", cfg.Distance.Size, H.Color, cx, below, alpha)
+						below = below + cfg.Distance.Size + 1
+					else
+						hideText(tg, "Distance")
+					end
+					if H.Timer then
+						local s
+						if H.TimerMode == "Elapsed" then
+							s = string.format("+%.1fs", age)
+						else
+							s = string.format("%.1fs", math.max(H.Time - age, 0))
+						end
+						setText(tg, "Timer", s, 14, Color3.fromRGB(255, 255, 255), cx, below, alpha)
+					else
+						hideText(tg, "Timer")
+					end
+
+					local trg = use(obj, "tracer", cfg.Tracer.Enabled)
+					if trg then
+						trg.Line.From = getTracerOrigin(viewport)
+						trg.Line.To = v2(cx, maxY)
+						trg.Line.Color = H.Color
+						trg.Line.Thickness = cfg.Tracer.Thickness
+						trg.Line.Transparency = alpha * 0.8
+						trg.Line.Visible = true
+					end
+				end
+			end
+		end
+	end
+
+	local function processTarget(model, info, camera, viewport, camPos)
+		local obj = objects[model]
+		if not obj then
+			obj = createObject()
+			objects[model] = obj
+		end
+		local humanoid = model:FindFirstChildOfClass("Humanoid")
+		local alive = humanoid == nil or humanoid.Health > 0
+		local snap = alive and getSnap(model, humanoid) or nil
+		if cfg.History.Enabled then
+			track(model, info, snap, alive)
+		end
+		local dist = snap and (snap.pos - camPos).Magnitude or math.huge
+		if not snap or dist > cfg.MaxDistance then
+			hideObject(obj)
+			removeChams(model)
+			return
+		end
+		if info.Self and cfg.Self.HideFirstPerson then
+			local hd = model:FindFirstChild("Head")
+			if hd and (hd.Position - camPos).Magnitude < 2.2 then
+				hideObject(obj)
+				removeChams(model)
+				return
+			end
+		end
+
+		local g = cfg.Gradient
+		local pal = obj.pal
+		pal.flat = false
+		pal.vis = nil
+		local solid = cfg.Box.Color
+		local c1, c2 = g.Color1, g.Color2
+		if cfg.Visible.Enabled then
+			local vis = isVisible(model, snap.pos, camera)
+			solid = vis and cfg.Visible.Visible or cfg.Visible.Hidden
+			c1 = solid
+			c2 = solid:Lerp(black, 0.55)
+			pal.vis = solid
+		end
+		pal.c1, pal.c2, pal.solid = c1, c2, solid
+
+		if cfg.Chams.Enabled then
+			updateChams(model, pal, snap)
+		else
+			removeChams(model)
+		end
+
+		local minX, minY, maxX, maxY = project(snap, camera)
+		if not minX then
+			hideObject(obj)
+			drawArrow(obj, snap, camera, viewport, pal, dist)
+			return
+		end
+
+		local w, h = maxX - minX, maxY - minY
+		local cx = minX + w / 2
+
+		drawBox(obj, minX, minY, maxX, maxY, pal, 1, false, snap, camera)
+
+		local n, d, t, hp = cfg.Name, cfg.Distance, cfg.Tool, cfg.Health
+		local tg = use(obj, "text", n.Enabled or d.Enabled or t.Enabled or (hp.Enabled and hp.Number))
+		if tg then
+			if n.Enabled then
+				setText(tg, "Name", info.Name, n.Size, pc(g.Text, pal, sf(0.5, 0), n.Color, false), cx, minY - n.Size - 4, 1)
+			else
+				hideText(tg, "Name")
+			end
+			local below = maxY + 2
+			if d.Enabled then
+				setText(tg, "Distance", math.floor(dist) .. "m", d.Size, pc(g.Text, pal, sf(0.5, 1), d.Color, false), cx, below, 1)
+				below = below + d.Size + 1
+			else
+				hideText(tg, "Distance")
+			end
+			local tool = t.Enabled and model:FindFirstChildOfClass("Tool")
+			if tool then
+				setText(tg, "Tool", tool.Name, t.Size, t.Color, cx, below, 1)
+			else
+				hideText(tg, "Tool")
+			end
+			hideText(tg, "HealthText")
+			hideText(tg, "Timer")
+		end
+
+		local hg = use(obj, "health", hp.Enabled and humanoid and humanoid.MaxHealth > 0)
+		if hg then
+			local pct = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
+			local x = hp.Side == "Right" and (maxX + 5) or (minX - 5)
+			drawHealth(hg, x, minY, maxY, h, pct)
+			if tg and hp.Number then
+				local hs = 13
+				local lo = minY - 2
+				local ty = math.clamp(maxY - h * pct - hs / 2, lo, math.max(maxY - hs, lo))
+				local tx = hp.Side == "Right" and (x + 15) or (x - 15)
+				setText(tg, "HealthText", tostring(math.floor(humanoid.Health)), hs, white, tx, ty, 1)
+			end
+		end
+
+		local tr = cfg.Tracer
+		local trg = use(obj, "tracer", tr.Enabled)
+		if trg then
+			trg.Line.From = getTracerOrigin(viewport)
+			trg.Line.To = v2(cx, maxY)
+			trg.Line.Color = pc(g.Tracer, pal, 0.5, tr.Color, true)
+			trg.Line.Thickness = tr.Thickness
+			trg.Line.Transparency = 1
+			trg.Line.Visible = true
+		end
+
+		local sg = use(obj, "skel", cfg.Skeleton.Enabled and humanoid ~= nil)
+		if sg then
+			drawSkeleton(sg, model, camera, pal, minX, minY, w, h)
+		end
+
+		local hd, vl = cfg.HeadDot, cfg.ViewLine
+		local hdg = use(obj, "head", hd.Enabled or vl.Enabled)
+		if hdg then
+			local head = model:FindFirstChild("Head")
+			local okh = head and head:IsA("BasePart")
+			local sp = okh and camera:WorldToViewportPoint(head.Position) or nil
+			local showDot = hd.Enabled and sp ~= nil and sp.Z > 0
+			hdg.DotO.Visible = showDot
+			hdg.Dot.Visible = showDot
+			if showDot then
+				local r = math.clamp(h * 0.06 * hd.Size, 1.5, 60)
+				local pt = Vector2.new(sp.X, sp.Y)
+				hdg.DotO.Position = pt
+				hdg.DotO.Radius = r + 1.5
+				hdg.Dot.Position = pt
+				hdg.Dot.Radius = r
+				hdg.Dot.Color = pc(g.Extras, pal, sf(0.5, 0.1), hd.Color, false)
+			end
+			local showV = false
+			if vl.Enabled and sp ~= nil then
+				local b = camera:WorldToViewportPoint(head.Position + head.CFrame.LookVector * vl.Length)
+				if sp.Z > 0 and b.Z > 0 then
+					showV = true
+					hdg.VO.From = v2(sp.X, sp.Y)
+					hdg.VO.To = v2(b.X, b.Y)
+					hdg.VO.Thickness = vl.Thickness + 2
+					hdg.V.From = hdg.VO.From
+					hdg.V.To = hdg.VO.To
+					hdg.V.Thickness = vl.Thickness
+					hdg.V.Color = pc(g.Extras, pal, 0.5, vl.Color, false)
+				end
+			end
+			hdg.VO.Visible = showV
+			hdg.V.Visible = showV
+		end
+
+		drawArrow(obj, snap, camera, viewport, pal, dist)
+	end
+
+	local function espStep()
+		local camera = Workspace.CurrentCamera
+		if not camera then
+			return
+		end
+		GT = tick()
+
+		if not anyEnabled() then
+			for _, obj in pairs(objects) do
+				hideObject(obj)
+			end
+			for model in pairs(chamData) do
+				removeChams(model)
+			end
+			clearGhosts()
+			table.clear(tracked)
+			return
+		end
+
+		local targets = collectTargets()
+		for model, obj in pairs(objects) do
+			if not targets[model] or not model.Parent then
+				removeObject(obj)
+				objects[model] = nil
+			end
+		end
+		for model in pairs(chamData) do
+			if not targets[model] or not model.Parent then
+				removeChams(model)
+			end
+		end
+
+		local viewport = camera.ViewportSize
+		local camPos = camera.CFrame.Position
+		for model, info in pairs(targets) do
+			if not pcall(processTarget, model, info, camera, viewport, camPos) then
+				local obj = objects[model]
+				if obj then
+					hideObject(obj)
+				end
+			end
+		end
+
+		if cfg.History.Enabled then
+			trackCleanup(targets)
+			drawGhosts(camera, camPos, viewport)
+		else
+			clearGhosts()
+			table.clear(tracked)
+		end
+	end
+
+	local function pool(key)
+		local p = pools[key]
+		if not p then
+			p = {Line = {}, Triangle = {}, Circle = {}}
+			pools[key] = p
+		end
+		p.frame = frame
+		p.i = {Line = 0, Triangle = 0, Circle = 0}
+		return p
+	end
+
+	local function take(p, class)
+		local i = p.i[class] + 1
+		p.i[class] = i
+		local d = p[class][i]
+		if not d then
+			d = Drawing.new(class)
+			if class == "Triangle" then
+				d.Filled = true
+				d.ZIndex = 1
+			elseif class == "Circle" then
+				d.NumSides = 32
+				d.ZIndex = 2
+			else
+				d.ZIndex = 2
+			end
+			p[class][i] = d
+		end
+		d.Transparency = 1
+		d.Visible = true
+		return d
+	end
+
+	local function finish(p)
+		for _, class in ipairs(poolClasses) do
+			local list = p[class]
+			for i = p.i[class] + 1, #list do
+				list[i].Visible = false
+			end
+		end
+	end
+
+	local function removePool(p)
+		for _, class in ipairs(poolClasses) do
+			for _, d in ipairs(p[class]) do
+				pcall(function()
+					d:Remove()
+				end)
+			end
+		end
+	end
+
+	local function ringLines(p, camera, center, radius, n, spin, thickness, colorOf, opacity, dashed)
+		local pts, oks = {}, {}
+		for i = 0, n do
+			local a = spin + i / n * math.pi * 2
+			local s = camera:WorldToViewportPoint(center + Vector3.new(math.cos(a) * radius, 0, math.sin(a) * radius))
+			pts[i] = Vector2.new(s.X, s.Y)
+			oks[i] = s.Z > 0
+		end
+		for i = 0, n - 1 do
+			if (not dashed or i % 2 == 0) and oks[i] and oks[i + 1] then
+				local l = take(p, "Line")
+				l.From = pts[i]
+				l.To = pts[i + 1]
+				l.Color = colorOf(i / n)
+				l.Thickness = thickness
+				l.Transparency = opacity
+			end
+		end
+	end
+
+	local MP, MO = {}, {}
+
+	local function drawMesh(p, camera, cf, M, cfn, opacity, thick, fill, wire)
+		local v = M.v
+		for i = 1, #v do
+			local s = camera:WorldToViewportPoint(cf:PointToWorldSpace(v[i]))
+			MP[i] = Vector2.new(s.X, s.Y)
+			MO[i] = s.Z > 0
+		end
+		if fill then
+			local nt = #M.t
+			for k, tri in ipairs(M.t) do
+				local a, b, c = tri[1], tri[2], tri[3]
+				if MO[a] and MO[b] and MO[c] then
+					local tr = take(p, "Triangle")
+					tr.PointA, tr.PointB, tr.PointC = MP[a], MP[b], MP[c]
+					tr.Color = cfn(k / nt)
+					tr.Transparency = opacity
+				end
+			end
+		end
+		if wire then
+			local ne = #M.e
+			for k, e in ipairs(M.e) do
+				if MO[e[1]] and MO[e[2]] then
+					local l = take(p, "Line")
+					l.From, l.To = MP[e[1]], MP[e[2]]
+					l.Color = cfn(k / ne)
+					l.Thickness = thick
+				end
+			end
+		end
+	end
+
+	local function circ(r, y, n, i)
+		local a = i / n * math.pi * 2
+		return Vector3.new(math.cos(a) * r, y, math.sin(a) * r)
+	end
+
+	local hatBuilders = {}
+
+	hatBuilders["Wizard"] = function(R, H)
+		local n = 20
+		local v, t, e = {}, {}, {}
+		local rc, rb = R * 0.65, R * 1.35
+		v[1] = Vector3.new(0, H * 1.6, 0)
+		for i = 0, n - 1 do
+			v[2 + i] = circ(rc, 0, n, i)
+			v[2 + n + i] = circ(rb, 0, n, i)
+		end
+		for i = 0, n - 1 do
+			local a, b = 2 + i, 2 + (i + 1) % n
+			local c, d = 2 + n + i, 2 + n + (i + 1) % n
+			t[#t + 1] = {1, a, b}
+			t[#t + 1] = {a, c, d}
+			t[#t + 1] = {a, d, b}
+			e[#e + 1] = {a, b}
+			e[#e + 1] = {c, d}
+			if i % 2 == 0 then
+				e[#e + 1] = {1, a}
+			end
+		end
+		return {v = v, t = t, e = e}
+	end
+
+	hatBuilders["Crown"] = function(R, H)
+		local teeth = 5
+		local m = teeth * 2
+		local r = R * 0.6
+		local v, t, e = {}, {}, {}
+		for j = 0, m - 1 do
+			v[1 + j] = circ(r, 0, m, j)
+			v[1 + m + j] = circ(r, (j % 2 == 0) and H * 0.95 or H * 0.45, m, j)
+		end
+		for j = 0, m - 1 do
+			local a, b = 1 + j, 1 + (j + 1) % m
+			local c, d = 1 + m + j, 1 + m + (j + 1) % m
+			t[#t + 1] = {a, c, d}
+			t[#t + 1] = {a, d, b}
+			e[#e + 1] = {a, b}
+			e[#e + 1] = {c, d}
+			e[#e + 1] = {a, c}
+		end
+		return {v = v, t = t, e = e}
+	end
+
+	hatBuilders["Top Hat"] = function(R, H)
+		local n = 20
+		local rcyl, rbrim, hh = R * 0.45, R * 0.9, H * 1.2
+		local v, t, e = {}, {}, {}
+		for i = 0, n - 1 do
+			v[1 + i] = circ(rbrim, 0, n, i)
+			v[1 + n + i] = circ(rcyl, 0, n, i)
+			v[1 + 2 * n + i] = circ(rcyl, hh, n, i)
+			v[1 + 3 * n + i] = circ(rcyl * 1.02, hh * 0.22, n, i)
+		end
+		v[1 + 4 * n] = Vector3.new(0, hh, 0)
+		local top = 1 + 4 * n
+		for i = 0, n - 1 do
+			local j = (i + 1) % n
+			local br, bo, tp = 1 + i, 1 + n + i, 1 + 2 * n + i
+			local br2, bo2, tp2 = 1 + j, 1 + n + j, 1 + 2 * n + j
+			t[#t + 1] = {br, bo, bo2}
+			t[#t + 1] = {br, bo2, br2}
+			t[#t + 1] = {bo, tp, tp2}
+			t[#t + 1] = {bo, tp2, bo2}
+			t[#t + 1] = {top, tp, tp2}
+			e[#e + 1] = {br, br2}
+			e[#e + 1] = {tp, tp2}
+			e[#e + 1] = {1 + 3 * n + i, 1 + 3 * n + j}
+			if i % 2 == 0 then
+				e[#e + 1] = {bo, tp}
+			end
+		end
+		return {v = v, t = t, e = e}
+	end
+
+	hatBuilders["Cat Ears"] = function(R, H, hs)
+		local v, t, e = {}, {}, {}
+		for _, s in ipairs({1, -1}) do
+			local b = #v
+			v[b + 1] = Vector3.new(s * hs * 0.15, 0, 0)
+			v[b + 2] = Vector3.new(s * hs * 0.85, 0, 0)
+			v[b + 3] = Vector3.new(s * hs * 0.65, H * 0.95, 0)
+			v[b + 4] = Vector3.new(s * hs * 0.3, 0, -0.03)
+			v[b + 5] = Vector3.new(s * hs * 0.7, 0, -0.03)
+			v[b + 6] = Vector3.new(s * hs * 0.62, H * 0.6, -0.03)
+			t[#t + 1] = {b + 1, b + 2, b + 3}
+			t[#t + 1] = {b + 4, b + 5, b + 6}
+			e[#e + 1] = {b + 1, b + 2}
+			e[#e + 1] = {b + 2, b + 3}
+			e[#e + 1] = {b + 3, b + 1}
+		end
+		return {v = v, t = t, e = e}
+	end
+
+	hatBuilders["Horns"] = function(R, H, hs)
+		local v, t, e = {}, {}, {}
+		local steps = 8
+		for _, s in ipairs({1, -1}) do
+			local base = #v
+			for i = 0, steps do
+				local tt = i / steps
+				local x = s * (hs * 0.55 + R * 0.45 * math.sin(tt * math.pi * 0.75))
+				local y = H * 1.4 * tt
+				local w = hs * 0.2 * (1 - tt) + 0.01
+				v[base + 1 + i * 2] = Vector3.new(x - w, y, 0)
+				v[base + 2 + i * 2] = Vector3.new(x + w, y, 0)
+			end
+			for i = 0, steps - 1 do
+				local l1, r1 = base + 1 + i * 2, base + 2 + i * 2
+				local l2, r2 = base + 3 + i * 2, base + 4 + i * 2
+				t[#t + 1] = {l1, r1, l2}
+				t[#t + 1] = {r1, r2, l2}
+				e[#e + 1] = {l1, l2}
+				e[#e + 1] = {r1, r2}
+			end
+		end
+		return {v = v, t = t, e = e}
+	end
+
+	local hatCache = {}
+	local function getHatMesh(kind, R, H, hs)
+		local key = string.format("%s|%.2f|%.2f|%.2f", kind, R, H, hs)
+		local m = hatCache[key]
+		if not m then
+			m = hatBuilders[kind](R, H, hs)
+			hatCache[key] = m
+		end
+		return m
+	end
+
+	local function drawHatMesh(key, head, camera, t)
+		local h = cfg.Hat
+		local p = pool(key)
+		if key == "hat:self" and (camera.CFrame.Position - head.Position).Magnitude < h.HideDist then
+			return
+		end
+		local sc = h.Scale
+		local spin = h.Spin and t * h.SpinSpeed or 0
+		local cfn = colorFn(h.Color1, h.Color2, h.Rainbow, spin / (math.pi * 2))
+		local M = getHatMesh(h.Type, h.Radius * sc, h.Height * sc, head.Size.X / 2 * sc)
+		local cf
+		if h.Type == "Cat Ears" or h.Type == "Horns" then
+			cf = head.CFrame * CFrame.new(h.OffX, head.Size.Y / 2 + h.Offset, -h.OffZ)
+		else
+			local pos = head.Position + Vector3.new(0, head.Size.Y / 2 + h.Offset, 0) + head.CFrame.RightVector * h.OffX + head.CFrame.LookVector * h.OffZ
+			cf = CFrame.new(pos) * CFrame.Angles(0, spin, 0)
+		end
+		local style = h.Style
+		drawMesh(p, camera, cf, M, cfn, h.Opacity, h.Thickness, style ~= "Wireframe", style ~= "Filled" or h.Outline)
+	end
+
+	local function drawHat(key, head, camera, t)
+		local h = cfg.Hat
+		if h.Type ~= "China Hat" then
+			return drawHatMesh(key, head, camera, t)
+		end
+		local p = pool(key)
+		local camDist = (camera.CFrame.Position - head.Position).Magnitude
+		if key == "hat:self" and camDist < h.HideDist then
+			return
+		end
+
+		local n = h.Segments
+		local R, H = h.Radius * h.Scale, h.Height * h.Scale
+		local center = head.Position + Vector3.new(0, head.Size.Y / 2 + h.Offset, 0) + head.CFrame.RightVector * h.OffX + head.CFrame.LookVector * h.OffZ
+		local apexW = center + Vector3.new(0, H, 0)
+		local spin = h.Spin and t * h.SpinSpeed or 0
+		local cf = colorFn(h.Color1, h.Color2, h.Rainbow, spin / (math.pi * 2))
+		local style = h.Style
+
+		local apexS = camera:WorldToViewportPoint(apexW)
+		local apex = Vector2.new(apexS.X, apexS.Y)
+		local apexOk = apexS.Z > 0
+
+		if style == "Rings" then
+			for k = 0, 3 do
+				local f = k / 4
+				local c = cf(f)
+				ringLines(p, camera, center + Vector3.new(0, H * f, 0), R * (1 - f), n, spin, h.Thickness, function()
+					return c
+				end, 1, false)
+			end
+			return
+		end
+
+		if style == "Spiral" then
+			local total = n * 3
+			local pts, oks = {}, {}
+			for k = 0, total do
+				local f = k / total
+				local a = spin + f * 4 * math.pi * 2
+				local s = camera:WorldToViewportPoint(center + Vector3.new(math.cos(a) * R * (1 - f), H * f, math.sin(a) * R * (1 - f)))
+				pts[k] = Vector2.new(s.X, s.Y)
+				oks[k] = s.Z > 0
+			end
+			for k = 0, total - 1 do
+				if oks[k] and oks[k + 1] then
+					local l = take(p, "Line")
+					l.From = pts[k]
+					l.To = pts[k + 1]
+					l.Color = cf(k / total)
+					l.Thickness = h.Thickness
+				end
+			end
+			if h.Outline then
+				ringLines(p, camera, center, R, n, spin, h.Thickness, cf, 1, false)
+			end
+			return
+		end
+
+		local base, oks = {}, {}
+		for i = 0, n do
+			local a = spin + i / n * math.pi * 2
+			local s = camera:WorldToViewportPoint(center + Vector3.new(math.cos(a) * R, 0, math.sin(a) * R))
+			base[i] = Vector2.new(s.X, s.Y)
+			oks[i] = s.Z > 0
+		end
+
+		local fill = style == "Filled" or style == "Filled + Wireframe"
+		local wire = style == "Wireframe" or style == "Filled + Wireframe"
+
+		if fill and apexOk then
+			for i = 0, n - 1 do
+				if oks[i] and oks[i + 1] then
+					local tr = take(p, "Triangle")
+					tr.PointA = apex
+					tr.PointB = base[i]
+					tr.PointC = base[i + 1]
+					tr.Color = cf((i + 0.5) / n)
+					tr.Transparency = h.Opacity
+				end
+			end
+		end
+		if wire and apexOk then
+			for i = 0, n - 1 do
+				if oks[i] then
+					local l = take(p, "Line")
+					l.From = apex
+					l.To = base[i]
+					l.Color = cf(i / n)
+					l.Thickness = h.Thickness
+				end
+			end
+		end
+		if wire or h.Outline then
+			for i = 0, n - 1 do
+				if oks[i] and oks[i + 1] then
+					local l = take(p, "Line")
+					l.From = base[i]
+					l.To = base[i + 1]
+					l.Color = cf(i / n)
+					l.Thickness = h.Thickness
+				end
+			end
+		end
+	end
+
+	local function mirrorPoly(poly)
+		local r = {}
+		for i = #poly, 1, -1 do
+			r[#r + 1] = {-poly[i][1], poly[i][2]}
+		end
+		return r
+	end
+
+	local function mirrorLine(l)
+		local r = {}
+		for i, pt in ipairs(l) do
+			r[i] = {-pt[1], pt[2]}
+		end
+		return r
+	end
+
+	local maskDesigns = {}
+	do
+		local eyeL = {{-0.95, 0.3}, {-0.15, 0.35}, {-0.1, -0.1}, {-0.75, -0.2}, {-0.97, 0.0}}
+		maskDesigns["Domino"] = {polys = {eyeL, mirrorPoly(eyeL), {{-0.2, 0.2}, {0.2, 0.2}, {0.2, 0.05}, {-0.2, 0.05}}}, lines = {}}
+
+		maskDesigns["Visor"] = {
+			polys = {{{-0.95, 0.4}, {0.95, 0.4}, {0.8, -0.2}, {-0.8, -0.2}}, {{-0.8, 0.3}, {0.8, 0.3}, {0.75, 0.2}, {-0.75, 0.2}}},
+			lines = {}
+		}
+
+		local lens = {{-0.9, 0.3}, {-0.1, 0.3}, {-0.15, -0.2}, {-0.85, -0.2}}
+		maskDesigns["Sunglasses"] = {polys = {lens, mirrorPoly(lens), {{-0.1, 0.25}, {0.1, 0.25}, {0.1, 0.15}, {-0.1, 0.15}}}, lines = {}}
+
+		local brow = {{-0.95, 0.55}, {-0.1, 0.2}, {-0.1, 0.4}, {-0.9, 0.75}}
+		local fang = {{-0.5, -0.55}, {-0.3, -0.55}, {-0.4, -0.9}}
+		local scar = {{-0.8, -0.2}, {-0.6, -0.45}}
+		maskDesigns["Demon"] = {
+			polys = {brow, mirrorPoly(brow), fang, mirrorPoly(fang), {{-0.7, 0.1}, {-0.3, 0.0}, {-0.3, 0.15}, {-0.7, 0.2}}, mirrorPoly({{-0.7, 0.1}, {-0.3, 0.0}, {-0.3, 0.15}, {-0.7, 0.2}})},
+			lines = {scar, mirrorLine(scar)}
+		}
+
+		local eye = {{-0.55, 0.35}, {-0.25, 0.35}, {-0.25, 0.05}, {-0.55, 0.05}}
+		local mouth = {}
+		for i = 0, 10 do
+			mouth[#mouth + 1] = {-0.6 + 1.2 * i / 10, -0.2 - 0.3 * math.sin(math.pi * i / 10)}
+		end
+		maskDesigns["Smile"] = {polys = {eye, mirrorPoly(eye)}, lines = {mouth}}
+
+		maskDesigns["Cyber"] = {
+			polys = {{{-0.95, 0.4}, {0.95, 0.4}, {0.8, -0.2}, {-0.8, -0.2}}},
+			lines = {{{0, 0.4}, {0, -0.2}}, {{-0.5, -0.45}, {0.5, -0.45}}, {{-0.5, -0.6}, {0.5, -0.6}}, {{-0.5, -0.75}, {0.5, -0.75}}}
+		}
+
+		local whisk1 = {{-0.4, -0.25}, {-1.05, -0.15}}
+		local whisk2 = {{-0.4, -0.3}, {-1.1, -0.3}}
+		local whisk3 = {{-0.4, -0.35}, {-1.05, -0.45}}
+		local slit = {{-0.6, 0.25}, {-0.25, 0.15}, {-0.6, 0.1}}
+		maskDesigns["Cat Face"] = {
+			polys = {{{-0.12, -0.05}, {0.12, -0.05}, {0, -0.22}}, slit, mirrorPoly(slit)},
+			lines = {whisk1, mirrorLine(whisk1), whisk2, mirrorLine(whisk2), whisk3, mirrorLine(whisk3)}
+		}
+	end
+
+	local function drawMask(key, head, camera, t)
+		local m = cfg.Mask
+		local p = pool(key)
+		local toCam = camera.CFrame.Position - head.Position
+		if toCam.Magnitude < m.HideDist and key == "mask:self" then
+			return
+		end
+		if toCam:Dot(head.CFrame.LookVector) <= 0 then
+			return
+		end
+		local design = maskDesigns[m.Style]
+		if not design then
+			return
+		end
+		local cfn = colorFn(m.Color1, m.Color2, m.Rainbow, t * 0.15)
+		local cf = head.CFrame
+		local hx, hy, hz = head.Size.X / 2, head.Size.Y / 2, head.Size.Z / 2
+		local zf = -hz - 0.03 - m.OffZ
+		local sc = m.Scale
+		local np = #design.polys
+
+		for pi, poly in ipairs(design.polys) do
+			local all = true
+			for i, pt in ipairs(poly) do
+				local s = camera:WorldToViewportPoint(cf:PointToWorldSpace(Vector3.new(pt[1] * hx * sc + m.OffX, pt[2] * hy * sc + m.OffY, zf)))
+				MP[i] = Vector2.new(s.X, s.Y)
+				if s.Z <= 0 then
+					all = false
+				end
+			end
+			if all then
+				local col = cfn(pi / np)
+				if m.Fill then
+					for i = 2, #poly - 1 do
+						local tr = take(p, "Triangle")
+						tr.PointA, tr.PointB, tr.PointC = MP[1], MP[i], MP[i + 1]
+						tr.Color = col
+						tr.Transparency = m.Opacity
+					end
+				end
+				if m.Outline then
+					for i = 1, #poly do
+						local l = take(p, "Line")
+						l.From = MP[i]
+						l.To = MP[i % #poly + 1]
+						l.Color = m.Fill and black or col
+						l.Thickness = m.Thickness
+					end
+				end
+			end
+		end
+
+		for li, line in ipairs(design.lines) do
+			local pts, oks = {}, {}
+			for i, pt in ipairs(line) do
+				local s = camera:WorldToViewportPoint(cf:PointToWorldSpace(Vector3.new(pt[1] * hx * sc + m.OffX, pt[2] * hy * sc + m.OffY, zf)))
+				pts[i] = Vector2.new(s.X, s.Y)
+				oks[i] = s.Z > 0
+			end
+			local col = cfn(li / math.max(#design.lines, 1))
+			for i = 1, #line - 1 do
+				if oks[i] and oks[i + 1] then
+					local l = take(p, "Line")
+					l.From, l.To = pts[i], pts[i + 1]
+					l.Color = col
+					l.Thickness = m.Thickness + 1
+				end
+			end
+		end
+	end
+
+	local function drawHalo(head, camera, t)
+		local h = cfg.Halo
+		local p = pool("halo")
+		if (camera.CFrame.Position - head.Position).Magnitude < h.HideDist then
+			return
+		end
+		local bob = h.Bob and math.sin(t * 2) * 0.15 or 0
+		local center = head.Position + Vector3.new(0, head.Size.Y / 2 + h.Offset + bob, 0) + head.CFrame.RightVector * h.OffX + head.CFrame.LookVector * h.OffZ
+		local cf = colorFn(h.Color, h.Color, h.Rainbow, t * 0.2)
+		local style = h.Style
+		if style == "Ring" then
+			ringLines(p, camera, center, h.Radius, 32, 0, h.Thickness, cf, 1, false)
+		elseif style == "Double" then
+			ringLines(p, camera, center, h.Radius, 32, 0, h.Thickness, cf, 1, false)
+			ringLines(p, camera, center, h.Radius * 0.8, 32, 0, h.Thickness, cf, 1, false)
+		elseif style == "Glow" then
+			ringLines(p, camera, center, h.Radius, 32, 0, h.Thickness + 5, cf, 0.2, false)
+			ringLines(p, camera, center, h.Radius, 32, 0, h.Thickness + 2, cf, 0.45, false)
+			ringLines(p, camera, center, h.Radius, 32, 0, h.Thickness, cf, 1, false)
+		else
+			ringLines(p, camera, center, h.Radius, 24, t * 1.2, h.Thickness, cf, 1, true)
+		end
+	end
+
+	local function drawOrbit(root, camera, t)
+		local o = cfg.Orbit
+		local p = pool("orbit")
+		local cf = colorFn(o.Color1, o.Color2, o.Rainbow, t * 0.15)
+		local center = root.Position + root.CFrame:VectorToWorldSpace(Vector3.new(o.OffX, 0, -o.OffZ)) + Vector3.new(0, o.Offset, 0)
+		local count = o.Count
+		for i = 0, count - 1 do
+			local a = t * o.Speed + i / count * math.pi * 2
+			local c, s = math.cos(a) * o.Radius, math.sin(a) * o.Radius
+			local lv
+			if o.Style == "Horizontal" then
+				lv = Vector3.new(c, 0, s)
+			elseif o.Style == "Vertical" then
+				lv = Vector3.new(c, s, 0)
+			elseif o.Style == "Cross" then
+				if i % 2 == 0 then
+					lv = Vector3.new(c, 0, s)
+				else
+					lv = Vector3.new(c, s, 0)
+				end
+			else
+				lv = Vector3.new(c, (i / count - 0.5) * o.Radius * 2, s)
+			end
+			local sp = camera:WorldToViewportPoint(center + root.CFrame:VectorToWorldSpace(lv))
+			if sp.Z > 0 then
+				local r = math.clamp(o.Size * 18 / sp.Z, 1.5, 40)
+				local pt = Vector2.new(sp.X, sp.Y)
+				local outline = take(p, "Circle")
+				outline.Position = pt
+				outline.Radius = r + 1.5
+				outline.Filled = true
+				outline.Color = black
+				outline.ZIndex = 1
+				local dot = take(p, "Circle")
+				dot.Position = pt
+				dot.Radius = r
+				dot.Filled = true
+				dot.Color = cf(i / count)
+				dot.ZIndex = 2
+			end
+		end
+	end
+
+	local function oval(cx, cy, rx, ry, n)
+		local t = {}
+		for i = 0, n - 1 do
+			local a = i / n * math.pi * 2
+			t[#t + 1] = {cx + math.cos(a) * rx, cy + math.sin(a) * ry}
+		end
+		return t
+	end
+
+	local function SP(pts, c, fc)
+		return {k = "poly", pts = pts, c = c, fc = fc}
+	end
+
+	local function SC(x, y, r, c, filled)
+		return {k = "circ", x = x, y = y, r = r, c = c, filled = filled ~= false}
+	end
+
+	local function SL(x1, y1, x2, y2, c)
+		return {k = "line", x1 = x1, y1 = y1, x2 = x2, y2 = y2, c = c}
+	end
+
+	local sprites = {}
+	local cute = {Heart = true, Star = true, Flower = true, Sparkle = true}
+
+	do
+		local heart = {}
+		for i = 0, 31 do
+			local t = i / 32 * math.pi * 2
+			heart[#heart + 1] = {math.sin(t) ^ 3, -(13 * math.cos(t) - 5 * math.cos(2 * t) - 2 * math.cos(3 * t) - math.cos(4 * t)) / 16}
+		end
+		sprites.Heart = {SP(heart, 1, {0, 0.05}), SC(-0.45, -0.35, 0.14, 4)}
+
+		local star = {}
+		for i = 0, 9 do
+			local r = (i % 2 == 0) and 1 or 0.45
+			local a = -math.pi / 2 + i * math.pi / 5
+			star[#star + 1] = {math.cos(a) * r, math.sin(a) * r}
+		end
+		sprites.Star = {SP(star, 1, {0, 0}), SC(-0.2, 0.05, 0.07, 3), SC(0.2, 0.05, 0.07, 3), SC(-0.36, 0.22, 0.09, 2), SC(0.36, 0.22, 0.09, 2)}
+
+		local fl = {}
+		for i = 0, 5 do
+			local a = i / 6 * math.pi * 2
+			fl[#fl + 1] = SC(math.cos(a) * 0.55, math.sin(a) * 0.55, 0.38, 1)
+		end
+		fl[#fl + 1] = SC(0, 0, 0.3, 2)
+		sprites.Flower = fl
+
+		sprites.Sparkle = {
+			SP({{0, -1}, {0.22, -0.22}, {1, 0}, {0.22, 0.22}, {0, 1}, {-0.22, 0.22}, {-1, 0}, {-0.22, -0.22}}, 1, {0, 0}),
+			SP({{0.62, -0.95}, {0.7, -0.7}, {0.95, -0.62}, {0.7, -0.54}, {0.62, -0.3}, {0.54, -0.54}, {0.3, -0.62}, {0.54, -0.7}}, 2, {0.62, -0.62})
+		}
+
+		sprites.Classic = {
+			SP({{0, 0}, {0, 1}, {0.23, 0.79}, {0.38, 1.12}, {0.53, 1.05}, {0.39, 0.73}, {0.7, 0.73}}, 1, {0.15, 0.4}),
+			scale = 1.7
+		}
+		sprites.Pointer = {SP({{0, 0}, {0.5, 1}, {0, 0.72}, {-0.5, 1}}, 1, {0, 0.5}), scale = 1.6, tilt = -0.35}
+		sprites.Kite = {
+			SP({{0, 0}, {0.4, 0.55}, {0, 0.55}}, 1), SP({{0, 0}, {0, 0.55}, {-0.4, 0.55}}, 2),
+			SP({{0, 0.55}, {0.4, 0.55}, {0, 1.1}}, 2), SP({{0, 0.55}, {0, 1.1}, {-0.4, 0.55}}, 1),
+			scale = 1.6, tilt = -0.35
+		}
+		sprites.Chevron = {
+			SP({{0, 0}, {0.55, 0.55}, {0.55, 0.9}, {0, 0.35}, {-0.55, 0.9}, {-0.55, 0.55}}, 1, {0, 0.15}),
+			SP({{0, 0.5}, {0.55, 1.05}, {0.55, 1.4}, {0, 0.85}, {-0.55, 1.4}, {-0.55, 1.05}}, 2, {0, 0.65}),
+			scale = 1.2, tilt = -0.35
+		}
+		sprites.Plane = {
+			SP({{0, 0}, {0.6, 0.85}, {0.08, 0.7}}, 1), SP({{0, 0}, {-0.6, 0.85}, {-0.08, 0.7}}, 2),
+			SP({{0, 0}, {0.08, 0.7}, {0, 1.1}}, 1), SP({{0, 0}, {0, 1.1}, {-0.08, 0.7}}, 2),
+			scale = 1.6, tilt = -0.35
+		}
+		sprites.Compass = {
+			SP({{0, 0}, {0.28, 0.7}, {-0.28, 0.7}}, 1), SP({{0.28, 0.7}, {-0.28, 0.7}, {0, 1.4}}, 2), SC(0, 0.7, 0.1, 4),
+			scale = 1.2, tilt = -0.35
+		}
+		sprites.Dot = {SC(0, 0, 0.5, 1)}
+		sprites.Ring = {SC(0, 0, 0.7, 1, false)}
+	end
+
+	local function drawSprite(p, sp, cx, cy, size, rot, c1, c2, outline, alpha, z0)
+		local cs, sn = math.cos(rot), math.sin(rot)
+		local cols = {c1, c2, black, white}
+		local function T(x, y)
+			return Vector2.new(cx + (x * cs - y * sn) * size, cy + (x * sn + y * cs) * size)
+		end
+		if outline then
+			for _, e in ipairs(sp) do
+				if e.k == "poly" and e.c ~= 4 then
+					local n = #e.pts
+					for j = 1, n do
+						local a, b = e.pts[j], e.pts[j % n + 1]
+						local l = take(p, "Line")
+						l.From, l.To = T(a[1], a[2]), T(b[1], b[2])
+						l.Color, l.Thickness, l.Transparency, l.ZIndex = black, 3, alpha, z0 + 1
+					end
+				elseif e.k == "circ" and e.c ~= 3 and e.c ~= 4 then
+					local d = take(p, "Circle")
+					d.Position = T(e.x, e.y)
+					d.Radius = e.r * size + (e.filled and 1.5 or 0)
+					d.Filled = e.filled
+					d.Thickness = 4
+					d.Color, d.Transparency, d.ZIndex = black, alpha, z0 + 1
+				end
+			end
+		end
+		for i, e in ipairs(sp) do
+			local z, col = z0 + 2 + i, cols[e.c]
+			if e.k == "poly" then
+				local pts, n = e.pts, #e.pts
+				if e.fc then
+					local ctr = T(e.fc[1], e.fc[2])
+					for j = 1, n do
+						local a, b = pts[j], pts[j % n + 1]
+						local tr = take(p, "Triangle")
+						tr.PointA, tr.PointB, tr.PointC = ctr, T(a[1], a[2]), T(b[1], b[2])
+						tr.Color, tr.Transparency, tr.ZIndex = col, alpha, z
+					end
+				else
+					local a = T(pts[1][1], pts[1][2])
+					for j = 2, n - 1 do
+						local tr = take(p, "Triangle")
+						tr.PointA, tr.PointB, tr.PointC = a, T(pts[j][1], pts[j][2]), T(pts[j + 1][1], pts[j + 1][2])
+						tr.Color, tr.Transparency, tr.ZIndex = col, alpha, z
+					end
+				end
+			elseif e.k == "circ" then
+				local d = take(p, "Circle")
+				d.Position = T(e.x, e.y)
+				d.Radius = e.r * size
+				d.Filled = e.filled
+				d.Thickness = 2
+				d.Color, d.Transparency, d.ZIndex = col, alpha, z
+			else
+				local l = take(p, "Line")
+				l.From, l.To = T(e.x1, e.y1), T(e.x2, e.y2)
+				l.Color, l.Thickness, l.Transparency, l.ZIndex = col, 1.5, alpha, z
+			end
+		end
+	end
+
+	local function pickColors(c1, c2, mode, t)
+		if mode == "Rainbow" then
+			local h = (t * 0.3) % 1
+			return Color3.fromHSV(h, 0.7, 1), Color3.fromHSV((h + 0.15) % 1, 0.7, 1)
+		elseif mode == "Gradient" then
+			local x = pp(t * 0.3)
+			return c1:Lerp(c2, x), c2:Lerp(c1, x)
+		elseif mode == "Pulse" then
+			return c1:Lerp(c2, math.sin(t * 3) * 0.5 + 0.5), c2
+		end
+		return c1, c2
+	end
+
+	local function ln(p, a, b, col, th, alpha, outline)
+		if outline then
+			local o = take(p, "Line")
+			o.From, o.To = a, b
+			o.Color, o.Thickness, o.Transparency, o.ZIndex = black, th + 2, alpha, 1
+		end
+		local l = take(p, "Line")
+		l.From, l.To = a, b
+		l.Color, l.Thickness, l.Transparency, l.ZIndex = col, th, alpha, 2
+	end
+
+	local crossDyn = 0
+
+	local function drawCross(camera, t)
+		local c = cfg.Cross
+		local p = pool("cross")
+		local pos = c.AtMouse and UserInputService:GetMouseLocation() or (camera.ViewportSize / 2)
+		local cx, cy = math.floor(pos.X + c.OffX + 0.5), math.floor(pos.Y + c.OffY + 0.5)
+		local col, col2 = pickColors(c.Color, c.Color2, c.ColorMode, t)
+		local a, s, th, ol, style = c.Opacity, c.Size, c.Thickness, c.Outline, c.Style
+		local rot = c.Spin and t * c.SpinSpeed or 0
+
+		if cute[style] then
+			drawSprite(p, sprites[style], cx, cy, s * 1.2, rot, col, col2, ol, a, 0)
+			return
+		end
+
+		local target = 0
+		if c.Dynamic then
+			local char = lp.Character
+			local r = char and char:FindFirstChild("HumanoidRootPart")
+			if r then
+				local v = r.AssemblyLinearVelocity
+				target = math.min(Vector3.new(v.X, 0, v.Z).Magnitude / 16, 1.5) * c.DynAmount
+			end
+		end
+		crossDyn = crossDyn + (target - crossDyn) * 0.2
+		local gap = c.Gap + crossDyn
+
+		local cs, sn = math.cos(rot), math.sin(rot)
+		local function R(x, y)
+			return Vector2.new(cx + x * cs - y * sn, cy + x * sn + y * cs)
+		end
+
+		if style == "Classic" or style == "T-Shape" then
+			for k = 0, 3 do
+				if not (style == "T-Shape" and k == 3) then
+					local ang = k * math.pi / 2
+					local dx, dy = math.cos(ang), math.sin(ang)
+					ln(p, R(dx * gap, dy * gap), R(dx * (gap + s), dy * (gap + s)), col, th, a, ol)
+				end
+			end
+		elseif style == "Circle" then
+			local o = take(p, "Circle")
+			o.Position, o.Radius, o.Filled, o.Thickness = Vector2.new(cx, cy), s, false, th + 2
+			o.Color, o.Transparency, o.ZIndex = black, ol and a or 0, 1
+			local m = take(p, "Circle")
+			m.Position, m.Radius, m.Filled, m.Thickness = Vector2.new(cx, cy), s, false, th
+			m.Color, m.Transparency, m.ZIndex = col, a, 2
+		elseif style == "Square" then
+			local q = {R(-s, -s), R(s, -s), R(s, s), R(-s, s)}
+			for k = 1, 4 do
+				ln(p, q[k], q[k % 4 + 1], col, th, a, ol)
+			end
+		elseif style == "Brackets" then
+			local L = s * 0.6
+			for _, sx in ipairs({-1, 1}) do
+				for _, sy in ipairs({-1, 1}) do
+					local q = R(sx * s, sy * s)
+					ln(p, q, R(sx * s - sx * L, sy * s), col, th, a, ol)
+					ln(p, q, R(sx * s, sy * s - sy * L), col, th, a, ol)
+				end
+			end
+		elseif style == "Triangle" then
+			local q = {}
+			for k = 0, 2 do
+				local ang = -math.pi / 2 + k * math.pi * 2 / 3
+				q[k + 1] = R(math.cos(ang) * s, math.sin(ang) * s)
+			end
+			for k = 1, 3 do
+				ln(p, q[k], q[k % 3 + 1], col, th, a, ol)
+			end
+		elseif style == "Burst" then
+			for k = 0, 7 do
+				local ang = k * math.pi / 4
+				local dx, dy = math.cos(ang), math.sin(ang)
+				local len = (k % 2 == 0) and s or s * 0.6
+				ln(p, R(dx * gap, dy * gap), R(dx * (gap + len), dy * (gap + len)), col, th, a, ol)
+			end
+		end
+
+		if style == "Dot" or c.Dot then
+			local r = style == "Dot" and math.max(s / 3, 1.5) or c.DotSize
+			local center = Vector2.new(cx, cy)
+			if ol then
+				local o = take(p, "Circle")
+				o.Position, o.Radius, o.Filled = center, r + 1, true
+				o.Color, o.Transparency, o.ZIndex = black, a, 1
+			end
+			local m = take(p, "Circle")
+			m.Position, m.Radius, m.Filled = center, r, true
+			m.Color, m.Transparency, m.ZIndex = style == "Dot" and col or col2, a, 3
+		end
+	end
+
+	local mouseHid, mouseOrig = false, true
+	local trail = {}
+
+	local function updateMouseIcon()
+		local m = cfg.Mouse
+		if m.Enabled and m.HideSystem then
+			if not mouseHid then
+				mouseOrig = UserInputService.MouseIconEnabled
+				mouseHid = true
+			end
+			UserInputService.MouseIconEnabled = false
+		elseif mouseHid then
+			UserInputService.MouseIconEnabled = mouseOrig
+			mouseHid = false
+		end
+	end
+
+	local function drawMouse(t)
+		local m = cfg.Mouse
+		local p = pool("mouse")
+		local pos = UserInputService:GetMouseLocation()
+		local mx, my = pos.X + m.OffX, pos.Y + m.OffY
+		local col, col2 = pickColors(m.Color1, m.Color2, m.ColorMode, t)
+
+		if m.Trail then
+			local count = #trail
+			local last = trail[count]
+			if not last then
+				trail[1] = {x = mx, y = my, t = t}
+				count = 1
+			else
+				local dx, dy = mx - last.x, my - last.y
+				local dist = math.sqrt(dx * dx + dy * dy)
+				local gap = math.max(m.Size * 0.3, 2)
+				if dist > 600 then
+					count = count + 1
+					trail[count] = {x = mx, y = my, t = t}
+				elseif dist > gap then
+					local steps = math.min(math.floor(dist / gap), 80)
+					local lx, ly, lt = last.x, last.y, last.t
+					for i = 1, steps do
+						local k = i / steps
+						trail[count + i] = {x = lx + dx * k, y = ly + dy * k, t = lt + (t - lt) * k}
+					end
+					count = count + steps
+				end
+			end
+			local drop = 0
+			while drop < count and t - trail[drop + 1].t > 0.4 do
+				drop = drop + 1
+			end
+			drop = math.max(drop, count - m.TrailLength * 2)
+			if drop > 0 then
+				table.move(trail, drop + 1, count, 1)
+				for i = count - drop + 1, count do
+					trail[i] = nil
+				end
+			end
+			for _, pt in ipairs(trail) do
+				local f = 1 - (t - pt.t) / 0.4
+				local d = take(p, "Circle")
+				d.Position = Vector2.new(pt.x, pt.y)
+				d.Radius = math.max(1, m.Size * 0.4 * f)
+				d.Filled = true
+				d.Color = col:Lerp(col2, 1 - f)
+				d.Transparency = math.clamp(f * 0.6, 0, 1) * m.Opacity
+				d.ZIndex = 40
+			end
+		else
+			table.clear(trail)
+		end
+
+		local sprite = sprites[m.Style]
+		if not sprite then
+			return
+		end
+		local size = m.Size * (sprite.scale or 1) * (m.Bounce and (1 + 0.08 * math.sin(t * 5)) or 1)
+		local rot = (m.Spin and t * m.SpinSpeed or 0) + (sprite.tilt or 0)
+		drawSprite(p, sprite, mx, my, size, rot, col, col2, m.Outline, m.Opacity, 50)
+	end
+
+
+	local function visualsStep()
+		frame = frame + 1
+		local camera = Workspace.CurrentCamera
+		if not camera then
+			return
+		end
+		GT = tick()
+		local t = GT
+
+		local char = lp.Character
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		local head = char and char:FindFirstChild("Head")
+		local root = char and char:FindFirstChild("HumanoidRootPart")
+		local alive = hum and hum.Health > 0
+		local camPos = camera.CFrame.Position
+
+		if cfg.Hat.Enabled then
+			if cfg.Hat.Self and head and alive then
+				drawHat("hat:self", head, camera, t)
+			end
+			if cfg.Hat.Players then
+				for _, pl in ipairs(Players:GetPlayers()) do
+					if pl ~= lp and pl.Character then
+						local ph = pl.Character:FindFirstChild("Head")
+						local phum = pl.Character:FindFirstChildOfClass("Humanoid")
+						if ph and phum and phum.Health > 0 and (ph.Position - camPos).Magnitude <= cfg.Hat.PlayerDistance then
+							drawHat("hat:" .. pl.UserId, ph, camera, t)
+						end
+					end
+				end
+			end
+		end
+
+		if cfg.Mask.Enabled then
+			if cfg.Mask.Self and head and alive then
+				drawMask("mask:self", head, camera, t)
+			end
+			if cfg.Mask.Players then
+				for _, pl in ipairs(Players:GetPlayers()) do
+					if pl ~= lp and pl.Character then
+						local ph = pl.Character:FindFirstChild("Head")
+						local phum = pl.Character:FindFirstChildOfClass("Humanoid")
+						if ph and phum and phum.Health > 0 and (ph.Position - camPos).Magnitude <= cfg.Mask.PlayerDistance then
+							drawMask("mask:" .. pl.UserId, ph, camera, t)
+						end
+					end
+				end
+			end
+		end
+
+		if cfg.Halo.Enabled and head and alive then
+			drawHalo(head, camera, t)
+		end
+		if cfg.Orbit.Enabled and root and alive then
+			drawOrbit(root, camera, t)
+		end
+		if cfg.Cross.Enabled then
+			drawCross(camera, t)
+		end
+		updateMouseIcon()
+		if cfg.Mouse.Enabled then
+			drawMouse(t)
+		end
+
+		for key, p in pairs(pools) do
+			if p.frame ~= frame then
+				removePool(p)
+				pools[key] = nil
+			else
+				finish(p)
+			end
+		end
+
+	end
+
+	local enabledKeys = {"Box", "Name", "Health", "Distance", "Tool", "Tracer", "Skeleton", "Chams", "Arrows", "HeadDot", "ViewLine", "History", "Hat", "Mask", "Halo", "Orbit", "Cross", "Mouse"}
+	local stepConn
+
+	local function visualsAny()
+		return cfg.Hat.Enabled or cfg.Mask.Enabled or cfg.Halo.Enabled or cfg.Orbit.Enabled or cfg.Cross.Enabled or cfg.Mouse.Enabled
+	end
+
+	local function step()
+		pcall(espStep)
+		visualsStep()
+	end
+
+	local function idle()
+		for model, obj in pairs(objects) do
+			removeObject(obj)
+			objects[model] = nil
+		end
+		for model in pairs(chamData) do
+			removeChams(model)
+		end
+		clearGhosts()
+		table.clear(tracked)
+		for key, p in pairs(pools) do
+			removePool(p)
+			pools[key] = nil
+		end
+		table.clear(trail)
+		updateMouseIcon()
+	end
+
+	local function sync()
+		local want = anyEnabled() or visualsAny()
+		if want and not stepConn then
+			stepConn = RunService.RenderStepped:Connect(step)
+		elseif not want and stepConn then
+			stepConn:Disconnect()
+			stepConn = nil
+			idle()
+		end
+		syncTracking()
+	end
+
+	local function stop()
+		for _, k in ipairs(enabledKeys) do
+			cfg[k].Enabled = false
+		end
+		cfg.Self.Enabled = false
+		if stepConn then
+			stepConn:Disconnect()
+			stepConn = nil
+		end
+		idle()
+		syncTracking()
+		pcall(function()
+			chamsFolder:Destroy()
+		end)
+		if nameGui then
+			pcall(nameGui.Destroy, nameGui)
+			nameGui = nil
+		end
+	end
+
+	Lib.C(UserInputService.WindowFocused, function()
+		table.clear(trail)
+		for key, p in pairs(pools) do
+			removePool(p)
+			pools[key] = nil
+		end
+		for model, obj in pairs(objects) do
+			removeObject(obj)
+			objects[model] = nil
+		end
+	end)
+
+	return {cfg = cfg, sync = sync, stop = stop, fonts = fonts}
+end
+
+function Lib.CreateRowKit(sync)
+	local reg, colorControls, inputControls = {}, {}, {}
+	local Kit = {}
+
+	local function Round(value)
+		return math.floor(value * 1000 + 0.5) / 1000
+	end
+
+	function Kit.T(title, desc, tbl, key)
+		return { k = "T", title = title, desc = desc, tbl = tbl, key = key }
+	end
+
+	function Kit.S(title, desc, tbl, key, min, max, step, suffix, mul)
+		return { k = "S", title = title, desc = desc, tbl = tbl, key = key, min = min, max = max, step = step, suffix = suffix, mul = mul or 1 }
+	end
+
+	function Kit.C(title, tbl, key, options)
+		return { k = "C", title = title, tbl = tbl, key = key, options = options }
+	end
+
+	function Kit.K(title, tbl, key)
+		return { k = "K", title = title, tbl = tbl, key = key }
+	end
+
+	function Kit.I(title, placeholder, tbl, key)
+		return { k = "I", title = title, placeholder = placeholder, tbl = tbl, key = key }
+	end
+
+	function Kit.M(title, options, get, set)
+		return { k = "M", title = title, options = options, get = get, set = set }
+	end
+
+	local function ColorItem(group, title, tbl, key, last)
+		local item, set = Lib.CreateColorItem(group, title, tbl, key, last)
+		colorControls[title] = set
+		return item
+	end
+
+	local function InputItem(group, row, last)
+		local tbl, key = row.tbl, row.key
+		local item = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 50), BackgroundTransparency = 1, Parent = group })
+		local label = Lib.Create("TextLabel", {
+			Size = UDim2.new(0.4, 0, 1, 0), Position = UDim2.fromOffset(14, 0), BackgroundTransparency = 1, Text = row.title,
+			TextColor3 = Color3.fromRGB(240, 240, 240), TextSize = 13, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = item
+		})
+		Lib.RegisterThemeText(label, "Primary")
+		local box = Lib.Create("TextBox", {
+			Size = UDim2.new(0.6, -28, 0, 28), Position = UDim2.new(0.4, 0, 0.5, -14), BackgroundColor3 = Color3.fromRGB(22, 22, 22),
+			PlaceholderText = row.placeholder, PlaceholderColor3 = Color3.fromRGB(110, 110, 110), TextColor3 = Color3.fromRGB(240, 240, 240),
+			TextSize = 12, Font = Enum.Font.GothamMedium, Text = tbl[key], ClearTextOnFocus = false, TextXAlignment = Enum.TextXAlignment.Left, Parent = item,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
+			Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
+		})
+		Lib.RegisterThemeElement(box, "BackgroundColor3", 0.7, true)
+		Lib.RegisterThemeText(box, "Primary")
+		box.FocusLost:Connect(function()
+			tbl[key] = box.Text
+		end)
+		inputControls[row.title] = function(text)
+			box.Text = text
+			tbl[key] = text
+		end
+		if not last then
+			Lib.Create("Frame", { Size = UDim2.new(1, -28, 0, 1), Position = UDim2.new(0, 14, 1, -1), BackgroundColor3 = Color3.fromRGB(25, 25, 25), BorderSizePixel = 0, Parent = item })
+		end
+	end
+
+	local function Gear(item, open)
+		local gear = Lib.Create("ImageButton", {
+			Size = UDim2.fromOffset(28, 28), Position = UDim2.new(1, -98, 0.5, -14), BackgroundColor3 = Color3.fromRGB(22, 22, 22), AutoButtonColor = false,
+			Image = "rbxassetid://119430435918970", ImageColor3 = Color3.fromRGB(180, 180, 180), ScaleType = Enum.ScaleType.Fit, Parent = item,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
+			Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5), PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5) })
+		})
+		Lib.RegisterThemeElement(gear, "BackgroundColor3", 0.7)
+		gear.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			open()
+		end)
+	end
+
+	local function BuildRows(modal, rows)
+		local group, order = nil, 0
+		for i, row in ipairs(rows) do
+			if type(row) == "string" then
+				order += 1
+				group = Lib.CreateFeatureGroup(modal.Content, row, order)
+			else
+				local following = rows[i + 1]
+				local last = following == nil or type(following) == "string"
+				local kind, tbl, key = row.k, row.tbl, row.key
+				if kind == "T" then
+					Lib.CreateSettingToggleItem(group, row.title, row.desc, tbl[key], function(value) tbl[key] = value end, last)
+				elseif kind == "S" then
+					local mul = row.mul
+					Lib.CreateSettingSliderItem(group, row.title, row.desc, row.min, row.max, Round(tbl[key] * mul), function(value) tbl[key] = value / mul end, last, row.suffix, row.step)
+				elseif kind == "C" then
+					Lib.CreateSettingChoiceItem(group, row.title, row.options, tbl[key], function(value) tbl[key] = value end, last)
+				elseif kind == "K" then
+					ColorItem(group, row.title, tbl, key, last)
+				elseif kind == "I" then
+					InputItem(group, row, last)
+				else
+					Lib.CreateSettingChoiceItem(group, row.title, row.options, row.get(), row.set, last, true)
+				end
+			end
+		end
+	end
+
+	local function LazyModal(name, width, height, rows)
+		for _, row in ipairs(rows) do
+			if type(row) == "table" then reg[#reg + 1] = row end
+		end
+		local modal
+		return function()
+			if not modal then
+				modal = Lib.CreateModal(name, width, height)
+				BuildRows(modal, rows)
+			end
+			modal.Open()
+		end
+	end
+
+	Kit.LazyModal = LazyModal
+
+	function Kit.Feature(group, title, desc, tbl, name, height, rows, last)
+		reg[#reg + 1] = { k = "T", title = title, tbl = tbl, key = "Enabled" }
+		local open = rows and LazyModal(name .. " Settings", 470, height, rows)
+		local item = Lib.CreateSettingToggleItem(group, title, desc, tbl.Enabled, function(value)
+			tbl.Enabled = value
+			sync()
+		end, last)
+		if open then Gear(item, open) end
+	end
+
+	function Kit.Hook()
+		return {
+			Dump = function()
+				local dump = {}
+				for _, row in ipairs(reg) do
+					local kind, tbl, key = row.k, row.tbl, row.key
+					if kind == "K" then
+						local color = tbl[key]
+						dump[row.title] = { math.round(color.R * 255), math.round(color.G * 255), math.round(color.B * 255) }
+					elseif kind == "M" then
+						local control = Lib.ChoiceControls[row.title]
+						dump[row.title] = control and control.Get() or row.get()
+					else
+						dump[row.title] = tbl[key]
+					end
+				end
+				return dump
+			end,
+			Apply = function(data)
+				for _, row in ipairs(reg) do
+					local value = data[row.title]
+					if value ~= nil then
+						local kind, title, tbl, key = row.k, row.title, row.tbl, row.key
+						if kind == "T" and type(value) == "boolean" then
+							local control = Lib.ToggleControls[title]
+							if control then control.Set(value) else tbl[key] = value end
+						elseif kind == "S" and type(value) == "number" then
+							local control = Lib.SliderControls[title]
+							if control then control(value * row.mul) else tbl[key] = value end
+						elseif kind == "C" then
+							local control = Lib.ChoiceControls[title]
+							if control then control.Set(value) else tbl[key] = value end
+						elseif kind == "I" and type(value) == "string" then
+							local control = inputControls[title]
+							if control then control(value) else tbl[key] = value end
+						elseif kind == "K" and type(value) == "table" then
+							local color = Color3.fromRGB(math.clamp(tonumber(value[1]) or 0, 0, 255), math.clamp(tonumber(value[2]) or 0, 0, 255), math.clamp(tonumber(value[3]) or 0, 0, 255))
+							local control = colorControls[title]
+							if control then control(color) else tbl[key] = color end
+						elseif kind == "M" and type(value) == "table" then
+							local control = Lib.ChoiceControls[title]
+							if control then
+								control.Set(value)
+							else
+								local set = {}
+								for _, name in ipairs(value) do set[name] = true end
+								row.set(set)
+							end
+						end
+					end
+				end
+				sync()
+			end
+		}
+	end
+
+	return Kit
+end
+
+function Lib.BuildEsp(scroll)
+	local E = Lib.CreateEspCore()
+	local cfg, sync = E.cfg, E.sync
+	local Kit = Lib.CreateRowKit(sync)
+	local T, S, C, K, M, Feature, LazyModal = Kit.T, Kit.S, Kit.C, Kit.K, Kit.M, Kit.Feature, Kit.LazyModal
+	local TARGET_KEYS = { "Player", "Player Humanoid", "Npc Humanoid (better)", "Npc WorkSpace" }
+	local TRIGGER_KEYS = { "Left", "Teleport", "Death", "Gone" }
+	local SIDE_KEYS = { "Self", "Players" }
+
+	local function SideRow(title, tbl)
+		return M(title, { { "Self", "Self" }, { "Players", "Players" } }, function()
+			local list = {}
+			for _, name in ipairs(SIDE_KEYS) do
+				if tbl[name] then list[#list + 1] = name end
+			end
+			return list
+		end, function(set)
+			tbl.Self, tbl.Players = set.Self == true, set.Players == true
+		end)
+	end
+
+	local B, N, H, D, TL, TR, SK, CH, AR, HD, VL, HI, GR = cfg.Box, cfg.Name, cfg.Health, cfg.Distance, cfg.Tool, cfg.Tracer, cfg.Skeleton, cfg.Chams, cfg.Arrows, cfg.HeadDot, cfg.ViewLine, cfg.History, cfg.Gradient
+	local HT, MK, HL, OR, CR, MS = cfg.Hat, cfg.Mask, cfg.Halo, cfg.Orbit, cfg.Cross, cfg.Mouse
+
+	local generalRows = {
+		"Targets",
+		M("ESP Targets", { { "Players", "Player" }, { "Humanoids", "Player Humanoid" }, { "NPCs", "Npc Humanoid (better)" }, { "Workspace", "Npc WorkSpace" } }, function()
+			local list = {}
+			for _, name in ipairs(TARGET_KEYS) do
+				if cfg.Targets[name] then list[#list + 1] = name end
+			end
+			return list
+		end, function(set)
+			cfg.Targets = set
+			sync()
+		end),
+		S("ESP Max Distance", "Maximum distance of ESP targets", cfg, "MaxDistance", 100, 5000, 50, "m"),
+		T("ESP Team Check", "Skips players from your own team", cfg, "TeamCheck"),
+		T("Self ESP", "Draws ESP on your own character", cfg.Self, "Enabled"),
+		T("Self ESP Hide In First Person", "Hides your own ESP in first person", cfg.Self, "HideFirstPerson"),
+		"Text",
+		C("ESP Font", cfg.Text, "Font", { { "Plex", 2 }, { "UI", 0 }, { "System", 1 }, { "Monospace", 3 } }),
+		T("ESP Bold Text", "Makes ESP text thicker", cfg.Text, "Bold"),
+		"Visible Check",
+		T("ESP Visible Check", "Colors targets by line of sight", cfg.Visible, "Enabled"),
+		K("ESP Visible Color", cfg.Visible, "Visible"),
+		K("ESP Hidden Color", cfg.Visible, "Hidden")
+	}
+
+	local boxRows = {
+		"Shape",
+		C("Box Style", B, "Style", { "Corners", "Full", "Dashed", "Brackets", "3D", "Diamond" }),
+		S("Box Scale", "Overall size of the box", B, "Scale", 50, 130, 1, "%"),
+		S("Box Width", "Box width relative to its height", B, "Width", 30, 90, 1, "%"),
+		S("Box Corner Width", "Horizontal length of corner lines", B, "CornerW", 10, 50, 1, "%"),
+		S("Box Corner Height", "Vertical length of corner lines", B, "CornerH", 10, 50, 1, "%"),
+		"Appearance",
+		K("Box Color", B, "Color"),
+		S("Box Thickness", "Line thickness", B, "Thickness", 1, 5, 1),
+		T("Box Outline", "Dark outline around the box", B, "Outline"),
+		T("Box Filled", "Fills the box with color", B, "Filled"),
+		S("Box Fill Opacity", "Opacity of the box fill", B, "Opacity", 5, 100, 5, "%", 100)
+	}
+
+	local nameRows = {
+		"Name",
+		T("Name Use Display Name", "Shows display names instead of usernames", N, "UseDisplay"),
+		K("Name Color", N, "Color"),
+		S("Name Size", "Name text size", N, "Size", 10, 28, 1)
+	}
+
+	local healthRows = {
+		"Health Bar",
+		C("Health Mode", H, "Mode", { "Gradient", "Dynamic", "Custom" }),
+		S("Health Black Zone", "Share of the bar treated as empty", H, "BlackZone", 1, 25, 1, "%"),
+		T("Health Number", "Shows the health value", H, "Number"),
+		C("Health Side", H, "Side", { "Left", "Right" }),
+		K("Health Custom Color", H, "Color"),
+		S("Health Thickness", "Health bar thickness", H, "Thickness", 1, 6, 1)
+	}
+
+	local distanceRows = {
+		"Distance",
+		K("Distance Color", D, "Color"),
+		S("Distance Size", "Distance text size", D, "Size", 10, 28, 1)
+	}
+
+	local toolRows = {
+		"Tool",
+		K("Tool Color", TL, "Color"),
+		S("Tool Size", "Tool text size", TL, "Size", 10, 28, 1)
+	}
+
+	local tracerRows = {
+		"Tracer",
+		C("Tracer Origin", TR, "Origin", { "Bottom", "Center", "Top", "Mouse" }),
+		K("Tracer Color", TR, "Color"),
+		S("Tracer Thickness", "Line thickness", TR, "Thickness", 1, 5, 1)
+	}
+
+	local arrowRows = {
+		"Arrows",
+		C("Arrow Style", AR, "Style", { "Dart", "Triangle", "Chevron", "Needle", "Double" }),
+		S("Arrow Radius", "Distance from the screen center", AR, "Radius", 60, 600, 10, "px"),
+		S("Arrow Size", "Arrow size", AR, "Size", 6, 40, 1),
+		K("Arrow Color", AR, "Color"),
+		T("Arrow Filled", "Fills the arrow", AR, "Filled"),
+		T("Arrow Outline", "Dark outline around the arrow", AR, "Outline"),
+		T("Arrow Distance Text", "Shows the target distance", AR, "ShowDist"),
+		T("Arrow Distance Scale", "Scales arrows by target distance", AR, "DistScale")
+	}
+
+	local headRows = {
+		"Head Dot",
+		S("Head Dot Size", "Dot size", HD, "Size", 0.5, 3, 0.1),
+		K("Head Dot Color", HD, "Color")
+	}
+
+	local viewRows = {
+		"View Line",
+		S("View Line Length", "Line length in studs", VL, "Length", 2, 40, 1, "st"),
+		S("View Line Thickness", "Line thickness", VL, "Thickness", 1, 5, 1),
+		K("View Line Color", VL, "Color")
+	}
+
+	local skeletonRows = {
+		"Skeleton",
+		K("Skeleton Color", SK, "Color"),
+		S("Skeleton Thickness", "Line thickness", SK, "Thickness", 1, 5, 1),
+		T("Skeleton Outline", "Dark outline around bones", SK, "Outline")
+	}
+
+	local chamsRows = {
+		"Chams",
+		C("Chams Mode", CH, "Mode", { "Highlight", "Adornment" }),
+		K("Chams Fill Color", CH, "Fill"),
+		K("Chams Outline Color", CH, "Outline"),
+		S("Chams Fill Transparency", "Transparency of the fill", CH, "FillTransparency", 0, 100, 5, "%", 100),
+		S("Chams Outline Transparency", "Transparency of the outline", CH, "OutlineTransparency", 0, 100, 5, "%", 100),
+		T("Chams Through Walls", "Visible through obstacles", CH, "ThroughWalls"),
+		T("Chams Pulse", "Pulsing animation", CH, "Pulse")
+	}
+
+	local historyRows = {
+		"History",
+		M("History Triggers", { { "Left", "Left" }, { "Teleport", "Teleport" }, { "Died", "Death" }, { "Removed", "Gone" } }, function()
+			local list = {}
+			for _, name in ipairs(TRIGGER_KEYS) do
+				if HI.Triggers[name] then list[#list + 1] = name end
+			end
+			return list
+		end, function(set)
+			for _, name in ipairs(TRIGGER_KEYS) do HI.Triggers[name] = set[name] == true end
+		end),
+		S("History Duration", "How long a ghost stays", HI, "Time", 1, 60, 1, "s"),
+		S("History Teleport Distance", "Distance that counts as a teleport", HI, "TpDist", 30, 1000, 10, "st"),
+		K("History Color", HI, "Color"),
+		T("History Show Timer", "Shows the remaining time", HI, "Timer"),
+		C("History Timer Mode", HI, "TimerMode", { "Countdown", "Elapsed" }),
+		T("History Fade Out", "Ghost fades out over time", HI, "Fade")
+	}
+
+	local gradientRows = {
+		"Colors",
+		K("Gradient Color 1", GR, "Color1"),
+		K("Gradient Color 2", GR, "Color2"),
+		T("Gradient Third Color", "Adds a middle color", GR, "ThreeColor"),
+		K("Gradient Color 3", GR, "Color3"),
+		"Motion",
+		C("Gradient Mode", GR, "Mode", { "Static", "Scroll", "Reverse", "Pulse", "Wave", "Shine", "Rainbow" }),
+		C("Gradient Shape", GR, "Shape", { "Vertical", "Horizontal", "Diagonal", "Radial" }),
+		C("Gradient Fill Type", GR, "FillType", { "Smooth", "Solid", "Stripes", "Checker" }),
+		S("Gradient Speed", "Animation speed", GR, "Speed", 1, 10, 1),
+		S("Gradient Repeat", "How many times the gradient repeats", GR, "Scale", 1, 4, 1),
+		S("Gradient Bands", "Color bands, 0 = smooth", GR, "Bands", 0, 8, 1),
+		T("Gradient Reverse", "Reverses the direction", GR, "Reverse"),
+		"Apply To",
+		T("Gradient Fill", "Box fill", GR, "Fill"),
+		T("Gradient Text", "Name, distance and tool text", GR, "Text"),
+		T("Gradient Tracer", "Tracer lines", GR, "Tracer"),
+		T("Gradient Skeleton", "Skeleton lines", GR, "Skeleton"),
+		T("Gradient Chams", "Chams colors", GR, "Chams"),
+		T("Gradient Extras", "Arrows and head dot", GR, "Extras")
+	}
+
+	local hatRows = {
+		"Hat",
+		C("Hat Type", HT, "Type", { "China Hat", "Wizard", "Crown", "Top Hat", "Horns" }),
+		C("Hat Style", HT, "Style", { "Filled", "Wireframe", "Filled + Wireframe", "Rings", "Spiral" }),
+		SideRow("Hat Apply To", HT),
+		S("Hat Player Distance", "Maximum distance for other players", HT, "PlayerDistance", 30, 500, 10, "m"),
+		"Shape",
+		S("Hat Height", "Hat height", HT, "Height", 0.3, 3, 0.1),
+		S("Hat Radius", "Hat radius", HT, "Radius", 0.5, 3, 0.1),
+		S("Hat Size", "Overall hat scale", HT, "Scale", 0.3, 3, 0.05, "x"),
+		S("Hat Segments", "Segments of the China hat", HT, "Segments", 6, 24, 1),
+		"Position",
+		S("Hat Up Down", "Vertical offset", HT, "Offset", -2, 4, 0.05),
+		S("Hat Left Right", "Horizontal offset", HT, "OffX", -3, 3, 0.05),
+		S("Hat Back Forward", "Depth offset", HT, "OffZ", -3, 3, 0.05),
+		S("Hat Hide Distance", "Hides when the camera is closer", HT, "HideDist", 0, 15, 0.5, "st"),
+		"Style",
+		T("Hat Spin", "Rotates the hat", HT, "Spin"),
+		S("Hat Spin Speed", "Rotation speed", HT, "SpinSpeed", 0.1, 5, 0.1),
+		K("Hat Color 1", HT, "Color1"),
+		K("Hat Color 2", HT, "Color2"),
+		T("Hat Rainbow", "Rainbow colors", HT, "Rainbow"),
+		S("Hat Opacity", "Hat opacity", HT, "Opacity", 5, 100, 5, "%", 100),
+		S("Hat Thickness", "Line thickness", HT, "Thickness", 1, 5, 1),
+		T("Hat Base Outline", "Outline at the hat base", HT, "Outline")
+	}
+
+	local maskRows = {
+		"Mask",
+		C("Mask Style", MK, "Style", { "Visor", "Domino", "Sunglasses", "Demon", "Smile", "Cyber" }),
+		SideRow("Mask Apply To", MK),
+		S("Mask Player Distance", "Maximum distance for other players", MK, "PlayerDistance", 20, 300, 10, "m"),
+		"Position",
+		S("Mask Size", "Overall mask scale", MK, "Scale", 0.3, 2.5, 0.05, "x"),
+		S("Mask Up Down", "Vertical offset", MK, "OffY", -2, 2, 0.05),
+		S("Mask Left Right", "Horizontal offset", MK, "OffX", -2, 2, 0.05),
+		S("Mask Back Forward", "Depth offset", MK, "OffZ", -1, 3, 0.05),
+		S("Mask Hide Distance", "Hides when the camera is closer", MK, "HideDist", 0, 15, 0.5, "st"),
+		"Style",
+		T("Mask Fill", "Fills the mask", MK, "Fill"),
+		T("Mask Outline", "Draws mask outlines", MK, "Outline"),
+		S("Mask Thickness", "Line thickness", MK, "Thickness", 1, 4, 1),
+		S("Mask Opacity", "Mask opacity", MK, "Opacity", 5, 100, 5, "%", 100),
+		K("Mask Color 1", MK, "Color1"),
+		K("Mask Color 2", MK, "Color2"),
+		T("Mask Rainbow", "Rainbow colors", MK, "Rainbow")
+	}
+
+	local haloRows = {
+		"Halo",
+		C("Halo Style", HL, "Style", { "Glow", "Ring", "Double", "Dashed" }),
+		S("Halo Radius", "Halo radius", HL, "Radius", 0.4, 3, 0.1),
+		"Position",
+		S("Halo Up Down", "Vertical offset", HL, "Offset", -2, 4, 0.05),
+		S("Halo Left Right", "Horizontal offset", HL, "OffX", -3, 3, 0.05),
+		S("Halo Back Forward", "Depth offset", HL, "OffZ", -3, 3, 0.05),
+		S("Halo Hide Distance", "Hides when the camera is closer", HL, "HideDist", 0, 15, 0.5, "st"),
+		"Style",
+		S("Halo Thickness", "Line thickness", HL, "Thickness", 1, 5, 1),
+		K("Halo Color", HL, "Color"),
+		T("Halo Rainbow", "Rainbow colors", HL, "Rainbow"),
+		T("Halo Bobbing", "Floating animation", HL, "Bob")
+	}
+
+	local orbitRows = {
+		"Orbit",
+		C("Orbit Style", OR, "Style", { "Horizontal", "Vertical", "Cross", "Helix" }),
+		S("Orbit Count", "Number of orbiting dots", OR, "Count", 1, 12, 1),
+		S("Orbit Radius", "Orbit radius", OR, "Radius", 1, 8, 0.1),
+		S("Orbit Speed", "Rotation speed", OR, "Speed", 0.2, 6, 0.1),
+		S("Orbit Dot Size", "Dot size", OR, "Size", 1, 10, 1),
+		"Position",
+		S("Orbit Up Down", "Vertical offset", OR, "Offset", -4, 4, 0.1),
+		S("Orbit Left Right", "Horizontal offset", OR, "OffX", -4, 4, 0.1),
+		S("Orbit Back Forward", "Depth offset", OR, "OffZ", -4, 4, 0.1),
+		"Colors",
+		K("Orbit Color 1", OR, "Color1"),
+		K("Orbit Color 2", OR, "Color2"),
+		T("Orbit Rainbow", "Rainbow colors", OR, "Rainbow")
+	}
+
+	local crossStyles = { "Classic", "T-Shape", "Dot", "Circle", "Square", "Brackets", "Triangle", "Burst", "Heart", "Star", "Flower", "Sparkle" }
+	local cursorStyles = { "Heart", "Star", "Flower", "Sparkle", "Classic", "Pointer", "Kite", "Chevron", "Plane", "Compass", "Dot", "Ring" }
+	local colorModes = { "Solid", "Gradient", "Rainbow", "Pulse" }
+
+	local crossRows = {
+		"Crosshair",
+		C("Crosshair Style", CR, "Style", crossStyles),
+		S("Crosshair Size", "Crosshair size", CR, "Size", 2, 40, 1),
+		S("Crosshair Gap", "Gap in the center", CR, "Gap", 0, 20, 1),
+		S("Crosshair Thickness", "Line thickness", CR, "Thickness", 1, 6, 1),
+		"Colors",
+		K("Crosshair Color", CR, "Color"),
+		K("Crosshair Color 2", CR, "Color2"),
+		C("Crosshair Color Mode", CR, "ColorMode", colorModes),
+		S("Crosshair Opacity", "Crosshair opacity", CR, "Opacity", 10, 100, 5, "%", 100),
+		T("Crosshair Outline", "Dark outline", CR, "Outline"),
+		"Extras",
+		T("Crosshair Center Dot", "Dot in the center", CR, "Dot"),
+		S("Crosshair Dot Size", "Center dot size", CR, "DotSize", 1, 6, 0.5),
+		T("Crosshair Dynamic Gap", "Gap grows while moving", CR, "Dynamic"),
+		S("Crosshair Dynamic Amount", "Gap growth amount", CR, "DynAmount", 2, 30, 1),
+		T("Crosshair Spin", "Rotates the crosshair", CR, "Spin"),
+		S("Crosshair Spin Speed", "Rotation speed", CR, "SpinSpeed", 0.5, 10, 0.5),
+		T("Crosshair Follow Mouse", "Follows the cursor", CR, "AtMouse"),
+		S("Crosshair Offset X", "Horizontal offset", CR, "OffX", -300, 300, 1, "px"),
+		S("Crosshair Offset Y", "Vertical offset", CR, "OffY", -300, 300, 1, "px")
+	}
+
+	local cursorRows = {
+		"Cursor",
+		C("Cursor Style", MS, "Style", cursorStyles),
+		S("Cursor Size", "Cursor size", MS, "Size", 6, 40, 1),
+		"Colors",
+		K("Cursor Color 1", MS, "Color1"),
+		K("Cursor Color 2", MS, "Color2"),
+		C("Cursor Color Mode", MS, "ColorMode", colorModes),
+		S("Cursor Opacity", "Cursor opacity", MS, "Opacity", 10, 100, 5, "%", 100),
+		T("Cursor Outline", "Dark outline", MS, "Outline"),
+		"Effects",
+		T("Cursor Bounce", "Pulsing animation", MS, "Bounce"),
+		T("Cursor Spin", "Rotates the cursor", MS, "Spin"),
+		S("Cursor Spin Speed", "Rotation speed", MS, "SpinSpeed", 0.5, 10, 0.5),
+		T("Cursor Trail", "Draws a trail behind the cursor", MS, "Trail"),
+		S("Cursor Trail Length", "Trail length", MS, "TrailLength", 3, 30, 1),
+		T("Cursor Hide System", "Hides the system cursor", MS, "HideSystem"),
+		S("Cursor Offset X", "Horizontal offset", MS, "OffX", -30, 30, 1, "px"),
+		S("Cursor Offset Y", "Vertical offset", MS, "OffY", -30, 30, 1, "px")
+	}
+
+	local espGroup = Lib.CreateFeatureGroup(scroll, "ESP", 1)
+	Feature(espGroup, "Box ESP", "Boxes around targets with several styles", B, "Box ESP", 520, boxRows)
+	Feature(espGroup, "Name ESP", "Target names above the box", N, "Name ESP", 330, nameRows)
+	Feature(espGroup, "Health ESP", "Health bar next to the box", H, "Health ESP", 460, healthRows)
+	Feature(espGroup, "Distance ESP", "Distance to the target", D, "Distance ESP", 290, distanceRows)
+	Feature(espGroup, "Tool ESP", "Name of the held tool", TL, "Tool ESP", 290, toolRows)
+	Feature(espGroup, "Tracer ESP", "Lines from the screen to targets", TR, "Tracer ESP", 340, tracerRows)
+	Feature(espGroup, "Off-Screen Arrows", "Arrows pointing to targets out of view", AR, "Off-Screen Arrows", 500, arrowRows)
+	Feature(espGroup, "Head Dot", "Dot on target heads", HD, "Head Dot", 290, headRows)
+	Feature(espGroup, "View Direction Line", "Line showing where targets look", VL, "View Direction Line", 330, viewRows)
+	Feature(espGroup, "Skeleton ESP", "Bone lines on targets", SK, "Skeleton ESP", 330, skeletonRows)
+	Feature(espGroup, "Chams", "Highlights targets through walls", CH, "Chams", 470, chamsRows)
+	Feature(espGroup, "History ESP", "Ghost of a target that left or died", HI, "History ESP", 520, historyRows)
+	Feature(espGroup, "Gradient ESP", "Animated gradient colors for ESP", GR, "Gradient ESP", 600, gradientRows)
+	Lib.CreateSettingButtonItem(espGroup, "General ESP Settings", "Targets, distance, team check, text and visible check", LazyModal("General ESP Settings", 470, 520, generalRows), true)
+
+	local visualsGroup = Lib.CreateFeatureGroup(scroll, "Visuals", 2)
+	Feature(visualsGroup, "Hat", "Hats above heads", HT, "Hat", 620, hatRows)
+	Feature(visualsGroup, "Face Mask", "Masks drawn on faces", MK, "Face Mask", 560, maskRows)
+	Feature(visualsGroup, "Halo", "Halo above heads", HL, "Halo", 470, haloRows)
+	Feature(visualsGroup, "Orbit", "Dots orbiting your character", OR, "Orbit", 520, orbitRows)
+	Feature(visualsGroup, "Custom Crosshair", "Custom crosshair in the screen center", CR, "Custom Crosshair", 620, crossRows)
+	Feature(visualsGroup, "Custom Mouse", "Custom cursor with effects", MS, "Custom Mouse", 560, cursorRows, true)
+
+	Lib.StopEsp = E.stop
+
+	Lib.ConfigExtras = Lib.ConfigExtras or {}
+	Lib.ConfigExtras.Esp = Kit.Hook()
+end
+
+function Lib.CreateWorldCore()
+	local Workspace, Lighting, RunService = Services.Workspace, Services.Lighting, Services.Run
+	local keys = { "NoFog", "Time", "Ambient", "Atmo", "ColorGrade", "Bloom", "Sky", "Terrain", "Recolor" }
+	local cfg = {
+		NoFog = { Enabled = false },
+		Time = { Enabled = false, Value = 14 },
+		Ambient = { Enabled = false, Color1 = Color3.fromRGB(120, 80, 200), Color2 = Color3.fromRGB(60, 160, 255), Animate = false, Speed = 3 },
+		Atmo = { Enabled = false, Color1 = Color3.fromRGB(255, 120, 200), Color2 = Color3.fromRGB(100, 140, 255), Animate = true, Speed = 3 },
+		ColorGrade = { Enabled = false, Color1 = Color3.fromRGB(255, 220, 255), Color2 = Color3.fromRGB(200, 230, 255), Animate = false, Speed = 3, Saturation = 0.2, Contrast = 0.1, Brightness = 0 },
+		Bloom = { Enabled = false, Intensity = 1, Size = 24, Threshold = 0.8 },
+		Sky = { Enabled = false, Preset = "Space Nebula", Custom = "", Stars = 3000, Celestial = true, Rotation = 0, Spin = false, SpinSpeed = 1 },
+		Terrain = { Enabled = false, Color1 = Color3.fromRGB(255, 90, 160), Color2 = Color3.fromRGB(90, 140, 255), Animate = true, Speed = 3, Strength = 0.8, Water = true },
+		Recolor = {
+			Enabled = false, Mode = "Gradient", Axis = "Height", Color1 = Color3.fromRGB(255, 90, 160), Color2 = Color3.fromRGB(90, 140, 255),
+			Animate = true, Speed = 3, Period = 60, Strength = 0.8, Material = "Off", PerFrame = 300, Textures = true
+		}
+	}
+
+	local lw = {}
+	Refs.LightWorld = lw
+	local wf, GT = 0, 0
+	local conn
+	local lightWas = false
+	local orig = setmetatable({}, { __mode = "k" })
+	local want = setmetatable({}, { __mode = "k" })
+
+	local function pp(f)
+		f = f % 1
+		if f < 0.5 then return f * 2 end
+		return (1 - f) * 2
+	end
+
+	local function animColor(c1, c2, animate, speed)
+		if animate then return c1:Lerp(c2, pp(GT * speed * 0.1)) end
+		return c1
+	end
+
+	local function put(inst, prop, value)
+		if inst[prop] ~= value then inst[prop] = value end
+	end
+
+	local function setProp(obj, prop, value)
+		local o = orig[obj]
+		if not o then
+			o = {}
+			orig[obj] = o
+		end
+		if o[prop] == nil then o[prop] = obj[prop] end
+		local w = want[obj]
+		if not w then
+			w = {}
+			want[obj] = w
+		end
+		w[prop] = wf
+		if obj[prop] ~= value then obj[prop] = value end
+	end
+
+	local function flushProps()
+		for obj, props in pairs(orig) do
+			local w = want[obj]
+			for prop, val in pairs(props) do
+				if not (w and w[prop] == wf) then
+					pcall(function() obj[prop] = val end)
+					props[prop] = nil
+				end
+			end
+			if next(props) == nil then orig[obj] = nil end
+		end
+	end
+
+	local atmos, atmosAdd, atmosRem = {}, nil, nil
+
+	local function trackAtmos(on)
+		if on and not atmosAdd then
+			for _, child in ipairs(Lighting:GetChildren()) do
+				if child:IsA("Atmosphere") then atmos[child] = true end
+			end
+			atmosAdd = Lighting.ChildAdded:Connect(function(child)
+				if child:IsA("Atmosphere") then atmos[child] = true end
+			end)
+			atmosRem = Lighting.ChildRemoved:Connect(function(child)
+				atmos[child] = nil
+			end)
+		elseif not on and atmosAdd then
+			atmosAdd:Disconnect()
+			atmosRem:Disconnect()
+			atmosAdd, atmosRem = nil, nil
+			table.clear(atmos)
+		end
+	end
+
+	local function effect(class, name)
+		local e = Lighting:FindFirstChild(name)
+		if not e then
+			e = Instance.new(class)
+			e.Name = name
+			e.Parent = Lighting
+		end
+		return e
+	end
+
+	local gradeFx, bloomFx
+
+	local function updateEffects()
+		local cg = cfg.ColorGrade
+		if cg.Enabled then
+			if not gradeFx or gradeFx.Parent ~= Lighting then gradeFx = effect("ColorCorrectionEffect", "HubColorGrade") end
+			put(gradeFx, "Enabled", true)
+			put(gradeFx, "Saturation", cg.Saturation)
+			put(gradeFx, "Contrast", cg.Contrast)
+			put(gradeFx, "Brightness", cg.Brightness)
+			put(gradeFx, "TintColor", animColor(cg.Color1, cg.Color2, cg.Animate, cg.Speed))
+		elseif gradeFx and gradeFx.Enabled then
+			gradeFx.Enabled = false
+		end
+		local bl = cfg.Bloom
+		if bl.Enabled then
+			if not bloomFx or bloomFx.Parent ~= Lighting then bloomFx = effect("BloomEffect", "HubBloom") end
+			put(bloomFx, "Enabled", true)
+			put(bloomFx, "Intensity", bl.Intensity)
+			put(bloomFx, "Size", bl.Size)
+			put(bloomFx, "Threshold", bl.Threshold)
+		elseif bloomFx and bloomFx.Enabled then
+			bloomFx.Enabled = false
+		end
+	end
+
+	local skyInst, lastPreset, lastCustom
+	local skyHidden = {}
+	local skyPresets = {
+		["Roblox Default"] = {
+			"rbxasset://textures/sky/sky512_bk.tex", "rbxasset://textures/sky/sky512_dn.tex", "rbxasset://textures/sky/sky512_ft.tex",
+			"rbxasset://textures/sky/sky512_lf.tex", "rbxasset://textures/sky/sky512_rt.tex", "rbxasset://textures/sky/sky512_up.tex"
+		},
+		["Space Nebula"] = {
+			"rbxassetid://159454299", "rbxassetid://159454296", "rbxassetid://159454293",
+			"rbxassetid://159454286", "rbxassetid://159454300", "rbxassetid://159454288"
+		}
+	}
+
+	local function normId(text)
+		text = text:gsub("%s", "")
+		if text:match("^%d+$") then return "rbxassetid://" .. text end
+		return text
+	end
+
+	local function customFaces(text)
+		local parts = {}
+		for piece in string.gmatch(text or "", "[^,;]+") do
+			parts[#parts + 1] = normId(piece)
+		end
+		if #parts == 0 then return nil end
+		local faces = {}
+		for i = 1, 6 do faces[i] = parts[i] or parts[1] end
+		return faces
+	end
+
+	local function applyFaces(sky)
+		local s = cfg.Sky
+		local faces = (s.Preset == "Custom" and customFaces(s.Custom)) or skyPresets[s.Preset] or skyPresets["Roblox Default"]
+		sky.SkyboxBk, sky.SkyboxDn, sky.SkyboxFt = faces[1], faces[2], faces[3]
+		sky.SkyboxLf, sky.SkyboxRt, sky.SkyboxUp = faces[4], faces[5], faces[6]
+	end
+
+	local function hideOtherSkies()
+		for _, child in ipairs(Lighting:GetChildren()) do
+			if child:IsA("Sky") and child ~= skyInst then
+				skyHidden[#skyHidden + 1] = { child, child.Parent }
+				child.Parent = nil
+			end
+		end
+	end
+
+	local function updateSky()
+		local s = cfg.Sky
+		if s.Enabled then
+			if not skyInst or not skyInst.Parent then
+				skyInst = Instance.new("Sky")
+				skyInst.Name = "HubSky"
+				skyInst.Parent = Lighting
+				lastPreset = nil
+				hideOtherSkies()
+			elseif wf % 120 == 0 then
+				hideOtherSkies()
+			end
+			if lastPreset ~= s.Preset or lastCustom ~= s.Custom then
+				applyFaces(skyInst)
+				lastPreset, lastCustom = s.Preset, s.Custom
+			end
+			put(skyInst, "StarCount", s.Stars)
+			put(skyInst, "CelestialBodiesShown", s.Celestial)
+			local rot = s.Spin and (GT * s.SpinSpeed * 10) % 360 or s.Rotation
+			if skyInst.SkyboxOrientation.Y ~= rot then skyInst.SkyboxOrientation = Vector3.new(0, rot, 0) end
+		elseif skyInst then
+			pcall(skyInst.Destroy, skyInst)
+			skyInst = nil
+			for _, pair in ipairs(skyHidden) do
+				pcall(function() pair[1].Parent = pair[2] end)
+			end
+			table.clear(skyHidden)
+		end
+	end
+
+	local terrain = Workspace:FindFirstChildOfClass("Terrain")
+	local terrainMats = {}
+	for _, name in ipairs({ "Grass", "Slate", "Concrete", "Brick", "Sand", "WoodPlanks", "Rock", "Glacier", "Snow", "Sandstone", "Mud", "Basalt", "Ground", "CrackedLava", "Asphalt", "Cobblestone", "Ice", "LeafyGrass", "Salt", "Limestone", "Pavement" }) do
+		terrainMats[#terrainMats + 1] = Enum.Material[name]
+	end
+	local terrainBase = {}
+	local terrainOn, terrainLast = false, 0
+	local tc1, tc2, ts, tAnim
+
+	local function updateTerrain()
+		local tc = cfg.Terrain
+		if not terrain then return end
+		if tc.Enabled then
+			if tc.Water then setProp(terrain, "WaterColor", animColor(tc.Color1, tc.Color2, tc.Animate, tc.Speed)) end
+			if GT - terrainLast < 0.1 then return end
+			terrainLast = GT
+			if terrainOn and not tc.Animate and tAnim == false and tc1 == tc.Color1 and tc2 == tc.Color2 and ts == tc.Strength then return end
+			tc1, tc2, ts, tAnim = tc.Color1, tc.Color2, tc.Strength, tc.Animate
+			terrainOn = true
+			local count = #terrainMats
+			for i, material in ipairs(terrainMats) do
+				local base = terrainBase[material]
+				if base == nil then
+					local ok, color = pcall(terrain.GetMaterialColor, terrain, material)
+					if ok then
+						base = color
+						terrainBase[material] = color
+					end
+				end
+				if base then
+					local f = tc.Animate and pp((i / count) * 0.5 + GT * tc.Speed * 0.1) or ((i - 1) / (count - 1))
+					pcall(terrain.SetMaterialColor, terrain, material, base:Lerp(tc.Color1:Lerp(tc.Color2, f), tc.Strength))
+				end
+			end
+		elseif terrainOn then
+			terrainOn = false
+			tAnim = nil
+			for material, color in pairs(terrainBase) do
+				pcall(terrain.SetMaterialColor, terrain, material, color)
+			end
+		end
+	end
+
+	local rc = {
+		items = {}, parts = {}, pending = {}, idx = 1, built = false, building = false, gen = 0, done = false, nextPass = 0, tex = nil, conn = nil,
+		col = setmetatable({}, { __mode = "k" }), mat = setmetatable({}, { __mode = "k" }), sig = {}
+	}
+
+	local function inCharacter(inst)
+		local model = inst:FindFirstAncestorOfClass("Model")
+		while model do
+			if model:FindFirstChildOfClass("Humanoid") then return true end
+			model = model:FindFirstAncestorOfClass("Model")
+		end
+		return false
+	end
+
+	local function rcAdd(inst)
+		local isPart = inst:IsA("BasePart")
+		if isPart then
+			if inst:IsA("Terrain") then return end
+		elseif not (cfg.Recolor.Textures and inst:IsA("Decal")) then
+			return
+		end
+		if inCharacter(inst) then return end
+		local n = #rc.items + 1
+		rc.items[n] = inst
+		rc.parts[n] = isPart
+	end
+
+	local function buildRc()
+		if rc.building then return end
+		rc.building = true
+		local gen = rc.gen
+		task.spawn(function()
+			local list = Workspace:GetDescendants()
+			for i, inst in ipairs(list) do
+				rcAdd(inst)
+				if i % 400 == 0 then
+					task.wait()
+					if rc.gen ~= gen then return end
+				end
+			end
+			rc.built = true
+			rc.building = false
+		end)
+	end
+
+	local function restoreRc()
+		rc.gen += 1
+		rc.building = false
+		for inst, color in pairs(rc.col) do
+			pcall(function()
+				if inst:IsA("BasePart") then inst.Color = color else inst.Color3 = color end
+			end)
+		end
+		for inst, material in pairs(rc.mat) do
+			pcall(function() inst.Material = material end)
+		end
+		table.clear(rc.col)
+		table.clear(rc.mat)
+		table.clear(rc.items)
+		table.clear(rc.parts)
+		table.clear(rc.pending)
+		rc.built, rc.done, rc.idx = false, false, 1
+		if rc.conn then
+			rc.conn:Disconnect()
+			rc.conn = nil
+		end
+	end
+
+	local function sameSig(r)
+		local sg = rc.sig
+		return sg.Mode == r.Mode and sg.Axis == r.Axis and sg.Color1 == r.Color1 and sg.Color2 == r.Color2 and sg.Period == r.Period and sg.Strength == r.Strength and sg.Material == r.Material
+	end
+
+	local axisCode = { X = 1, Z = 2, Diagonal = 3, Distance = 4 }
+
+	local function updateRecolor()
+		local r = cfg.Recolor
+		if not r.Enabled then
+			if rc.conn or rc.built or rc.building then restoreRc() end
+			return
+		end
+		if rc.tex ~= r.Textures then
+			if rc.built or rc.building then restoreRc() end
+			rc.tex = r.Textures
+		end
+		if not rc.conn then
+			rc.conn = Workspace.DescendantAdded:Connect(function(inst)
+				if rc.built then rc.pending[#rc.pending + 1] = inst end
+			end)
+		end
+		if not rc.built then
+			buildRc()
+			return
+		end
+		local items, parts, pending = rc.items, rc.parts, rc.pending
+		for _ = 1, math.min(#pending, 64) do
+			local inst = table.remove(pending)
+			if inst.Parent then
+				rcAdd(inst)
+				rc.done = false
+			end
+		end
+		local static = not r.Animate and r.Axis ~= "Distance"
+		if not sameSig(r) then
+			local sg = rc.sig
+			sg.Mode, sg.Axis, sg.Color1, sg.Color2, sg.Period, sg.Strength, sg.Material = r.Mode, r.Axis, r.Color1, r.Color2, r.Period, r.Strength, r.Material
+			rc.idx = 1
+			rc.done = false
+		end
+		if rc.done then
+			if static and GT < rc.nextPass then return end
+			rc.done = false
+		end
+		local n = #items
+		local i = rc.idx
+		local code = axisCode[r.Axis] or 0
+		local camPos = code == 4 and Workspace.CurrentCamera.CFrame.Position
+		local mode, c1, c2, strength, period = r.Mode, r.Color1, r.Color2, r.Strength, r.Period
+		local shift = r.Animate and GT * r.Speed * 0.05 or 0
+		local matEnum = r.Material ~= "Off" and Enum.Material[r.Material] or nil
+		local zero = Vector3.zero
+		for _ = 1, math.min(n, r.PerFrame) do
+			if i > n then
+				i = 1
+				if static then
+					rc.done = true
+					rc.nextPass = GT + 2
+					break
+				end
+			end
+			local inst = items[i]
+			if inst.Parent then
+				local isPart = parts[i]
+				local base = isPart and inst or inst.Parent
+				local original = rc.col[inst]
+				if not original then
+					original = isPart and inst.Color or inst.Color3
+					rc.col[inst] = original
+				end
+				local pos = (base and base:IsA("BasePart")) and base.Position or zero
+				local coord
+				if code == 1 then
+					coord = pos.X
+				elseif code == 2 then
+					coord = pos.Z
+				elseif code == 3 then
+					coord = pos.X + pos.Z
+				elseif code == 4 then
+					coord = (pos - camPos).Magnitude
+				else
+					coord = pos.Y
+				end
+				local ph = coord / period + shift
+				local color
+				if mode == "Tint" then
+					color = c1
+				elseif mode == "Rainbow" then
+					color = Color3.fromHSV(ph % 1, 0.7, 1)
+				else
+					color = c1:Lerp(c2, pp(ph))
+				end
+				if isPart then
+					inst.Color = original:Lerp(color, strength)
+					if matEnum then
+						if rc.mat[inst] == nil then rc.mat[inst] = inst.Material end
+						if inst.Material ~= matEnum then inst.Material = matEnum end
+					elseif rc.mat[inst] ~= nil then
+						inst.Material = rc.mat[inst]
+						rc.mat[inst] = nil
+					end
+				else
+					inst.Color3 = original:Lerp(color, strength)
+				end
+				i += 1
+			else
+				items[i], parts[i] = items[n], parts[n]
+				items[n], parts[n] = nil, nil
+				n -= 1
+			end
+		end
+		rc.idx = i
+	end
+
+	local function step()
+		wf += 1
+		GT = tick()
+		local nf, tm, am, at = cfg.NoFog, cfg.Time, cfg.Ambient, cfg.Atmo
+
+		local lightOn = nf.Enabled or tm.Enabled or am.Enabled
+		lw.FogEnd = nf.Enabled and 1000000 or nil
+		lw.ClockTime = tm.Enabled and tm.Value or nil
+		if am.Enabled then
+			local color = animColor(am.Color1, am.Color2, am.Animate, am.Speed)
+			lw.Ambient, lw.OutdoorAmbient = color, color
+		else
+			lw.Ambient, lw.OutdoorAmbient = nil, nil
+		end
+		if lightOn or lightWas then Lib.SyncLighting() end
+		lightWas = lightOn
+
+		local atmoOn = nf.Enabled or at.Enabled
+		trackAtmos(atmoOn)
+		if atmoOn then
+			local tint = at.Enabled and animColor(at.Color1, at.Color2, at.Animate, at.Speed) or nil
+			for atmosphere in pairs(atmos) do
+				if nf.Enabled then
+					setProp(atmosphere, "Density", 0)
+					setProp(atmosphere, "Haze", 0)
+				end
+				if tint then
+					setProp(atmosphere, "Color", tint)
+					setProp(atmosphere, "Decay", tint)
+				end
+			end
+		end
+
+		updateEffects()
+		updateSky()
+		updateTerrain()
+		updateRecolor()
+		flushProps()
+	end
+
+	local function anyOn()
+		for i = 1, #keys do
+			if cfg[keys[i]].Enabled then return true end
+		end
+		return false
+	end
+
+	local function sync()
+		if anyOn() then
+			if not conn then conn = RunService.RenderStepped:Connect(step) end
+		elseif conn then
+			conn:Disconnect()
+			conn = nil
+			step()
+		end
+	end
+
+	local function stop()
+		for i = 1, #keys do cfg[keys[i]].Enabled = false end
+		sync()
+		for _, fx in ipairs({ gradeFx or false, bloomFx or false }) do
+			if fx then pcall(fx.Destroy, fx) end
+		end
+		gradeFx, bloomFx = nil, nil
+	end
+
+	return { cfg = cfg, sync = sync, stop = stop }
+end
+
+function Lib.BuildWorld(scroll)
+	local W = Lib.CreateWorldCore()
+	local cfg = W.cfg
+	local Kit = Lib.CreateRowKit(W.sync)
+	local T, S, C, K, I, Feature = Kit.T, Kit.S, Kit.C, Kit.K, Kit.I, Kit.Feature
+	local NF, TM, AM, AT, CG, BL, SK, TE, RC = cfg.NoFog, cfg.Time, cfg.Ambient, cfg.Atmo, cfg.ColorGrade, cfg.Bloom, cfg.Sky, cfg.Terrain, cfg.Recolor
+
+	local timeRows = {
+		"Time",
+		S("Clock Time", "Time of day in hours", TM, "Value", 0, 24, 0.5)
+	}
+
+	local ambientRows = {
+		"Colors",
+		K("Ambient Color 1", AM, "Color1"),
+		K("Ambient Color 2", AM, "Color2"),
+		"Animation",
+		T("Ambient Animated", "Blends between both colors", AM, "Animate"),
+		S("Ambient Speed", "Animation speed", AM, "Speed", 1, 10, 1)
+	}
+
+	local atmoRows = {
+		"Colors",
+		K("Atmosphere Color 1", AT, "Color1"),
+		K("Atmosphere Color 2", AT, "Color2"),
+		"Animation",
+		T("Atmosphere Animated", "Blends between both colors", AT, "Animate"),
+		S("Atmosphere Speed", "Animation speed", AT, "Speed", 1, 10, 1)
+	}
+
+	local gradeRows = {
+		"Colors",
+		K("Grade Tint 1", CG, "Color1"),
+		K("Grade Tint 2", CG, "Color2"),
+		T("Grade Animated", "Blends between both tints", CG, "Animate"),
+		S("Grade Speed", "Animation speed", CG, "Speed", 1, 10, 1),
+		"Adjustments",
+		S("Grade Saturation", "Color saturation", CG, "Saturation", -1, 2, 0.05),
+		S("Grade Contrast", "Image contrast", CG, "Contrast", -1, 1, 0.05),
+		S("Grade Brightness", "Image brightness", CG, "Brightness", -0.5, 0.5, 0.05)
+	}
+
+	local bloomRows = {
+		"Bloom",
+		S("Bloom Intensity", "Glow strength", BL, "Intensity", 0, 5, 0.1),
+		S("Bloom Size", "Glow spread", BL, "Size", 0, 56, 1),
+		S("Bloom Threshold", "Minimum brightness that glows", BL, "Threshold", 0, 3, 0.05)
+	}
+
+	local skyRows = {
+		"Skybox",
+		C("Sky Preset", SK, "Preset", { "Space Nebula", "Roblox Default", "Custom" }),
+		I("Sky Custom IDs", "1 ID or 6 IDs (Bk,Dn,Ft,Lf,Rt,Up)", SK, "Custom"),
+		"Space",
+		S("Star Count", "Number of stars", SK, "Stars", 0, 5000, 100),
+		T("Sun / Moon", "Shows the sun and moon", SK, "Celestial"),
+		"Rotation",
+		S("Sky Rotation", "Skybox angle", SK, "Rotation", 0, 360, 5, "°"),
+		T("Sky Spin", "Rotates the skybox", SK, "Spin"),
+		S("Sky Spin Speed", "Rotation speed", SK, "SpinSpeed", 0.1, 5, 0.1)
+	}
+
+	local terrainRows = {
+		"Colors",
+		K("Terrain Color 1", TE, "Color1"),
+		K("Terrain Color 2", TE, "Color2"),
+		T("Terrain Animated", "Blends between both colors", TE, "Animate"),
+		S("Terrain Speed", "Animation speed", TE, "Speed", 1, 10, 1),
+		S("Terrain Strength", "How strongly terrain is recolored", TE, "Strength", 0, 100, 5, "%", 100),
+		T("Recolor Water", "Recolors the water too", TE, "Water")
+	}
+
+	local recolorRows = {
+		"Mode",
+		C("Recolor Mode", RC, "Mode", { "Gradient", "Tint", "Rainbow" }),
+		C("Recolor Axis", RC, "Axis", { "Height", "X", "Z", "Diagonal", "Distance" }),
+		"Colors",
+		K("Recolor Color 1", RC, "Color1"),
+		K("Recolor Color 2", RC, "Color2"),
+		T("Recolor Animated", "Moves the gradient over time", RC, "Animate"),
+		S("Recolor Speed", "Animation speed", RC, "Speed", 1, 10, 1),
+		S("Recolor Gradient Length", "Gradient length in studs", RC, "Period", 5, 500, 5, "st"),
+		S("Recolor Strength", "How strongly parts are recolored", RC, "Strength", 0, 100, 5, "%", 100),
+		"Parts",
+		C("Material Override", RC, "Material", { "Off", "Neon", "ForceField", "SmoothPlastic", "Glass", "Metal", "Plastic", "Foil" }),
+		T("Recolor Decals / Textures", "Recolors decals and textures", RC, "Textures"),
+		S("Recolor Parts Per Frame", "Parts processed each frame", RC, "PerFrame", 50, 1000, 50)
+	}
+
+	local group = Lib.CreateFeatureGroup(scroll, "World", 4)
+	Feature(group, "No Fog", "Removes fog and atmosphere haze", NF, "No Fog")
+	Feature(group, "Time Changer", "Locks the time of day", TM, "Time Changer", 220, timeRows)
+	Feature(group, "Ambient Color", "Tints the world ambient light", AM, "Ambient Color", 400, ambientRows)
+	Feature(group, "Atmosphere Tint", "Tints the sky atmosphere", AT, "Atmosphere Tint", 400, atmoRows)
+	Feature(group, "Color Grade", "Color correction with animated tint", CG, "Color Grade", 560, gradeRows)
+	Feature(group, "Bloom", "Adds a glow around bright areas", BL, "Bloom", 330, bloomRows)
+	Feature(group, "Custom Skybox", "Replaces the sky with a custom skybox", SK, "Custom Skybox", 560, skyRows)
+	Feature(group, "Terrain Recolor", "Recolors terrain materials and water", TE, "Terrain Recolor", 520, terrainRows)
+	Feature(group, "World Recolor", "Recolors parts, decals and textures", RC, "World Recolor", 700, recolorRows, true)
+
+	Lib.StopWorld = W.stop
+	Lib.ConfigExtras = Lib.ConfigExtras or {}
+	Lib.ConfigExtras.World = Kit.Hook()
 end
 
 function Lib.BuildDevConsole()
@@ -7519,13 +11932,10 @@ do
 
 	Lib.BuildFeatureSearch(FeaturesSection, FeaturesSideBar, FeaturesTabs)
 
-	local ESPGroup = Lib.CreateFeatureGroup(VisualsScroll, "ESP", 1)
-	Lib.CreateSettingToggleItem(ESPGroup, "Esp Name", "Display player display names with studs distance", State.ESP_Name, function(val) State.ESP_Name = val end)
-	Lib.CreateSettingToggleItem(ESPGroup, "ESP Outline", "Highlight player character models through obstacles", State.ESP_Outline, function(val) State.ESP_Outline = val end)
-	Lib.CreateSettingToggleItem(ESPGroup, "Box ESP", "Draw 2D bounding boxes around players", State.ESP_Box, function(val) State.ESP_Box = val end)
-	Lib.CreateSettingToggleItem(ESPGroup, "Tracers", "Draw lines connecting screen bottom to players", State.ESP_Tracers, function(val) State.ESP_Tracers = val end, true)
+	Lib.BuildEsp(VisualsScroll)
+	Lib.BuildWorld(VisualsScroll)
 
-	local BoostGroup = Lib.CreateFeatureGroup(VisualsScroll, "Boost FPS & World", 2)
+	local BoostGroup = Lib.CreateFeatureGroup(VisualsScroll, "Boost FPS & World", 3)
 	Lib.CreateSettingToggleItem(BoostGroup, "Boost FPS", "Very strong texture compression & maximum performance boost", State.BoostFPS, function(val)
 		State.BoostFPS = val
 		if val then Lib.ApplyBoostFPS() else Lib.RevertBoostFPS() end
@@ -7553,15 +11963,17 @@ do
 	local MoveCharGroup = Lib.CreateFeatureGroup(MovementScroll, "Character Speed & Jump", 1)
 	Lib.CreateSettingSliderItem(MoveCharGroup, "Walk Speed", "Adjust character movement speed", 16, 300, State.WalkSpeed, function(val)
 		State.WalkSpeed = val
+		if val ~= 16 then State.WalkSpeedTouched = true end
 		local char = App.Player.Character
 		local hum = char and char:FindFirstChildOfClass("Humanoid")
-		if hum and not State.FakeLagSuspension then hum.WalkSpeed = val end
+		if hum and State.WalkSpeedTouched and not State.FakeLagSuspension then hum.WalkSpeed = val end
 	end)
 	Lib.CreateSettingSliderItem(MoveCharGroup, "Jump Power", "Adjust jump power height", 50, 350, State.JumpPower, function(val)
 		State.JumpPower = val
+		if val ~= 50 then State.JumpPowerTouched = true end
 		local char = App.Player.Character
 		local hum = char and char:FindFirstChildOfClass("Humanoid")
-		if hum then
+		if hum and State.JumpPowerTouched then
 			hum.UseJumpPower = true
 			hum.JumpPower = val
 		end
@@ -7613,6 +12025,17 @@ do
 		State.Shader_Cyberpunk = val
 		if val then Lib.ApplyCyberpunkShader() else Lib.ResetShaders() end
 	end)
+	Lib.NeonSet = select(2, Lib.CreateColorItem(ShadersGroup, "Neon Color", State, "CyberpunkColor", false, Lib.RetintCyberpunk))
+	Lib.ConfigExtras.Shaders = {
+		Dump = function()
+			local color = State.CyberpunkColor
+			return { Neon = { math.round(color.R * 255), math.round(color.G * 255), math.round(color.B * 255) } }
+		end,
+		Apply = function(data)
+			local rgb = data.Neon
+			if type(rgb) == "table" and #rgb == 3 then Lib.NeonSet(Color3.fromRGB(rgb[1], rgb[2], rgb[3])) end
+		end
+	}
 	Lib.CreateSettingToggleItem(ShadersGroup, "Silent Hill Fog", "Heavy, dense fog, low visibility & desaturated horror atmosphere", State.Shader_SilentHill, function(val)
 		State.Shader_SilentHill = val
 		if val then Lib.ApplySilentHillShader() else Lib.ResetShaders() end
@@ -7809,7 +12232,7 @@ do
 	Lib.CreateSettingToggleItem(FakeLagGroup, "Complete Suspension", "Drops character movement to appear frozen to others", State.FakeLagSuspension, function(val)
 		State.FakeLagSuspension = val
 		local hum = App.Player.Character and App.Player.Character:FindFirstChildOfClass("Humanoid")
-		if hum then hum.WalkSpeed = val and 0.5 or State.WalkSpeed end
+		if hum then hum.WalkSpeed = val and 0.5 or (State.WalkSpeedTouched and State.WalkSpeed) or (Refs.OrigHum == hum and Refs.OrigWS) or 16 end
 	end)
 	Lib.CreateSettingToggleItem(FakeLagGroup, "Usual Lag", "Simulates realistic high ping latency and movement stutters", State.FakeLagUsual, function(val)
 		State.FakeLagUsual = val
@@ -8530,7 +12953,7 @@ do
 	local View_Recent = MakeScriptsTab("Recent", 130)
 
 	local BrowseScroll = Lib.Create("ScrollingFrame", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, ScrollBarThickness = 2, ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), BorderSizePixel = 0, Parent = View_Browse })
-	local BrowseGrid = Lib.Create("UIGridLayout", { CellSize = UDim2.fromOffset(185, 220), CellPadding = UDim2.fromOffset(15, 15), SortOrder = Enum.SortOrder.LayoutOrder, Parent = BrowseScroll })
+	local BrowseGrid = Lib.Create("UIGridLayout", { CellSize = UDim2.fromOffset(190, 236), CellPadding = UDim2.fromOffset(15, 15), SortOrder = Enum.SortOrder.LayoutOrder, Parent = BrowseScroll })
 	Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 5), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 15), Parent = BrowseScroll })
 
 	Lib.ScriptsSearch = Lib.BuildBrowseSearch(View_Browse, BrowseScroll, 0, "Search by place or script name...", function(query)
@@ -8575,20 +12998,41 @@ do
 		return url
 	end
 
+	function Src.Stamp(value)
+		if type(value) == "number" then return value > 1e12 and value // 1000 or value end
+		if type(value) ~= "string" or value == "" then return nil end
+		local ok, date = pcall(DateTime.fromIsoDate, value)
+		return ok and date and date.UnixTimestamp or nil
+	end
+
+	function Src.Meta(source, entry)
+		local stats = type(source.stats) == "table" and source.stats or {}
+		entry.views = entry.views or tonumber(source.views or source.viewCount or stats.views or stats.viewCount)
+		entry.created = entry.created or Src.Stamp(source.createdAt or source.created_at or source.publishedAt or source.date)
+		entry.updated = entry.updated or Src.Stamp(source.updatedAt or source.lastUpdated or source.updated_at or source.bumpedAt)
+	end
+
 	function Src.ParseBlox(decoded, result)
 		if decoded.result and decoded.result.scripts then
 			result.success = true
 			result.totalPages = decoded.result.totalPages or 1
+			local host = "https://scriptblox.com"
 			for _, s in ipairs(decoded.result.scripts) do
-				local img = Src.Abs(s.image, "https://scriptblox.com") or Src.Abs(s.game and s.game.imageUrl, "https://scriptblox.com")
-				table.insert(result.data, {
+				local place = type(s.game) == "table" and s.game or {}
+				local entry = {
 					title = s.title,
-					game = s.game and s.game.name or "Universal",
-					imageUrl = img,
+					game = place.name or "Universal",
+					imageUrl = Src.Abs(s.image, host) or Src.Abs(place.imageUrl, host),
+					gameImage = Src.Abs(place.imageUrl, host),
 					hasKey = s.key,
 					isVerified = s.verified,
-					script = s.script or s.code or ""
-				})
+					script = s.script or s.code or "",
+					slug = s.slug,
+					link = s.slug and (host .. "/script/" .. s.slug) or nil,
+					origin = "ScriptBlox"
+				}
+				Src.Meta(s, entry)
+				result.data[#result.data + 1] = entry
 			end
 			return true
 		end
@@ -8607,23 +13051,30 @@ do
 
 		if rawScripts and #rawScripts > 0 then
 			result.success = true
+			local host = "https://rscripts.net"
 			for _, s in ipairs(rawScripts) do
 				local place = type(s.game) == "table" and s.game or {}
-				local host = "https://rscripts.net"
-				local img = Src.Abs(s.imageUrl, host) or Src.Abs(s.image, host) or Src.Abs(place.thumbnailUrl, host) or Src.Abs(place.logoUrl, host) or Src.Abs(place.imageUrl, host)
+				local gameImage = Src.Abs(place.thumbnailUrl, host) or Src.Abs(place.logoUrl, host) or Src.Abs(place.imageUrl, host) or Src.Abs(place.imgurl, host)
+				local img = Src.Abs(s.imageUrl, host) or Src.Abs(s.image, host) or gameImage
 				local code = type(s.script) == "string" and s.script or type(s.code) == "string" and s.code or ""
 				if code:find("^https?://%S+$") then code = "" end
-				table.insert(result.data, {
+				local slug = s.slug or s._id or s.id
+				local entry = {
 					title = s.title or s.name,
 					game = (s.game and (s.game.title or s.game.name)) or "Universal",
 					imageUrl = img,
+					gameImage = gameImage,
 					hasKey = s.hasKey or s.isKeySystem or s.keySystem or s.key,
 					isVerified = s.isVerified or (s.risk and s.risk.level == "Safe") or (s.creator and s.creator.isVerified),
 					script = code,
 					raw = type(s.rawScript) == "string" and s.rawScript or "",
 					id = s._id or s.id,
+					slug = slug,
+					link = slug and (host .. "/script/" .. slug) or nil,
 					origin = "Rscripts"
-				})
+				}
+				Src.Meta(s, entry)
+				result.data[#result.data + 1] = entry
 			end
 			return true
 		end
@@ -8639,19 +13090,25 @@ do
 			local current = pg.page or 1
 			result.totalPages = pg.totalPages or (pg.hasMore and current + 1) or current
 		end
+		local host = "https://haxhell.com"
 		for _, s in ipairs(rows) do
-			local flags, game, media = s.flags or {}, s.game or {}, s.media or {}
-			result.data[#result.data + 1] = {
+			local flags, game, media, links = s.flags or {}, s.game or {}, s.media or {}, s.links or {}
+			local gameImage = Src.Abs(game.thumbnailUrl, host) or Src.Abs(game.iconUrl, host)
+			local entry = {
 				title = s.title,
 				game = game.name or "Universal",
-				imageUrl = Src.Abs(media.thumbnailUrl, "https://haxhell.com") or Src.Abs(game.thumbnailUrl, "https://haxhell.com") or Src.Abs(game.iconUrl, "https://haxhell.com"),
+				imageUrl = Src.Abs(media.thumbnailUrl, host) or gameImage,
+				gameImage = Src.Abs(game.iconUrl, host) or gameImage,
 				hasKey = flags.keySystem,
 				isVerified = flags.verified,
 				script = "",
 				slug = s.slug,
-				raw = s.links and s.links.raw or "",
+				raw = links.raw or "",
+				link = Src.Abs(links.web or links.page or links.url, host) or (s.slug and (host .. "/scripts/" .. s.slug) or nil),
 				origin = "HaxHell"
 			}
+			Src.Meta(s, entry)
+			result.data[#result.data + 1] = entry
 		end
 		return true
 	end
@@ -8692,6 +13149,7 @@ do
 		if data.origin == "HaxHell" and data.slug then
 			local decoded = Src.Decode("https://haxhell.com/api/v1/scripts/" .. data.slug)
 			local source = decoded and decoded.data and decoded.data.source
+			if decoded and type(decoded.data) == "table" then Src.Meta(decoded.data, data) end
 			if source then
 				local inline = type(source.code) == "string" and source.code or ""
 				code = (source.displayAsRawLink or inline == "") and Src.Wrap(source.rawUrl) or inline
@@ -8703,6 +13161,7 @@ do
 			local decoded = Src.Decode("https://rscripts.net/api/v2/script?id=" .. data.id)
 			local item = decoded and decoded.script
 			item = type(item) == "table" and (item[1] or item) or nil
+			if item then Src.Meta(item, data) end
 			if item and type(item.rawScript) == "string" then
 				data.raw = item.rawScript
 				code = Src.Wrap(item.rawScript)
@@ -8899,57 +13358,394 @@ do
 	end
 	Src.Button.SetCount(Src.Count())
 
-	local function CreateScriptCard(data, order, parent, onChange)
-		local Card = Lib.Create("Frame", {
-			Size = UDim2.fromOffset(185, 220),
-			BackgroundColor3 = Color3.fromRGB(15, 15, 15),
-			LayoutOrder = order,
-			ClipsDescendants = true,
-			Parent = parent or BrowseScroll,
+	function Lib.BuildScriptDetails()
+		local gold, white, green, red, gray = Color3.fromRGB(255, 200, 40), Color3.new(1, 1, 1), Color3.fromRGB(80, 220, 120), Color3.fromRGB(220, 80, 80), Color3.fromRGB(145, 145, 145)
+		local api, state, closing, busy = {}, nil, false, {}
+
+		local backdrop = Lib.Create("TextButton", {
+			Name = "ScriptDetailsBackdrop", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 1,
+			Text = "", AutoButtonColor = false, Visible = false, ZIndex = 30, Parent = UI.Main
+		})
+		local window = Lib.Create("Frame", {
+			Size = UDim2.fromScale(0.9, 0.92), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5),
+			BackgroundColor3 = Color3.fromRGB(16, 16, 16), ClipsDescendants = true, Active = true, ZIndex = 31, Parent = backdrop,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 12) }),
+			Lib.Create("UIStroke", { Color = Color3.fromRGB(60, 60, 60), Thickness = 1, Transparency = 0.5 }),
+			Lib.Create("UISizeConstraint", { MaxSize = Vector2.new(460, 580) })
+		})
+		Lib.RegisterThemeElement(window, "BackgroundColor3", 0.7)
+		local windowScale = Lib.Create("UIScale", { Parent = window })
+
+		local body = Lib.Create("ScrollingFrame", {
+			Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 2, ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100),
+			CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ZIndex = 32, Parent = window,
+			Lib.Create("UIListLayout", { Padding = UDim.new(0, 14), SortOrder = Enum.SortOrder.LayoutOrder })
+		})
+
+		local hero = Lib.Create("CanvasGroup", {
+			Size = UDim2.new(1, 0, 0, 170), BackgroundColor3 = Color3.fromRGB(20, 20, 20), LayoutOrder = 1, ZIndex = 32, Parent = body,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 12) })
+		})
+		Lib.RegisterThemeElement(hero, "BackgroundColor3", 0.7)
+		local heroImage = Lib.Create("ImageLabel", {
+			Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ScaleType = Enum.ScaleType.Crop, ZIndex = 32, Parent = hero
+		})
+		local fade = Lib.Create("Frame", {
+			Size = UDim2.fromScale(1, 1), BorderSizePixel = 0, ZIndex = 33, Parent = hero,
+			Lib.Create("UIGradient", {
+				Rotation = 90,
+				Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.55, 0.7), NumberSequenceKeypoint.new(1, 0) })
+			})
+		})
+		Lib.RegisterThemeElement(fade, "BackgroundColor3", 0.7)
+		local close = Lib.Create("TextButton", {
+			Size = UDim2.fromOffset(30, 30), Position = UDim2.new(1, -40, 0, 10), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.4,
+			Text = "\u{00D7}", TextColor3 = Color3.new(1, 1, 1), TextSize = 20, Font = Enum.Font.GothamBold, AutoButtonColor = false, ZIndex = 36, Parent = hero,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) })
+		})
+
+		local info = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 70), BackgroundTransparency = 1, LayoutOrder = 2, ZIndex = 34, Parent = body })
+		local thumb = Lib.Create("ImageLabel", {
+			Size = UDim2.fromOffset(68, 68), Position = UDim2.fromOffset(16, -34), BackgroundColor3 = Color3.fromRGB(20, 20, 20), ScaleType = Enum.ScaleType.Crop, ZIndex = 35, Parent = info,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 12) })
+		})
+		Lib.RegisterThemeElement(thumb, "BackgroundColor3", 0.7)
+		local thumbStroke = Lib.Create("UIStroke", { Color = Color3.fromRGB(16, 16, 16), Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = thumb })
+		Lib.RegisterThemeElement(thumbStroke, "Color", 0.7)
+		local title = Lib.Create("TextLabel", {
+			Size = UDim2.new(1, -116, 0, 42), Position = UDim2.fromOffset(100, 4), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(245, 245, 245), TextSize = 17,
+			Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true,
+			TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 35, Parent = info
+		})
+		Lib.RegisterThemeText(title, "Primary")
+		local place = Lib.Create("TextLabel", {
+			Size = UDim2.new(1, -116, 0, 16), Position = UDim2.fromOffset(100, 50), BackgroundTransparency = 1, TextColor3 = gray, TextSize = 12,
+			Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 35, Parent = info
+		})
+		Lib.RegisterThemeText(place, "Secondary")
+
+		local actions = Lib.Create("Frame", {
+			Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1, LayoutOrder = 3, ZIndex = 33, Parent = body,
+			Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 16) }),
+			Lib.Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder })
+		})
+
+		local function Button(parent, text, size, order, solid, size2, fixedText)
+			local button = Lib.Create("TextButton", {
+				Size = size, LayoutOrder = order, BackgroundColor3 = solid and white or Color3.fromRGB(28, 28, 28), Text = text,
+				TextColor3 = solid and Color3.new(0, 0, 0) or Color3.fromRGB(240, 240, 240), TextSize = size2 or 12, Font = Enum.Font.GothamBold,
+				AutoButtonColor = false, ZIndex = 34, Parent = parent,
+				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 10) })
+			})
+			if not solid then
+				Lib.RegisterThemeElement(button, "BackgroundColor3", 0.7, true)
+				if not fixedText then Lib.RegisterThemeText(button, "Primary") end
+			end
+			button.MouseEnter:Connect(function()
+				Lib.Tween(button, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundColor3 = solid and Color3.fromRGB(220, 220, 220) or Lib.Lighten(Lib.ThemeColor(0.7), 0.05) })
+			end)
+			button.MouseLeave:Connect(function()
+				Lib.Tween(button, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundColor3 = solid and white or Lib.ThemeColor(0.7) })
+			end)
+			return button
+		end
+
+		local executeBtn = Button(actions, "Execute", UDim2.new(1, -250, 1, 0), 1, true, 13)
+		local copyBtn = Button(actions, "Copy Script", UDim2.fromOffset(108, 40), 2)
+		local starBtn = Button(actions, "\u{2605}", UDim2.fromOffset(40, 40), 3, false, 18, true)
+		local linkBtn = Button(actions, "Copy Link", UDim2.fromOffset(78, 40), 4)
+
+		local chips = Lib.Create("Frame", {
+			Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 4, ZIndex = 33, Parent = body,
+			Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 16) }),
+			Lib.Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Wraps = true, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder })
+		})
+
+		local function Chip(kind, text, order)
+			local chip = Lib.Create("Frame", {
+				Size = UDim2.fromOffset(0, 28), AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = Color3.fromRGB(24, 24, 24), LayoutOrder = order, ZIndex = 34, Parent = chips,
+				Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) }),
+				Lib.Create("UIStroke", { Color = Color3.fromRGB(60, 60, 60), Thickness = 1, Transparency = 0.6 }),
+				Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) }),
+				Lib.Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder })
+			})
+			Lib.RegisterThemeElement(chip, "BackgroundColor3", 0.7, true)
+			if kind then Lib.MiniIcon(kind, chip, UDim2.new(), gray).LayoutOrder = 1 end
+			local label = Lib.Create("TextLabel", {
+				Size = UDim2.fromOffset(0, 28), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1, Text = text, TextColor3 = Color3.fromRGB(190, 190, 190),
+				TextSize = 12, Font = Enum.Font.GothamMedium, LayoutOrder = 2, ZIndex = 35, Parent = chip
+			})
+			Lib.RegisterThemeText(label, "Secondary")
+		end
+
+		local function BuildChips(d)
+			for _, child in ipairs(chips:GetChildren()) do
+				if child:IsA("Frame") then child:Destroy() end
+			end
+			local order = 0
+			local function Add(kind, text)
+				order += 1
+				Chip(kind, text, order)
+			end
+			if d.views then Add("eye", Lib.FormatViews(d.views) .. (d.views == 1 and " view" or " views")) end
+			if d.created then Add("clock", os.date("!%d.%m.%Y", d.created) .. " \u{2022} " .. Lib.TimeAgo(d.created)) end
+			if d.updated and (not d.created or d.updated - d.created > 3600) then Add("clock", "Updated " .. Lib.TimeAgo(d.updated)) end
+			if d.origin then Add(nil, d.origin) end
+			if d.hasKey then Add(nil, "Key System") end
+			if d.isVerified then Add(nil, "Verified") end
+		end
+
+		local preview = Lib.Create("Frame", {
+			Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 5, ZIndex = 33, Parent = body,
+			Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 16), PaddingBottom = UDim.new(0, 18) }),
+			Lib.Create("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder })
+		})
+		local head = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 28), BackgroundTransparency = 1, LayoutOrder = 1, ZIndex = 34, Parent = preview })
+		local tag = Lib.Create("TextLabel", {
+			Size = UDim2.fromOffset(26, 28), BackgroundTransparency = 1, Text = "</>", TextColor3 = gray, TextSize = 12, Font = Enum.Font.GothamBold, ZIndex = 35, Parent = head
+		})
+		Lib.RegisterThemeText(tag, "Secondary")
+		local headTitle = Lib.Create("TextLabel", {
+			Size = UDim2.fromOffset(120, 15), Position = UDim2.fromOffset(32, 0), BackgroundTransparency = 1, Text = "Script Preview", TextColor3 = Color3.fromRGB(240, 240, 240),
+			TextSize = 13, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 35, Parent = head
+		})
+		Lib.RegisterThemeText(headTitle, "Primary")
+		local lineCount = Lib.Create("TextLabel", {
+			Size = UDim2.fromOffset(120, 12), Position = UDim2.fromOffset(32, 16), BackgroundTransparency = 1, Text = "", TextColor3 = gray,
+			TextSize = 10, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 35, Parent = head
+		})
+		Lib.RegisterThemeText(lineCount, "Secondary")
+		local previewCopy = Button(head, "Copy", UDim2.fromOffset(60, 26), 1)
+		previewCopy.Position = UDim2.new(1, -60, 0, 1)
+
+		local box = Lib.Create("Frame", {
+			Size = UDim2.new(1, 0, 0, 170), BackgroundColor3 = Color3.fromRGB(10, 10, 10), ClipsDescendants = true, LayoutOrder = 2, ZIndex = 34, Parent = preview,
 			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
+		})
+		Lib.RegisterThemeElement(box, "BackgroundColor3", 0.5)
+		local codeScroll = Lib.Create("ScrollingFrame", {
+			Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3, ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100),
+			ScrollingDirection = Enum.ScrollingDirection.XY, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.XY, ZIndex = 35, Parent = box,
+			Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12), PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10) })
+		})
+		local code = Lib.Create("TextLabel", {
+			Size = UDim2.fromOffset(0, 0), AutomaticSize = Enum.AutomaticSize.XY, BackgroundTransparency = 1, Text = "", TextColor3 = Color3.fromRGB(205, 205, 205),
+			TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, ZIndex = 36, Parent = codeScroll
+		})
+		Lib.PinFont(code)
+		code.Font = Enum.Font.Code
+		Lib.RegisterThemeText(code, "Primary")
+
+		local function ShowCode(S)
+			local text = S.code
+			if text == "" then
+				code.Text = "-- Failed to load the script source"
+				lineCount.Text = ""
+				return
+			end
+			local count = select(2, text:gsub("\n", "\n")) + 1
+			lineCount.Text = count .. (count == 1 and " line" or " lines")
+			code.Text = #text > 6000 and (text:sub(1, 6000) .. "\n-- ... " .. (#text - 6000) .. " more characters") or text
+		end
+
+		local function Await(S)
+			while S.loading do task.wait(0.1) end
+			return S.code
+		end
+
+		local function Flash(button, text, good, rest)
+			button.Text = text
+			button.TextColor3 = good and green or red
+			task.wait(1.5)
+			if button.Parent then
+				button.Text = rest
+				button.TextColor3 = Lib.Palette.Primary
+			end
+		end
+
+		local function CopyCode(button, rest)
+			local S = state
+			if not S or busy[button] then return end
+			busy[button] = true
+			button.Text = "Copying..."
+			task.spawn(function()
+				local source = Await(S)
+				local copy = setclipboard or toclipboard or set_clipboard
+				local good = source ~= "" and copy ~= nil
+				if good then
+					copy(source)
+					Lib.ScriptStores.Recent.Add(S.key, S.data)
+				else
+					Lib.Notify({ Title = "Scripts", Text = "Failed to get the script loadstring" })
+				end
+				Flash(button, good and "Copied!" or "Failed", good, rest)
+				busy[button] = nil
+			end)
+		end
+
+		copyBtn.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			CopyCode(copyBtn, "Copy Script")
+		end)
+		previewCopy.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			CopyCode(previewCopy, "Copy")
+		end)
+
+		executeBtn.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			local S = state
+			if not S or busy[executeBtn] then return end
+			busy[executeBtn] = true
+			executeBtn.Text = "Executing..."
+			task.spawn(function()
+				local source = Await(S)
+				local fn, err
+				if source ~= "" and loadstring then fn, err = loadstring(source) end
+				if fn then
+					Lib.ScriptStores.Recent.Add(S.key, S.data)
+					task.spawn(function()
+						local ok, runError = pcall(fn)
+						if not ok then Lib.Notify({ Title = "Scripts", Text = "Script error: " .. tostring(runError):sub(1, 90) }) end
+					end)
+				else
+					Lib.Notify({ Title = "Scripts", Text = source == "" and "Failed to get the script source" or ("Compile error: " .. tostring(err):sub(1, 90)) })
+				end
+				executeBtn.Text = fn and "Executed!" or "Failed"
+				executeBtn.BackgroundColor3 = fn and green or red
+				executeBtn.TextColor3 = white
+				task.wait(1.5)
+				if executeBtn.Parent then
+					executeBtn.Text = "Execute"
+					executeBtn.BackgroundColor3 = white
+					executeBtn.TextColor3 = Color3.new(0, 0, 0)
+				end
+				busy[executeBtn] = nil
+			end)
+		end)
+
+		linkBtn.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			local S = state
+			if not S or busy[linkBtn] then return end
+			local link, copy = S.data.link, setclipboard or toclipboard or set_clipboard
+			if type(link) ~= "string" or link == "" or not copy then
+				Lib.Notify({ Title = "Scripts", Text = "Script page link is unavailable" })
+				return
+			end
+			copy(link)
+			busy[linkBtn] = true
+			task.spawn(function()
+				Flash(linkBtn, "Copied!", true, "Copy Link")
+				busy[linkBtn] = nil
+			end)
+		end)
+
+		starBtn.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			local S = state
+			if not S then return end
+			local on = Lib.ScriptStores.Saved.Toggle(S.key, S.data)
+			Lib.Tween(starBtn, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { TextColor3 = on and gold or white })
+			if S.star and S.star.Parent then S.star.TextColor3 = on and gold or white end
+			if S.onChange then task.defer(S.onChange) end
+		end)
+
+		function api.Show(data, key, onChange, cardStar)
+			if backdrop.Visible or closing then return end
+			local S = { data = data, key = key, onChange = onChange, star = cardStar, loading = true, code = "" }
+			state = S
+			title.Text = data.title or "Unknown Script"
+			place.Text = (data.game and data.game ~= "") and data.game or "Universal"
+			Lib.LoadWebImage(heroImage, data.imageUrl)
+			Lib.LoadWebImage(thumb, data.gameImage or data.imageUrl)
+			starBtn.TextColor3 = Lib.ScriptStores.Saved.Has(key) and gold or white
+			BuildChips(data)
+			code.Text = "Loading script..."
+			lineCount.Text = ""
+			body.CanvasPosition = Vector2.zero
+			codeScroll.CanvasPosition = Vector2.zero
+			windowScale.Scale = 0.94
+			Lib.GlassOpen(backdrop)
+			Lib.Tween(windowScale, 0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out, { Scale = 1 })
+			task.spawn(function()
+				local ok, source = pcall(Src.Resolve, data)
+				S.code = ok and type(source) == "string" and source or ""
+				S.loading = false
+				if state ~= S then return end
+				ShowCode(S)
+				BuildChips(data)
+			end)
+		end
+
+		function api.Close()
+			if not backdrop.Visible or closing then return end
+			closing = true
+			state = nil
+			Lib.GlassClose(backdrop, function()
+				backdrop.Visible = false
+				closing = false
+			end)
+		end
+
+		close.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			api.Close()
+		end)
+		backdrop.MouseButton1Click:Connect(api.Close)
+
+		Lib.ScriptDetails = api
+		return api
+	end
+
+	function Lib.OpenScriptDetails(data, key, onChange, cardStar)
+		local modal = Lib.ScriptDetails or Lib.BuildScriptDetails()
+		modal.Show(data, key, onChange, cardStar)
+	end
+
+	local function CreateScriptCard(data, order, parent, onChange)
+		local Cell = Lib.Create("Frame", { BackgroundTransparency = 1, LayoutOrder = order, Parent = parent or BrowseScroll })
+		local Card = Lib.Create("Frame", {
+			Size = UDim2.fromScale(1, 1),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
+			BackgroundColor3 = Color3.fromRGB(15, 15, 15),
+			ClipsDescendants = true,
+			Parent = Cell,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 10) })
 		})
 		Lib.RegisterThemeElement(Card, "BackgroundColor3", 0.5)
 
 		local CardStroke = Lib.Create("UIStroke", {
-			Color = Color3.fromRGB(35, 35, 35),
-			Thickness = 1,
-			Transparency = 0.5,
-			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-			Parent = Card
+			Color = Color3.fromRGB(35, 35, 35), Thickness = 1, Transparency = 0.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = Card
 		})
+		local Scale = Lib.Create("UIScale", { Parent = Card })
+
+		local Clip = Lib.Create("Frame", {
+			Size = UDim2.new(1, 0, 0, 122), BackgroundTransparency = 1, ClipsDescendants = true, ZIndex = 7, Parent = Card
+		})
+		local Round = Lib.Create("CanvasGroup", {
+			Size = UDim2.new(1, 0, 0, 134), BackgroundColor3 = Color3.fromRGB(20, 20, 20), ZIndex = 7, Parent = Clip,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 10) })
+		})
+		Lib.RegisterThemeElement(Round, "BackgroundColor3", 0.7)
 
 		local Image = Lib.Create("ImageLabel", {
-			Size = UDim2.new(1, 0, 0, 120),
-			BackgroundColor3 = Color3.fromRGB(20, 20, 20),
-			ScaleType = Enum.ScaleType.Crop,
-			ClipsDescendants = true,
-			Parent = Card,
-			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
+			Size = UDim2.fromScale(1, 1), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+			BackgroundTransparency = 1, ScaleType = Enum.ScaleType.Crop, ZIndex = 7, Parent = Round
 		})
 		Lib.LoadWebImage(Image, data.imageUrl)
-		Lib.RegisterThemeElement(Image, "BackgroundColor3", 0.7)
 
 		local Badges = Lib.Create("Frame", {
-			Size = UDim2.new(1, -12, 0, 20),
-			Position = UDim2.new(0, 6, 0, 6),
-			BackgroundTransparency = 1,
-			ZIndex = 3,
-			Parent = Image,
+			Size = UDim2.new(1, -44, 0, 20), Position = UDim2.fromOffset(6, 6), BackgroundTransparency = 1, ZIndex = 8, Parent = Clip,
 			Lib.Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder })
 		})
 
 		local function MakeBadge(text)
 			Lib.Create("TextLabel", {
-				Size = UDim2.new(0, 0, 1, 0),
-				AutomaticSize = Enum.AutomaticSize.X,
-				BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-				Text = text,
-				TextColor3 = Color3.fromRGB(0, 0, 0),
-				TextSize = 10,
-				Font = Enum.Font.GothamMedium,
-				ZIndex = 4,
-				Parent = Badges,
-				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 4) }),
+				Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+				Text = text, TextColor3 = Color3.fromRGB(0, 0, 0), TextSize = 10, Font = Enum.Font.GothamMedium, ZIndex = 9, Parent = Badges,
+				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 5) }),
 				Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6) })
 			})
 		end
@@ -8957,117 +13753,70 @@ do
 		if data.hasKey then MakeBadge("Key System") end
 		if data.isVerified then MakeBadge("Verified") end
 
+		if data.origin then
+			Lib.Create("TextLabel", {
+				Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 6, 1, -6),
+				BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.4, Text = data.origin, TextColor3 = Color3.new(1, 1, 1),
+				TextSize = 10, Font = Enum.Font.GothamMedium, ZIndex = 8, Parent = Clip,
+				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 5) }),
+				Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 7), PaddingRight = UDim.new(0, 7) })
+			})
+		end
+
 		local key = tostring(data.game) .. "|" .. tostring(data.title)
-		Lib.MakeStar(Image, UDim2.new(1, -30, 0, 6), Lib.ScriptStores.Saved.Has(key), function()
+		local Star = Lib.MakeStar(Clip, UDim2.new(1, -30, 0, 6), Lib.ScriptStores.Saved.Has(key), function()
 			local on = Lib.ScriptStores.Saved.Toggle(key, data)
 			if onChange then task.defer(onChange) end
 			return on
 		end)
 
-		local Overlay = Lib.Create("Frame", {
-			Size = UDim2.new(1, 0, 1, 0),
-			BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-			BackgroundTransparency = 1,
-			ZIndex = 5,
-			Parent = Image
-		})
-
-		local CopyBtn = Lib.Create("TextButton", {
-			Size = UDim2.new(0.85, 0, 0, 32),
-			Position = UDim2.new(0.5, 0, 0.5, 0),
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-			BackgroundTransparency = 1,
-			Text = "Copy Script",
-			TextColor3 = Color3.fromRGB(0, 0, 0),
-			TextTransparency = 1,
-			TextSize = 12,
-			Font = Enum.Font.GothamBold,
-			ZIndex = 6,
-			Parent = Overlay,
-			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
-		})
-
-		local gameName = (data.game and data.game ~= "") and data.game or "Universal"
 		local gLabel = Lib.Create("TextLabel", {
-			Size = UDim2.new(1, -20, 0, 15),
-			Position = UDim2.new(0, 10, 0, 130),
-			BackgroundTransparency = 1,
-			Text = gameName,
-			TextColor3 = Color3.fromRGB(150, 150, 150),
-			TextSize = 12,
-			Font = Enum.Font.Gotham,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			TextTruncate = Enum.TextTruncate.AtEnd,
-			Parent = Card
+			Size = UDim2.new(1, -20, 0, 14), Position = UDim2.fromOffset(10, 130), BackgroundTransparency = 1,
+			Text = (data.game and data.game ~= "") and data.game or "Universal", TextColor3 = Color3.fromRGB(150, 150, 150), TextSize = 11,
+			Font = Enum.Font.Gotham, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = Card
 		})
 		Lib.RegisterThemeText(gLabel, "Secondary")
 
 		local tLabel = Lib.Create("TextLabel", {
-			Size = UDim2.new(1, -20, 0, 36),
-			Position = UDim2.new(0, 10, 0, 148),
-			BackgroundTransparency = 1,
-			Text = data.title or "Unknown Script",
-			TextColor3 = Color3.fromRGB(240, 240, 240),
-			TextSize = 13,
-			Font = Enum.Font.GothamMedium,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			TextYAlignment = Enum.TextYAlignment.Top,
-			TextWrapped = true,
-			TextTruncate = Enum.TextTruncate.AtEnd,
-			Parent = Card
+			Size = UDim2.new(1, -20, 0, 38), Position = UDim2.fromOffset(10, 147), BackgroundTransparency = 1, Text = data.title or "Unknown Script",
+			TextColor3 = Color3.fromRGB(245, 245, 245), TextSize = 14, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left,
+			TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true, TextTruncate = Enum.TextTruncate.AtEnd, Parent = Card
 		})
 		Lib.RegisterThemeText(tLabel, "Primary")
 
-		Card.MouseEnter:Connect(function()
-			Lib.Tween(Card, 0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundColor3 = Lib.Lighten(Lib.Theme.Card, 0.04) })
-			Lib.Tween(CardStroke, 0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { Color = Color3.fromRGB(90, 90, 90), Transparency = 0.1 })
-			Lib.Tween(Overlay, 0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundTransparency = 0.4 })
-			Lib.Tween(CopyBtn, 0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundTransparency = 0, TextTransparency = 0 })
+		local gray = Color3.fromRGB(145, 145, 145)
+		local function Stat(x, kind, text)
+			Lib.MiniIcon(kind, Card, UDim2.fromOffset(x, 208), gray)
+			local label = Lib.Create("TextLabel", {
+				Size = UDim2.fromOffset(60, 16), Position = UDim2.fromOffset(x + 19, 207), BackgroundTransparency = 1, Text = text, TextColor3 = gray,
+				TextSize = 11, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = Card
+			})
+			Lib.RegisterThemeText(label, "Secondary")
+		end
+		Stat(10, "eye", data.views and Lib.FormatViews(data.views) or "-")
+		Stat(88, "clock", data.created and Lib.TimeAgo(data.created) or "-")
+
+		local Hit = Lib.Create("TextButton", {
+			Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 6, Parent = Card
+		})
+
+		Hit.MouseEnter:Connect(function()
+			Lib.Tween(Image, 0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out, { Size = UDim2.fromScale(1.12, 1.12) })
+			Lib.Tween(Scale, 0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { Scale = 1.025 })
+			Lib.Tween(Card, 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundColor3 = Lib.Lighten(Lib.Theme.Card, 0.05) })
+			Lib.Tween(CardStroke, 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { Color = Color3.fromRGB(120, 120, 120), Transparency = 0, Thickness = 1.5 })
 		end)
 
-		Card.MouseLeave:Connect(function()
-			Lib.Tween(Card, 0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundColor3 = Lib.Theme.Card })
-			Lib.Tween(CardStroke, 0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { Color = Color3.fromRGB(35, 35, 35), Transparency = 0.5 })
-			Lib.Tween(Overlay, 0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundTransparency = 1 })
-			Lib.Tween(CopyBtn, 0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundTransparency = 1, TextTransparency = 1 })
+		Hit.MouseLeave:Connect(function()
+			Lib.Tween(Image, 0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out, { Size = UDim2.fromScale(1, 1) })
+			Lib.Tween(Scale, 0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { Scale = 1 })
+			Lib.Tween(Card, 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundColor3 = Lib.Theme.Card })
+			Lib.Tween(CardStroke, 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { Color = Color3.fromRGB(35, 35, 35), Transparency = 0.5, Thickness = 1 })
 		end)
 
-		CopyBtn.MouseEnter:Connect(function()
-			Lib.Tween(CopyBtn, 0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundColor3 = Color3.fromRGB(220, 220, 220) })
-		end)
-		CopyBtn.MouseLeave:Connect(function()
-			Lib.Tween(CopyBtn, 0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundColor3 = Color3.fromRGB(255, 255, 255) })
-		end)
-
-		local busy = false
-		CopyBtn.MouseButton1Click:Connect(function()
+		Hit.MouseButton1Click:Connect(function()
 			Lib.PlayClick()
-			if busy then return end
-			busy = true
-			CopyBtn.Text = "Copying..."
-			task.spawn(function()
-				local ok, code = pcall(Src.Resolve, data)
-				local failed = not ok or code == ""
-				if failed then
-					Lib.Notify({ Title = "Scripts", Text = "Failed to get the script loadstring" })
-				else
-					local copyFunc = setclipboard or toclipboard or set_clipboard
-					if copyFunc then copyFunc(code) end
-					Lib.ScriptStores.Recent.Add(key, data)
-				end
-				if not CopyBtn.Parent then return end
-				CopyBtn.Text = failed and "Failed" or "Copied! ✓"
-				CopyBtn.BackgroundColor3 = failed and Color3.fromRGB(220, 80, 80) or Color3.fromRGB(80, 220, 120)
-				CopyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-				task.wait(1.5)
-				if CopyBtn.Parent then
-					CopyBtn.Text = "Copy Script"
-					CopyBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-					CopyBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
-				end
-				busy = false
-			end)
+			Lib.OpenScriptDetails(data, key, onChange, Star)
 		end)
 	end
 
@@ -9164,7 +13913,7 @@ do
 	end
 
 	do
-		local cell, gap = UDim2.fromOffset(185, 220), UDim2.fromOffset(15, 15)
+		local cell, gap = UDim2.fromOffset(190, 236), UDim2.fromOffset(15, 15)
 		local savedScroll, savedEmpty = Lib.MakeCardList(View_Saved, "No saved scripts yet\nTap the star on a script card to save it", cell, gap, 10)
 		local recentScroll, recentEmpty = Lib.MakeCardList(View_Recent, "No recent scripts yet\nScripts you copy will appear here", cell, gap, 10)
 
@@ -9994,6 +14743,650 @@ function Lib.BuildMusic(group)
 	Rebuild()
 end
 
+function Lib.DeriveTheme(spec)
+	local out = {}
+	if typeof(spec) == "Color3" then
+		local r, g, b = spec.R, spec.G, spec.B
+		local light = r > 0.9 and g > 0.9 and b > 0.9
+		local isDefaultBlack = math.floor(r * 255) == 18 and math.floor(g * 255) == 18 and math.floor(b * 255) == 18
+		if isDefaultBlack then
+			out.Main, out.Card, out.Item = Color3.fromRGB(0, 0, 0), Color3.fromRGB(15, 15, 15), Color3.fromRGB(22, 22, 22)
+		elseif light then
+			out.Main, out.Card, out.Item = Color3.fromRGB(242, 242, 244), Color3.fromRGB(255, 255, 255), Color3.fromRGB(232, 234, 238)
+		else
+			local function Scale(k)
+				return Color3.new(math.clamp(r * k, 0, 1), math.clamp(g * k, 0, 1), math.clamp(b * k, 0, 1))
+			end
+			if Lib.Luma(spec) > 0.65 then
+				out.Main, out.Card, out.Item = Scale(0.92), Scale(0.98), Scale(0.85)
+			else
+				out.Main, out.Card, out.Item = Scale(0.45), Scale(0.65), Scale(0.85)
+			end
+		end
+		out.Light = light
+		out.Primary = light and Color3.fromRGB(15, 15, 15) or Color3.fromRGB(245, 245, 245)
+		out.Secondary = light and Color3.fromRGB(85, 85, 85) or Color3.fromRGB(145, 145, 145)
+		out.SwitchOff = light and Color3.fromRGB(205, 205, 210) or Color3.fromRGB(38, 38, 38)
+		out.SwitchOn = light and Color3.fromRGB(20, 20, 20) or (isDefaultBlack and Color3.fromRGB(46, 213, 115) or spec)
+		out.Halloween = false
+	else
+		out.Light = Lib.Luma(spec.Background) > 0.6
+		out.Main, out.Card, out.Item = spec.Background, spec.Surface, spec.Item
+		out.Primary, out.Secondary, out.SwitchOn, out.SwitchOff = spec.Text, spec.Muted, spec.Accent, spec.SwitchOff
+		out.Halloween = spec.Halloween == true
+	end
+	return out
+end
+
+function Lib.BuildUIPreview(parent, scale, layoutOrder, options)
+	options = options or {}
+	local BASE_W, BASE_H = 800, 540
+	local TABS = {
+		{ id = "Home", icon = "rbxassetid://128407802503574" },
+		{ id = "Features", icon = "rbxassetid://74917927400316" },
+		{ id = "Scripts", icon = "rbxassetid://99356660335373" },
+		{ id = "Emotes", icon = "rbxassetid://132655372254315" },
+		{ id = "Settings", icon = "rbxassetid://112763474266331" }
+	}
+	local SUBS = {
+		Home = { "Overview", "Account", "Update Log" },
+		Features = { "Movement", "Visuals", "Combat" },
+		Scripts = { "Browse", "Saved", "Recent" },
+		Emotes = { "Emotes", "Saved", "Recent" },
+		Settings = { "Appearance", "Config" }
+	}
+	local reg = { card = {}, item = {}, input = {}, primary = {}, secondary = {}, accent = {}, thumb = {}, button = {}, switch = {}, slider = {}, nav = {}, sub = {} }
+	local preview, cur, active, pages = {}, nil, "Home", {}
+
+	local function Add(kind, obj)
+		local list = reg[kind]
+		list[#list + 1] = obj
+		return obj
+	end
+
+	local function Round(radius)
+		return Lib.Create("UICorner", { CornerRadius = UDim.new(0, radius) })
+	end
+
+	local function Label(host, text, x, y, w, h, size, role, bold, align)
+		return Add(role, Lib.Create("TextLabel", {
+			Size = UDim2.fromOffset(w, h), Position = UDim2.fromOffset(x, y), BackgroundTransparency = 1, Text = text,
+			TextSize = size, Font = bold and Enum.Font.GothamBold or Enum.Font.GothamMedium,
+			TextXAlignment = align or Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = host
+		}))
+	end
+
+	local function Panel(host, kind, x, y, w, h, radius)
+		return Add(kind, Lib.Create("Frame", {
+			Size = UDim2.fromOffset(w, h), Position = UDim2.fromOffset(x, y), BorderSizePixel = 0, Parent = host,
+			Round(radius or 8)
+		}))
+	end
+
+	local function Paint(rec, animate)
+		if not cur then return end
+		local color = rec.on and cur.SwitchOn or cur.SwitchOff
+		local position = rec.on and UDim2.new(1, -19, 0.5, -8) or UDim2.new(0, 3, 0.5, -8)
+		if animate then
+			Lib.Tween(rec.bg, 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundColor3 = color })
+			Lib.Tween(rec.knob, 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { Position = position })
+		else
+			rec.bg.BackgroundColor3 = color
+			rec.knob.Position = position
+		end
+	end
+
+	local function MakeSwitch(host, x, y, on)
+		local bg = Lib.Create("TextButton", {
+			Size = UDim2.fromOffset(40, 22), Position = UDim2.fromOffset(x, y), Text = "", AutoButtonColor = false, Parent = host,
+			Round(11)
+		})
+		local knob = Lib.Create("Frame", {
+			Size = UDim2.fromOffset(16, 16), Position = UDim2.new(0, 3, 0.5, -8), BackgroundColor3 = Color3.new(1, 1, 1),
+			BorderSizePixel = 0, Parent = bg, Round(8)
+		})
+		local rec = Add("switch", { bg = bg, knob = knob, on = on })
+		bg.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			rec.on = not rec.on
+			Paint(rec, true)
+		end)
+	end
+
+	local function MakeSlider(host, x, y, w, get)
+		local track = Panel(host, "item", x, y, w, 6, 3)
+		local fill = Add("accent", Lib.Create("Frame", { Size = UDim2.new(0.5, 0, 1, 0), BorderSizePixel = 0, Parent = track, Round(3) }))
+		local knob = Lib.Create("Frame", {
+			Size = UDim2.fromOffset(14, 14), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0),
+			BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = 2, Parent = track, Round(7)
+		})
+		Add("slider", { fill = fill, knob = knob, get = get })
+	end
+
+	local stage = Lib.Create("Frame", {
+		Name = "UIPreviewStage",
+		Size = UDim2.fromOffset(BASE_W * scale, BASE_H * scale),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		BorderSizePixel = 0,
+		ClipsDescendants = true,
+		LayoutOrder = layoutOrder or 0,
+		Parent = parent,
+		Round(10),
+		Lib.Create("UIGradient", { Rotation = 35, Color = ColorSequence.new(Color3.fromRGB(82, 88, 118), Color3.fromRGB(24, 25, 34)) })
+	})
+
+	for _, blob in ipairs({
+		{ 0.1, 0.18, 0.32, Color3.fromRGB(90, 120, 255) },
+		{ 0.88, 0.82, 0.4, Color3.fromRGB(255, 90, 150) },
+		{ 0.62, 0.1, 0.2, Color3.fromRGB(70, 220, 190) }
+	}) do
+		local size = BASE_W * scale * blob[3]
+		Lib.Create("Frame", {
+			Size = UDim2.fromOffset(size, size), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(blob[1], blob[2]),
+			BackgroundColor3 = blob[4], BackgroundTransparency = 0.45, BorderSizePixel = 0, Parent = stage, Round(size)
+		})
+	end
+
+	local winCorner = Lib.Create("UICorner", { CornerRadius = UDim.new(0, State.CornerRadius) })
+	local win = Lib.Create("Frame", {
+		Name = "PreviewWindow",
+		Size = UDim2.fromOffset(BASE_W, BASE_H),
+		Position = UDim2.fromOffset(0, 0),
+		BackgroundColor3 = Color3.new(0, 0, 0),
+		BorderSizePixel = 0,
+		ClipsDescendants = true,
+		ZIndex = 2,
+		Parent = stage,
+		winCorner,
+		Lib.Create("UIScale", { Scale = scale })
+	})
+
+	local bgc = Lib.Create("CanvasGroup", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 0, Parent = win })
+	local bgCorner = Lib.Create("UICorner", { CornerRadius = UDim.new(0, State.CornerRadius), Parent = bgc })
+	local bgImage = Lib.Create("ImageLabel", {
+		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1, ScaleType = Enum.ScaleType.Crop, Visible = false, ZIndex = 0, Parent = bgc
+	})
+	local gradLayer = Lib.Create("Frame", {
+		Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1,
+		BorderSizePixel = 0, Visible = false, ZIndex = 1, Parent = bgc
+	})
+	local gradient = Lib.Create("UIGradient", {
+		Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 0.45) }),
+		Parent = gradLayer
+	})
+	local fxLayer = Lib.Create("Frame", {
+		Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 2, Parent = bgc
+	})
+
+	local headerIcon = Lib.Create("ImageLabel", {
+		Size = UDim2.fromOffset(45, 45), Position = UDim2.fromOffset(14, 7), BackgroundTransparency = 1,
+		ScaleType = Enum.ScaleType.Fit, ZIndex = 3, Parent = win
+	})
+	local headerLogo = Lib.Create("ImageLabel", {
+		Size = UDim2.fromOffset(174, 39), Position = UDim2.fromOffset(66, 10), BackgroundTransparency = 1,
+		ScaleType = Enum.ScaleType.Fit, ZIndex = 3, Parent = win
+	})
+
+	local nav = Lib.Create("Frame", {
+		Size = UDim2.fromOffset(202, 36), Position = UDim2.new(0.5, 0, 0, 11), AnchorPoint = Vector2.new(0.5, 0),
+		BackgroundTransparency = 1, ZIndex = 3, Parent = win
+	})
+	for i, tab in ipairs(TABS) do
+		local button = Lib.Create("TextButton", {
+			Size = UDim2.fromOffset(34, 36), Position = UDim2.fromOffset((i - 1) * 42, 0), BackgroundTransparency = 1,
+			Text = "", AutoButtonColor = false, Parent = nav
+		})
+		local icon = Lib.Create("ImageLabel", {
+			Size = UDim2.fromOffset(18, 18), Position = UDim2.new(0.5, -9, 0.5, -9), BackgroundTransparency = 1,
+			Image = tab.icon, ScaleType = Enum.ScaleType.Fit, Parent = button
+		})
+		local line = Lib.Create("Frame", {
+			Size = UDim2.fromOffset(18, 2), Position = UDim2.new(0.5, -9, 1, -2), BorderSizePixel = 0, Parent = button
+		})
+		Add("nav", { id = tab.id, icon = icon, line = line })
+		button.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			preview.Show(tab.id)
+		end)
+	end
+
+	for i, glyph in ipairs({ "\u{2212}", "\u{25A1}", "\u{00D7}" }) do
+		Label(win, glyph, 800 - 125 + (i - 1) * 38, 12, 34, 34, 16, "secondary", false, Enum.TextXAlignment.Center).ZIndex = 3
+	end
+
+	local content = Lib.Create("Frame", {
+		Size = UDim2.new(1, 0, 1, -58), Position = UDim2.fromOffset(0, 58), BackgroundTransparency = 1,
+		ClipsDescendants = true, ZIndex = 2, Parent = win
+	})
+
+	local decorCorner = Lib.Create("UICorner", { CornerRadius = UDim.new(0, State.CornerRadius) })
+	local decor = Lib.Create("CanvasGroup", {
+		Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Visible = false, ZIndex = 4, Parent = win, decorCorner
+	})
+	Lib.Create("ImageLabel", {
+		Size = UDim2.fromOffset(110, 110), BackgroundTransparency = 1, Image = Lib.HalloweenWeb, ImageTransparency = 0.15,
+		ScaleType = Enum.ScaleType.Fit, Parent = decor
+	})
+	Lib.Create("ImageLabel", {
+		Size = UDim2.fromOffset(110, 110), AnchorPoint = Vector2.new(1, 1), Position = UDim2.fromScale(1, 1), Rotation = 180,
+		BackgroundTransparency = 1, Image = Lib.HalloweenWeb, ImageTransparency = 0.15, ScaleType = Enum.ScaleType.Fit, Parent = decor
+	})
+
+	local function BuildPage(name)
+		local page = Lib.Create("Frame", { Name = name, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Visible = false, Parent = content })
+		pages[name] = page
+		Label(page, name, 20, 10, 150, 30, 20, "primary", true)
+		local group = { Selected = 1 }
+		for i, sub in ipairs(SUBS[name]) do
+			local button = Lib.Create("TextButton", {
+				Size = UDim2.fromOffset(150, 34), Position = UDim2.fromOffset(15, 50 + (i - 1) * 40), BackgroundTransparency = 1,
+				Text = sub, TextSize = 14, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left,
+				AutoButtonColor = false, Parent = page,
+				Round(7),
+				Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 12) })
+			})
+			Add("sub", { button = button, group = group, index = i })
+			button.MouseButton1Click:Connect(function()
+				Lib.PlayClick()
+				group.Selected = i
+				preview.PaintSubs()
+			end)
+		end
+		local area = Lib.Create("Frame", { Size = UDim2.fromOffset(610, 462), Position = UDim2.fromOffset(180, 10), BackgroundTransparency = 1, Parent = page })
+		return area
+	end
+
+	local function Thumb(host, x, y, w, h)
+		local frame = Lib.Create("Frame", {
+			Size = UDim2.fromOffset(w, h), Position = UDim2.fromOffset(x, y), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = host,
+			Round(8),
+			Lib.Create("UIGradient", { Rotation = 35 })
+		})
+		Add("thumb", frame:FindFirstChildOfClass("UIGradient"))
+		return frame
+	end
+
+	do
+		local area = BuildPage("Home")
+		local hero = Panel(area, "card", 0, 0, 610, 92)
+		Panel(hero, "item", 18, 18, 56, 56, 28)
+		Label(hero, "Welcome back", 90, 20, 300, 24, 17, "primary", true)
+		Label(hero, "Septus Hub  \u{00B7}  V3.5", 90, 46, 300, 18, 12, "secondary")
+		for i, stat in ipairs({ { "Playtime", "12h 40m" }, { "FPS", "60" }, { "Ping", "32 ms" } }) do
+			local card = Panel(area, "card", (i - 1) * 208, 108, 194, 84)
+			Label(card, stat[1], 16, 14, 160, 16, 12, "secondary")
+			Label(card, stat[2], 16, 36, 160, 32, 24, "primary", true)
+		end
+		local feed = Panel(area, "card", 0, 208, 610, 138)
+		Label(feed, "Recent activity", 16, 12, 300, 20, 14, "primary", true)
+		for i, line in ipairs({ "Config loaded", "Theme changed", "Script copied" }) do
+			local row = Panel(feed, "item", 16, 40 + (i - 1) * 32, 578, 26, 6)
+			Label(row, line, 12, 0, 400, 26, 12, "primary")
+		end
+	end
+
+	do
+		local area = BuildPage("Features")
+		Label(area, "Movement", 4, 0, 300, 20, 14, "primary", true)
+		local group = Panel(area, "card", 0, 26, 610, 200)
+		for i, row in ipairs({
+			{ "Fly", "Move freely through the air", false },
+			{ "Noclip", "Walk through walls and objects", false },
+			{ "Bunny Hop", "Keeps momentum while jumping", true },
+			{ "Anti Sit", "Prevents your character from sitting", false }
+		}) do
+			local y = (i - 1) * 50
+			Label(group, row[1], 14, y + 7, 400, 20, 13, "primary", true)
+			Label(group, row[2], 14, y + 26, 400, 16, 11, "secondary")
+			MakeSwitch(group, 610 - 54, y + 14, row[3])
+			if i < 4 then Panel(group, "item", 14, y + 49, 582, 1, 0) end
+		end
+		Label(area, "Speed", 4, 244, 300, 20, 14, "primary", true)
+		local speed = Panel(area, "card", 0, 270, 610, 64)
+		Label(speed, "Walk Speed", 14, 10, 300, 20, 13, "primary", true)
+		Label(speed, "16", 500, 10, 96, 20, 12, "secondary", false, Enum.TextXAlignment.Right)
+		MakeSlider(speed, 14, 42, 582, function() return 0.3 end)
+	end
+
+	do
+		local area = BuildPage("Scripts")
+		local search = Panel(area, "input", 0, 0, 610, 36, 7)
+		Label(search, "Search scripts...", 14, 0, 400, 36, 12, "secondary")
+		for i, title in ipairs({ "Infinite Yield", "Dex Explorer", "Aim Assist" }) do
+			local card = Panel(area, "card", (i - 1) * 210, 50, 190, 196)
+			Thumb(card, 6, 6, 178, 108)
+			Label(card, title, 12, 122, 166, 20, 13, "primary", true)
+			Label(card, "12.4K views", 12, 142, 166, 16, 11, "secondary")
+			local button = Add("button", Lib.Create("TextButton", {
+				Size = UDim2.fromOffset(166, 26), Position = UDim2.fromOffset(12, 164), Text = "Copy script", TextSize = 11,
+				Font = Enum.Font.GothamBold, AutoButtonColor = false, Parent = card, Round(6)
+			}))
+			button.MouseButton1Click:Connect(Lib.PlayClick)
+		end
+	end
+
+	do
+		local area = BuildPage("Emotes")
+		for i, title in ipairs({ "Dance", "Wave", "Salute", "Shrug", "Cheer", "Point", "Laugh", "Sit" }) do
+			local x, y = ((i - 1) % 4) * 156, math.floor((i - 1) / 4) * 164
+			local card = Panel(area, "card", x, y, 140, 150)
+			Thumb(card, 6, 6, 128, 104)
+			Label(card, title, 12, 118, 116, 20, 12, "primary", true)
+		end
+	end
+
+	do
+		local area = BuildPage("Settings")
+		Label(area, "Theme", 4, 0, 300, 20, 14, "primary", true)
+		local themes = Panel(area, "card", 0, 26, 610, 72)
+		for i, color in ipairs(Lib.ThemePresets) do
+			Lib.Create("Frame", {
+				Size = UDim2.fromOffset(36, 36), Position = UDim2.fromOffset(14 + (i - 1) * 44, 18), BackgroundColor3 = color,
+				BorderSizePixel = 0, Parent = themes, Round(8)
+			})
+		end
+		Label(area, "Window Customization", 4, 116, 300, 20, 14, "primary", true)
+		local group = Panel(area, "card", 0, 142, 610, 150)
+		local rows = {
+			{ "Corner Radius", function() return State.CornerRadius / 28 end, function() return tostring(State.CornerRadius) end },
+			{ "Window Transparency", function() return State.WindowTransparency / 80 end, function() return State.WindowTransparency .. "%" end },
+			{ "Panel Transparency", function() return State.PanelTransparency / 70 end, function() return State.PanelTransparency .. "%" end }
+		}
+		for i, row in ipairs(rows) do
+			local y = (i - 1) * 50
+			Label(group, row[1], 14, y + 6, 300, 20, 13, "primary", true)
+			local value = Label(group, "", 500, y + 6, 96, 20, 12, "secondary", false, Enum.TextXAlignment.Right)
+			Add("slider", { value = value, text = row[3] })
+			MakeSlider(group, 14, y + 36, 582, row[2])
+		end
+	end
+
+	function preview.PaintNav()
+		if not cur then return end
+		local activeColor = cur.Light and Color3.fromRGB(15, 15, 15) or Color3.new(1, 1, 1)
+		local inactiveColor = cur.Light and Color3.fromRGB(130, 130, 130) or Color3.fromRGB(150, 150, 150)
+		for _, rec in ipairs(reg.nav) do
+			local on = rec.id == active
+			rec.icon.ImageColor3 = on and activeColor or inactiveColor
+			rec.line.BackgroundColor3 = activeColor
+			rec.line.Visible = on
+		end
+	end
+
+	function preview.PaintSubs()
+		if not cur then return end
+		local light = cur.Light
+		local selected = light and Color3.fromRGB(15, 15, 15) or Color3.new(1, 1, 1)
+		local idle = light and Color3.fromRGB(110, 110, 110) or Color3.fromRGB(150, 150, 150)
+		for _, rec in ipairs(reg.sub) do
+			local on = rec.group.Selected == rec.index
+			rec.button.BackgroundColor3 = light and Color3.new(0, 0, 0) or Color3.new(1, 1, 1)
+			rec.button.BackgroundTransparency = on and (light and 0.88 or 0.92) or 1
+			rec.button.TextColor3 = on and selected or idle
+		end
+	end
+
+	function preview.Show(id)
+		active = id
+		for name, page in pairs(pages) do
+			page.Visible = name == id
+		end
+		preview.PaintNav()
+		preview.PaintSubs()
+	end
+
+	local fxKey
+	local function PaintFx(Fx, tint)
+		local key = table.concat({ tostring(Fx.Snow), tostring(Fx.Twinkle), tostring(Fx.Particles), tostring(Fx.Shooting), tostring(Fx.Intensity) }, "|")
+		if key ~= fxKey then
+			fxKey = key
+			fxLayer:ClearAllChildren()
+			local rng = Random.new(7)
+			local k = Fx.Intensity / 100
+			local function Dot(size, alpha)
+				Lib.Create("Frame", {
+					Name = "Dot", Size = UDim2.fromOffset(size, size), AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromScale(rng:NextNumber(), rng:NextNumber()), BackgroundTransparency = alpha,
+					BorderSizePixel = 0, Parent = fxLayer, Round(size)
+				})
+			end
+			if Fx.Snow then
+				for _ = 1, math.floor(12 + 38 * k) do Dot(rng:NextInteger(2, 4), 0.3 + rng:NextNumber() * 0.4) end
+			end
+			if Fx.Twinkle then
+				for _ = 1, math.floor(14 + 40 * k) do Dot(rng:NextInteger(1, 3), 0.2 + rng:NextNumber() * 0.5) end
+			end
+			if Fx.Particles then
+				for _ = 1, math.floor(8 + 18 * k) do Dot(rng:NextInteger(3, 16), 0.7 + rng:NextNumber() * 0.2) end
+			end
+			if Fx.Shooting then
+				Lib.Create("Frame", {
+					Name = "Dot", Size = UDim2.fromOffset(90, 2), AnchorPoint = Vector2.new(1, 0.5), Rotation = 30,
+					Position = UDim2.fromScale(0.42, 0.22), BorderSizePixel = 0, Parent = fxLayer,
+					Lib.Create("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0) }) })
+				})
+			end
+		end
+		for _, obj in ipairs(fxLayer:GetChildren()) do
+			obj.BackgroundColor3 = tint
+		end
+	end
+
+	local lastImage, lastObject
+	local function PaintBackground(light)
+		local main = UI.CustomBgImage
+		local shown = main.Visible and State.CustomBackgroundId ~= ""
+		bgImage.Visible = shown
+		if shown then
+			bgImage.ImageTransparency = (100 - State.BgOpacity) / 100
+			local zoom = State.BgZoom / 100
+			bgImage.Size = UDim2.fromScale(zoom, zoom)
+			pcall(function()
+				local object = main.ImageContent.Object
+				if object ~= lastObject or main.Image ~= lastImage then
+					lastObject, lastImage = object, main.Image
+					if object then
+						bgImage.ImageContent = main.ImageContent
+					else
+						bgImage.Image = main.Image
+					end
+				end
+			end)
+		end
+		if not Lib.BgFxView then return end
+		local Fx, Custom, Presets = Lib.BgFxView()
+		gradLayer.Visible = Fx.Gradient
+		if Fx.Gradient then
+			local a, b, c = Custom.A, Custom.A:Lerp(Custom.B, 0.5), Custom.B
+			for _, entry in ipairs(Presets) do
+				if entry[1] == Fx.Style then
+					a, b, c = entry[2], entry[3], entry[4]
+					break
+				end
+			end
+			gradient.Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, a), ColorSequenceKeypoint.new(0.5, b), ColorSequenceKeypoint.new(1, c)
+			})
+			gradient.Rotation = Fx.Angle
+			gradLayer.BackgroundTransparency = 1 - Fx.Strength / 100
+		end
+		PaintFx(Fx, light and Color3.fromRGB(88, 104, 150) or Color3.new(1, 1, 1))
+	end
+
+	function preview.Update(spec)
+		local c
+		if spec ~= nil then
+			c = Lib.DeriveTheme(spec)
+		else
+			local theme, palette = Lib.Theme, Lib.Palette
+			c = {
+				Main = theme.Main, Card = theme.Card, Item = theme.Item, Primary = palette.Primary, Secondary = palette.Secondary,
+				SwitchOn = palette.SwitchOn, SwitchOff = palette.SwitchOff, Light = State.LightTheme,
+				Halloween = type(State.CustomTheme) == "table" and State.CustomTheme.Halloween == true
+			}
+		end
+		cur = c
+
+		local radius = UDim.new(0, State.CornerRadius)
+		winCorner.CornerRadius, bgCorner.CornerRadius, decorCorner.CornerRadius = radius, radius, radius
+		win.BackgroundColor3 = c.Main
+		win.BackgroundTransparency = State.WindowTransparency / 100
+		decor.Visible = c.Halloween == true
+
+		headerIcon.Image = c.Halloween and Lib.HalloweenHeader.Icon or Lib.DefaultHeaderIcon
+		headerLogo.Image = c.Halloween and Lib.HalloweenHeader.Logo or (c.Light and "rbxassetid://105446913647633" or "rbxassetid://97808676894113")
+		headerIcon.Visible = not State.HideLogo
+		headerLogo.Visible = not State.HideName
+		headerLogo.Position = UDim2.fromOffset(State.HideLogo and 14 or 66, 10)
+
+		local alpha = State.PanelTransparency / 100
+		for _, frame in ipairs(reg.card) do
+			frame.BackgroundColor3, frame.BackgroundTransparency = c.Card, alpha
+		end
+		for _, frame in ipairs(reg.input) do
+			frame.BackgroundColor3, frame.BackgroundTransparency = c.Item, alpha
+		end
+		for _, frame in ipairs(reg.item) do
+			frame.BackgroundColor3 = c.Item
+		end
+		for _, label in ipairs(reg.primary) do label.TextColor3 = c.Primary end
+		for _, label in ipairs(reg.secondary) do label.TextColor3 = c.Secondary end
+		for _, frame in ipairs(reg.accent) do frame.BackgroundColor3 = c.SwitchOn end
+		for _, grad in ipairs(reg.thumb) do
+			grad.Color = ColorSequence.new(c.SwitchOn:Lerp(c.Main, 0.35), c.Item)
+		end
+		for _, button in ipairs(reg.button) do
+			button.BackgroundColor3, button.TextColor3 = c.Primary, c.Main
+		end
+		for _, rec in ipairs(reg.switch) do Paint(rec, false) end
+		for _, rec in ipairs(reg.slider) do
+			if rec.get then
+				local value = math.clamp(rec.get(), 0, 1)
+				rec.fill.Size = UDim2.new(value, 0, 1, 0)
+				rec.knob.Position = UDim2.new(value, 0, 0.5, 0)
+			elseif rec.value then
+				rec.value.Text = rec.text()
+			end
+		end
+
+		preview.PaintNav()
+		preview.PaintSubs()
+		PaintBackground(c.Light)
+
+		if options.OnUpdate then pcall(options.OnUpdate, c) end
+	end
+
+	function preview.Destroy()
+		stage:Destroy()
+	end
+
+	preview.Stage = stage
+	preview.Show("Home")
+	preview.Update()
+
+	if options.Visible then
+		task.spawn(function()
+			local last, seen
+			while stage.Parent and not State.Unloaded do
+				if options.Visible() then
+					local fx = Lib.BgFxView and select(1, Lib.BgFxView()) or {}
+					local theme, palette = Lib.Theme, Lib.Palette
+					local main = UI.CustomBgImage
+					local sig = table.concat({
+						theme.Main:ToHex(), theme.Card:ToHex(), theme.Item:ToHex(), palette.Primary:ToHex(), palette.SwitchOn:ToHex(),
+						State.CornerRadius, State.WindowTransparency, State.PanelTransparency, tostring(State.HideLogo), tostring(State.HideName),
+						State.BgOpacity, State.BgZoom, State.BgSaturation, State.CustomBackgroundId, tostring(main.Visible), main.Image,
+						tostring(fx.Gradient), tostring(fx.Style), tostring(fx.Angle), tostring(fx.Strength), tostring(fx.Snow), tostring(fx.Twinkle),
+						tostring(fx.Shooting), tostring(fx.Particles), tostring(fx.Intensity), State.SelectedThemeIndex,
+						tostring(type(State.CustomTheme) == "table" and State.CustomTheme.Halloween)
+					}, "|")
+					local object
+					pcall(function() object = main.ImageContent.Object end)
+					if sig ~= last or object ~= seen then
+						last, seen = sig, object
+						pcall(preview.Update)
+					end
+				end
+				task.wait(0.2)
+			end
+		end)
+	end
+
+	return preview
+end
+
+function Lib.BuildPreviewCard(parent, layoutOrder, isVisible)
+	local STAGE_W, STAGE_H = 400, 270
+	local card = Lib.Create("Frame", {
+		Name = "UIPreviewCard",
+		Size = UDim2.new(1, 0, 0, STAGE_H + 70),
+		BackgroundColor3 = Color3.fromRGB(15, 15, 15),
+		LayoutOrder = layoutOrder,
+		ClipsDescendants = true,
+		Parent = parent,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
+	})
+	Lib.RegisterThemeElement(card, "BackgroundColor3", 0.5)
+
+	local icon = Lib.Create("ImageLabel", {
+		Size = UDim2.fromOffset(18, 18), Position = UDim2.fromOffset(14, 12), BackgroundTransparency = 1,
+		Image = "rbxassetid://92865789131206", ScaleType = Enum.ScaleType.Fit, Parent = card
+	})
+	Lib.RegisterThemeImage(icon)
+
+	local title = Lib.Create("TextLabel", {
+		Size = UDim2.new(1, -50, 0, 18), Position = UDim2.fromOffset(40, 12), BackgroundTransparency = 1, Text = "Live Preview",
+		TextColor3 = Lib.Palette.Primary, TextSize = 14, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = card
+	})
+	Lib.RegisterThemeText(title, "Primary")
+
+	local desc = Lib.Create("TextLabel", {
+		Size = UDim2.new(1, -50, 0, 16), Position = UDim2.fromOffset(40, 30), BackgroundTransparency = 1,
+		Text = "Shows how your Appearance settings look. Tabs can be switched, no functions are enabled here.",
+		TextColor3 = Lib.Palette.Secondary, TextSize = 11, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd, Parent = card
+	})
+	Lib.RegisterThemeText(desc, "Secondary")
+
+	local values = {}
+	for i, name in ipairs({ "Theme", "Corner Radius", "Window Opacity", "Panel Opacity", "Background" }) do
+		local y = 60 + (i - 1) * 50
+		local caption = Lib.Create("TextLabel", {
+			Size = UDim2.new(1, -444, 0, 14), Position = UDim2.fromOffset(430, y), BackgroundTransparency = 1, Text = string.upper(name),
+			TextColor3 = Lib.Palette.Secondary, TextSize = 10, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = card
+		})
+		Lib.RegisterThemeText(caption, "Secondary")
+		local value = Lib.Create("TextLabel", {
+			Size = UDim2.new(1, -444, 0, 20), Position = UDim2.fromOffset(430, y + 16), BackgroundTransparency = 1, Text = "",
+			TextColor3 = Lib.Palette.Primary, TextSize = 14, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left,
+			TextTruncate = Enum.TextTruncate.AtEnd, Parent = card
+		})
+		Lib.RegisterThemeText(value, "Primary")
+		values[name] = value
+	end
+
+	local function Refresh()
+		local spec = Lib.ResolveTheme(State.SelectedThemeIndex)
+		values.Theme.Text = type(spec) == "table" and spec.Name or (State.SelectedThemeIndex == 1 and "Default" or ("Preset " .. State.SelectedThemeIndex))
+		values["Corner Radius"].Text = State.CornerRadius .. " px"
+		values["Window Opacity"].Text = (100 - State.WindowTransparency) .. "%"
+		values["Panel Opacity"].Text = (100 - State.PanelTransparency) .. "%"
+		local parts = {}
+		if State.CustomBackgroundId ~= "" then parts[#parts + 1] = "Image" end
+		if Lib.BgFxView then
+			local fx = Lib.BgFxView()
+			if fx.Gradient then parts[#parts + 1] = "Gradient" end
+			if fx.Snow or fx.Twinkle or fx.Shooting or fx.Particles then parts[#parts + 1] = "Effects" end
+		end
+		values.Background.Text = #parts > 0 and table.concat(parts, " + ") or "Solid"
+	end
+
+	local preview = Lib.BuildUIPreview(card, STAGE_W / 800, 0, { Visible = isVisible, OnUpdate = Refresh })
+	preview.Stage.Position = UDim2.fromOffset(14, 56)
+	return card, preview
+end
+
 do
 	local SettingsSection = Lib.Create("Frame", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Visible = false, Parent = UI.ContentArea })
 	UI.SettingsSection = SettingsSection
@@ -10075,9 +15468,9 @@ do
 	end
 
 	local function OpenThemeEditor(onAdd)
-		local WIN_W, WIN_H, ROWS_Y, POPUP_W, POPUP_H = 380, 480, 184, 232, 240
-		local original = State.CustomTheme or State.ThemeColor
-		local alive, pending = true, false
+		local LEFT_W, WIN_H, ROWS_Y, POPUP_W, POPUP_H = 380, 480, 184, 232, 240
+		local WIN_W = LEFT_W + 316
+		local alive, pending, view = true, false, nil
 
 		local draft = {
 			Background = Color3.fromHex("282929"),
@@ -10094,7 +15487,7 @@ do
 			pending = true
 			task.delay(0.04, function()
 				pending = false
-				if alive then Lib.ApplyTheme(draft, true) end
+				if alive and view then view.Update(draft) end
 			end)
 		end
 
@@ -10161,12 +15554,12 @@ do
 			})
 		end
 
-		Label(window, "New Theme", UDim2.new(1, -90, 0, 24), UDim2.fromOffset(78, 17), 18, "Primary")
-		Label(window, "Changes preview live across the app.", UDim2.new(1, -90, 0, 16), UDim2.fromOffset(78, 42), 11, "Secondary")
-		Label(window, "NAME", UDim2.new(1, -32, 0, 14), UDim2.fromOffset(16, 76), 10, "Secondary")
+		Label(window, "New Theme", UDim2.new(0, 290, 0, 24), UDim2.fromOffset(78, 17), 18, "Primary")
+		Label(window, "Preview updates live. Press Add to save.", UDim2.new(0, 290, 0, 16), UDim2.fromOffset(78, 42), 11, "Secondary")
+		Label(window, "NAME", UDim2.new(0, LEFT_W - 32, 0, 14), UDim2.fromOffset(16, 76), 10, "Secondary")
 
 		local nameBox = Lib.Create("TextBox", {
-			Size = UDim2.new(1, -32, 0, 34),
+			Size = UDim2.new(0, LEFT_W - 32, 0, 34),
 			Position = UDim2.fromOffset(16, 94),
 			BackgroundColor3 = Lib.Theme.Item,
 			Text = "Custom " .. (#State.CustomThemes + 1),
@@ -10189,7 +15582,7 @@ do
 		end)
 
 		local tabBar = Lib.Create("Frame", {
-			Size = UDim2.new(1, -32, 0, 34),
+			Size = UDim2.new(0, LEFT_W - 32, 0, 34),
 			Position = UDim2.fromOffset(16, 138),
 			BackgroundColor3 = Lib.Theme.Item,
 			ZIndex = 42,
@@ -10398,7 +15791,7 @@ do
 			local rowTop = ROWS_Y + (rowIndexOf[key] - 1) * 52
 			local y = rowTop + 48
 			if y + POPUP_H > WIN_H - 6 then y = rowTop - POPUP_H - 4 end
-			popup.Position = UDim2.fromOffset(WIN_W - POPUP_W - 16, math.max(y, 6))
+			popup.Position = UDim2.fromOffset(LEFT_W - POPUP_W - 16, math.max(y, 6))
 			picker.Key = key
 			LoadPicker(draft[key])
 			catcher.Visible = true
@@ -10467,7 +15860,7 @@ do
 			Advanced = { { "Item", "Item" }, { "Muted", "Secondary Text" }, { "SwitchOff", "Switch Off" } }
 		}) do
 			local page = Lib.Create("Frame", {
-				Size = UDim2.new(1, -32, 0, 4 * 52 - 8),
+				Size = UDim2.new(0, LEFT_W - 32, 0, 4 * 52 - 8),
 				Position = UDim2.fromOffset(16, ROWS_Y),
 				BackgroundTransparency = 1,
 				Visible = false,
@@ -10514,13 +15907,12 @@ do
 		local function Close(revert)
 			if not alive then return end
 			alive = false
-			if revert then Lib.ApplyTheme(original) end
 			Lib.Tween(window, 0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In, { Size = UDim2.fromOffset(WIN_W - 40, WIN_H - 40) })
 			Lib.GlassClose(backdrop, function() backdrop:Destroy() end)
 		end
 
 		local cancelBtn = Lib.Create("TextButton", {
-			Size = UDim2.new(0.5, -20, 0, 40),
+			Size = UDim2.fromOffset(170, 40),
 			Position = UDim2.new(0, 16, 1, -56),
 			BackgroundColor3 = Lib.Theme.Item,
 			Text = "Cancel",
@@ -10536,8 +15928,8 @@ do
 		Lib.RegisterThemeText(cancelBtn, "Primary")
 
 		local addBtn = Lib.Create("TextButton", {
-			Size = UDim2.new(0.5, -20, 0, 40),
-			Position = UDim2.new(0.5, 4, 1, -56),
+			Size = UDim2.fromOffset(170, 40),
+			Position = UDim2.new(0, 194, 1, -56),
 			BackgroundColor3 = Color3.fromRGB(240, 240, 242),
 			Text = "Add",
 			TextColor3 = Color3.fromRGB(20, 20, 20),
@@ -10565,6 +15957,41 @@ do
 			onAdd(theme)
 			Close(false)
 		end)
+
+		local divider = Lib.Create("Frame", {
+			Size = UDim2.new(0, 1, 1, -32),
+			Position = UDim2.fromOffset(LEFT_W, 16),
+			BackgroundColor3 = Lib.Theme.Item,
+			BorderSizePixel = 0,
+			ZIndex = 42,
+			Parent = window
+		})
+		Lib.RegisterThemeElement(divider, "BackgroundColor3", 0.7)
+
+		local previewW = WIN_W - LEFT_W - 32
+		local previewScale = previewW / 800
+		local previewH = 540 * previewScale
+		local previewTop = math.floor((WIN_H - (previewH + 90)) / 2)
+		Label(window, "PREVIEW", UDim2.fromOffset(previewW, 14), UDim2.fromOffset(LEFT_W + 16, previewTop), 10, "Secondary")
+		view = Lib.BuildUIPreview(window, previewScale, 0)
+		view.Stage.Position = UDim2.fromOffset(LEFT_W + 16, previewTop + 22)
+		view.Stage.ZIndex = 42
+		local previewHint = Lib.Create("TextLabel", {
+			Size = UDim2.fromOffset(previewW, 48),
+			Position = UDim2.fromOffset(LEFT_W + 16, previewTop + 22 + previewH + 10),
+			BackgroundTransparency = 1,
+			Text = "Corner radius, transparency, background and font come from your current Appearance settings.",
+			TextColor3 = Lib.Palette.Secondary,
+			TextSize = 11,
+			Font = Enum.Font.GothamMedium,
+			TextWrapped = true,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextYAlignment = Enum.TextYAlignment.Top,
+			ZIndex = 43,
+			Parent = window
+		})
+		Lib.RegisterThemeText(previewHint, "Secondary")
+		view.Update(draft)
 
 		SelectTab("Basic")
 		Lib.GlassOpen(backdrop)
@@ -10803,7 +16230,7 @@ do
 
 	local function CreateFontPicker(parent, layoutOrder)
 		local FontSection = Lib.Create("Frame", {
-			Size = UDim2.new(1, 0, 0, 105),
+			Size = UDim2.new(1, 0, 0, 148),
 			BackgroundColor3 = Color3.fromRGB(15, 15, 15),
 			LayoutOrder = layoutOrder,
 			Parent = parent,
@@ -10886,25 +16313,64 @@ do
 			{ name = "Merriweather", regular = Enum.Font.Merriweather, bold = Enum.Font.Merriweather }
 		}
 
-		local fontBtns = {}
+		local fontBtns, customFonts = {}, {}
+		local FONT_FILE, FONT_DIR = "SeptusHub_Fonts.json", "SeptusHub_Fonts"
+		local Http, Market = Services.HttpService, game:GetService("MarketplaceService")
+		local selectedKey = State.SelectedFontIndex
+		local Select
 
-		for i, fData in ipairs(FontItems) do
-			local isSelected = (State.SelectedFontIndex == i)
+		local function MakeFaces(entry)
+			local family = "rbxassetid://" .. entry.id
+			if not entry.direct then
+				if not (writefile and getcustomasset and isfile and isfolder and makefolder) then
+					return nil, "Executor lacks writefile / getcustomasset"
+				end
+				local path = FONT_DIR .. "/" .. entry.id .. ".json"
+				local ok, result = pcall(function()
+					if not isfolder(FONT_DIR) then makefolder(FONT_DIR) end
+					if not isfile(path) then
+						writefile(path, Http:JSONEncode({
+							name = "SeptusFont" .. entry.id,
+							faces = {
+								{ name = "Regular", weight = 400, style = "normal", assetId = family },
+								{ name = "Bold", weight = 700, style = "normal", assetId = family }
+							}
+						}))
+					end
+					return getcustomasset(path)
+				end)
+				if not ok or type(result) ~= "string" or result == "" then return nil, "Could not prepare the font file" end
+				family = result
+			end
+			local ok, regular, bold = pcall(function()
+				return Font.new(family, Enum.FontWeight.Regular, Enum.FontStyle.Normal), Font.new(family, Enum.FontWeight.Bold, Enum.FontStyle.Normal)
+			end)
+			if not ok then return nil, "Invalid font asset" end
+			return regular, bold
+		end
 
+		local function Persist()
+			if writefile then pcall(writefile, FONT_FILE, Http:JSONEncode(customFonts)) end
+		end
+
+		local function AddFontButton(key, data, order, entry)
 			local Item = Lib.Create("TextButton", {
 				Size = UDim2.fromOffset(36, 36),
 				BackgroundColor3 = Color3.fromRGB(22, 22, 22),
 				Text = "Aa",
 				TextColor3 = Color3.fromRGB(240, 240, 240),
 				TextSize = 14,
-				Font = fData.bold,
 				AutoButtonColor = false,
-				LayoutOrder = i,
+				LayoutOrder = order,
 				Parent = FontListScroll,
 				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
 			})
+			Lib.PinFont(Item)
+			if data.boldFace then Item.FontFace = data.boldFace else Item.Font = data.bold end
 			Lib.RegisterThemeElement(Item, "BackgroundColor3", 0.7)
 			Lib.RegisterThemeText(Item, "Primary")
+
+			local isSelected = key == selectedKey
 
 			local Stroke = Lib.Create("UIStroke", {
 				Color = Color3.fromRGB(255, 255, 255),
@@ -10931,23 +16397,164 @@ do
 				})
 			})
 
-			fontBtns[i] = { Item = Item, Stroke = Stroke, Badge = CheckBadge, Data = fData }
+			fontBtns[key] = { Item = Item, Stroke = Stroke, Badge = CheckBadge, Data = data, Entry = entry }
 
-			Lib.FontSelectors[i] = function()
-				State.SelectedFontIndex = i
-				for idx, btnInfo in ipairs(fontBtns) do
-					local sel = (idx == i)
-					btnInfo.Badge.Visible = sel
-					btnInfo.Stroke.Transparency = sel and 0 or 1
-				end
-				Lib.ApplyGlobalFont(fData.regular, fData.bold)
+			if entry then
+				local Remove = Lib.Create("TextButton", {
+					Size = UDim2.fromOffset(14, 14),
+					Position = UDim2.new(1, -15, 0, 1),
+					BackgroundColor3 = Color3.fromRGB(220, 70, 70),
+					Text = "×",
+					TextColor3 = Color3.new(1, 1, 1),
+					TextSize = 11,
+					Font = Enum.Font.GothamBold,
+					AutoButtonColor = false,
+					ZIndex = 3,
+					Parent = Item,
+					Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) })
+				})
+				Remove.MouseButton1Click:Connect(function()
+					Lib.PlayClick()
+					local index = table.find(customFonts, entry)
+					if index then table.remove(customFonts, index) end
+					Persist()
+					local wasSelected = selectedKey == key
+					fontBtns[key] = nil
+					Lib.FontSelectors[key] = nil
+					Item:Destroy()
+					if wasSelected then Select(1) end
+				end)
 			end
 
 			Item.MouseButton1Click:Connect(function()
 				Lib.PlayClick()
-				Lib.FontSelectors[i]()
+				Select(key)
 			end)
 		end
+
+		Select = function(key)
+			local info = fontBtns[key]
+			if not info then return end
+			selectedKey = key
+			for otherKey, other in pairs(fontBtns) do
+				local selected = otherKey == key
+				other.Badge.Visible = selected
+				other.Stroke.Transparency = selected and 0 or 1
+			end
+			if info.Entry then
+				State.SelectedFontIndex, State.SelectedFontId = 0, info.Entry.id
+			else
+				State.SelectedFontIndex, State.SelectedFontId = key, nil
+			end
+			local data = info.Data
+			Lib.ApplyGlobalFont(data.regular, data.bold, data.regularFace, data.boldFace)
+		end
+
+		for i, fData in ipairs(FontItems) do
+			AddFontButton(i, fData, i)
+			Lib.FontSelectors[i] = function() Select(i) end
+		end
+
+		local function Register(entry)
+			local regular, bold = MakeFaces(entry)
+			if not regular then return false, bold end
+			local key = "c" .. entry.id
+			AddFontButton(key, {
+				regular = Enum.Font.Gotham, bold = Enum.Font.GothamBold, regularFace = regular, boldFace = bold
+			}, 100 + #customFonts, entry)
+			Lib.FontSelectors[key] = function() Select(key) end
+			return true
+		end
+
+		function Lib.AddCustomFont(raw)
+			local id = tostring(raw):match("%d+")
+			if not id or #id < 5 then
+				Lib.Notify({ Title = "App Font", Text = "Enter a valid font Asset ID" })
+				return false
+			end
+			local key = "c" .. id
+			if fontBtns[key] then
+				Select(key)
+				return true
+			end
+			local ok, info = pcall(Market.GetProductInfo, Market, tonumber(id))
+			if not ok or type(info) ~= "table" then
+				Lib.Notify({ Title = "App Font", Text = "Asset " .. id .. " was not found" })
+				return false
+			end
+			local entry = { id = id, name = tostring(info.Name or id):sub(1, 40), direct = info.AssetTypeId == 73 }
+			customFonts[#customFonts + 1] = entry
+			local added, err = Register(entry)
+			if not added then
+				table.remove(customFonts)
+				Lib.Notify({ Title = "App Font", Text = tostring(err) })
+				return false
+			end
+			Persist()
+			Select(key)
+			Lib.Notify({ Title = "App Font", Text = entry.name .. " applied" })
+			return true
+		end
+
+		if isfile and readfile then
+			pcall(function()
+				if not isfile(FONT_FILE) then return end
+				for _, entry in ipairs(Http:JSONDecode(readfile(FONT_FILE))) do
+					if type(entry) == "table" and tostring(entry.id):match("^%d+$") then
+						local clean = { id = tostring(entry.id), name = tostring(entry.name or entry.id), direct = entry.direct == true }
+						customFonts[#customFonts + 1] = clean
+						Register(clean)
+					end
+				end
+			end)
+		end
+
+		local FontInput = Lib.Create("TextBox", {
+			Size = UDim2.new(1, -104, 0, 32),
+			Position = UDim2.new(0, 14, 0, 104),
+			BackgroundColor3 = Color3.fromRGB(22, 22, 22),
+			PlaceholderText = "Custom font Asset ID...",
+			PlaceholderColor3 = Color3.fromRGB(110, 110, 110),
+			TextColor3 = Color3.fromRGB(240, 240, 240),
+			TextSize = 12,
+			Font = Enum.Font.GothamMedium,
+			Text = "",
+			ClearTextOnFocus = false,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Parent = FontSection,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
+			Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
+		})
+		Lib.RegisterThemeElement(FontInput, "BackgroundColor3", 0.7, true)
+		Lib.RegisterThemeText(FontInput, "Primary")
+
+		local FontAdd = Lib.Create("TextButton", {
+			Size = UDim2.fromOffset(62, 32),
+			Position = UDim2.new(1, -76, 0, 104),
+			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+			Text = "Add",
+			TextColor3 = Color3.fromRGB(0, 0, 0),
+			TextSize = 12,
+			Font = Enum.Font.GothamBold,
+			Parent = FontSection,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
+		})
+
+		local function Submit()
+			local text = FontInput.Text
+			if text == "" then return end
+			task.spawn(function()
+				if Lib.AddCustomFont(text) then FontInput.Text = "" end
+			end)
+		end
+
+		FontAdd.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			Submit()
+		end)
+		FontInput.FocusLost:Connect(function(enter)
+			if enter then Submit() end
+		end)
 	end
 
 	CreateThemePicker(AppearanceScroll, 1)
@@ -11018,6 +16625,8 @@ do
 		local val = bgInput.Text:match("^%s*(.-)%s*$")
 		State.CustomBackgroundId = val
 		local image = UI.CustomBgImage
+		local mine = (Lib.BgToken or 0) + 1
+		Lib.BgToken = mine
 		if val == "" then
 			image.Visible = false
 			Lib.BgAssetId, Lib.BgResolved = nil, nil
@@ -11029,13 +16638,20 @@ do
 		image.Visible = true
 		Lib.BgResolved, Lib.BgAssetId = resolved, id
 		Lib.RefreshBgSaturation()
-		if id then
-			task.delay(2, function()
-				if image.Image == resolved and not image.IsLoaded then
-					image.Image = "rbxthumb://type=Asset&id=" .. id .. "&w=420&h=420"
-				end
-			end)
-		end
+		if not id then return end
+		task.spawn(function()
+			local Provider = game:GetService("ContentProvider")
+			for attempt = 1, 4 do
+				if Lib.BgToken ~= mine then return end
+				local status
+				pcall(Provider.PreloadAsync, Provider, { image }, function(_, result) status = result end)
+				if status == Enum.AssetFetchStatus.Success then return end
+				task.wait(attempt * 2)
+			end
+			if Lib.BgToken == mine and not image.IsLoaded and image.Image == resolved then
+				image.Image = "rbxthumb://type=Asset&id=" .. id .. "&w=768&h=432"
+			end
+		end)
 	end
 
 	do
@@ -11177,6 +16793,345 @@ do
 		Lib.QueueBgSaturation()
 	end, true, "%")
 
+	do
+		local Tween, Run, rng = Services.Tween, Services.Run, Random.new()
+		local Fx = {
+			Gradient = false, Style = "Aurora", Angle = 45, Strength = 35, Spin = false,
+			Snow = false, Twinkle = false, Shooting = false, Particles = false, Intensity = 50
+		}
+		local Custom = { A = Color3.fromRGB(99, 102, 241), B = Color3.fromRGB(236, 72, 153) }
+		local Presets = {
+			{ "Aurora", Color3.fromRGB(16, 185, 129), Color3.fromRGB(56, 189, 248), Color3.fromRGB(139, 92, 246) },
+			{ "Sunset", Color3.fromRGB(251, 113, 133), Color3.fromRGB(251, 146, 60), Color3.fromRGB(168, 85, 247) },
+			{ "Ocean", Color3.fromRGB(14, 165, 233), Color3.fromRGB(37, 99, 235), Color3.fromRGB(6, 182, 212) },
+			{ "Violet", Color3.fromRGB(124, 58, 237), Color3.fromRGB(192, 38, 211), Color3.fromRGB(59, 130, 246) },
+			{ "Emerald", Color3.fromRGB(5, 150, 105), Color3.fromRGB(132, 204, 22), Color3.fromRGB(6, 182, 212) },
+			{ "Rose", Color3.fromRGB(244, 63, 94), Color3.fromRGB(251, 146, 60), Color3.fromRGB(217, 70, 239) },
+			{ "Midnight", Color3.fromRGB(30, 41, 59), Color3.fromRGB(79, 70, 229), Color3.fromRGB(15, 23, 42) }
+		}
+		local names = {}
+		for i, preset in ipairs(Presets) do names[i] = preset[1] end
+		names[#names + 1] = "Custom"
+
+		function Lib.BgFxView()
+			return Fx, Custom, Presets
+		end
+
+		local layer = Lib.Create("Frame", {
+			Name = "GradientLayer", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1),
+			BackgroundTransparency = 1, BorderSizePixel = 0, Visible = false, ZIndex = 1, Parent = UI.BackgroundContainer
+		})
+		local gradient = Lib.Create("UIGradient", {
+			Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 0.45) }),
+			Parent = layer
+		})
+		local fxLayer = Lib.Create("Frame", {
+			Name = "EffectsLayer", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
+			BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 2, Parent = UI.BackgroundContainer
+		})
+		local function Box(name)
+			return Lib.Create("Frame", { Name = name, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, Parent = fxLayer })
+		end
+		local snowBox, starBox, glintBox, shotBox = Box("Snow"), Box("Stars"), Box("Glints"), Box("Shooting")
+
+		local function Tint()
+			return State.LightTheme and Color3.fromRGB(88, 104, 150) or Color3.new(1, 1, 1)
+		end
+
+		local function Dot(parent, size, alpha)
+			return Lib.Create("Frame", {
+				Name = "Dot", Size = UDim2.fromOffset(size, size), AnchorPoint = Vector2.new(0.5, 0.5),
+				BackgroundColor3 = Tint(), BackgroundTransparency = alpha, BorderSizePixel = 0, Parent = parent,
+				Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) })
+			})
+		end
+
+		local function Count(base, span)
+			return math.floor(base + span * Fx.Intensity / 100)
+		end
+
+		local flakes, stars, glints = {}, {}, {}
+
+		local function BuildSnow()
+			snowBox:ClearAllChildren()
+			table.clear(flakes)
+			if not Fx.Snow then return end
+			for i = 1, Count(12, 38) do
+				local x, y = rng:NextNumber(), rng:NextNumber()
+				local obj = Dot(snowBox, rng:NextInteger(2, 4), 0.3 + rng:NextNumber() * 0.4)
+				obj.Position = UDim2.fromScale(x, y)
+				flakes[i] = {
+					obj = obj, x = x, y = y,
+					speed = 0.035 + rng:NextNumber() * 0.06,
+					amp = 0.008 + rng:NextNumber() * 0.014,
+					freq = 0.4 + rng:NextNumber() * 0.8,
+					phase = rng:NextNumber() * 6.28
+				}
+			end
+		end
+
+		local function BuildStars()
+			starBox:ClearAllChildren()
+			table.clear(stars)
+			if not Fx.Twinkle then return end
+			for i = 1, Count(14, 40) do
+				local obj = Dot(starBox, rng:NextInteger(1, 3), 0.9)
+				obj.Position = UDim2.fromScale(rng:NextNumber(), rng:NextNumber())
+				stars[i] = {
+					obj = obj, phase = rng:NextNumber() * 6.28,
+					speed = 0.8 + rng:NextNumber() * 1.6, low = 0.2 + rng:NextNumber() * 0.25
+				}
+			end
+		end
+
+		local function BuildGlints()
+			glintBox:ClearAllChildren()
+			table.clear(glints)
+			if not Fx.Particles then return end
+			for i = 1, Count(8, 18) do
+				local size = rng:NextInteger(3, 16)
+				local x, y = rng:NextNumber(), rng:NextNumber()
+				local obj = Dot(glintBox, size, 0.9)
+				obj.Position = UDim2.fromScale(x, y)
+				glints[i] = {
+					obj = obj, x = x, y = y,
+					vx = rng:NextNumber(-0.01, 0.01), vy = -(0.008 + rng:NextNumber() * 0.02),
+					base = 0.7 + (size - 3) / 13 * 0.25,
+					freq = 0.5 + rng:NextNumber(), phase = rng:NextNumber() * 6.28
+				}
+			end
+		end
+
+		local streak = Lib.Create("Frame", {
+			Name = "Dot", Size = UDim2.fromOffset(90, 2), AnchorPoint = Vector2.new(1, 0.5), BackgroundColor3 = Tint(),
+			BackgroundTransparency = 1, BorderSizePixel = 0, Visible = false, Parent = shotBox,
+			Lib.Create("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0) }) })
+		})
+		local shooting = false
+
+		local function Shoot()
+			local size = fxLayer.AbsoluteSize
+			if shooting or size.X < 120 then return end
+			shooting = true
+			local angle = math.rad(rng:NextInteger(22, 40))
+			local dist = size.X * rng:NextNumber(0.3, 0.5)
+			local x, y = rng:NextNumber(0.05, 0.65), rng:NextNumber(0.02, 0.35)
+			local life = 0.9 + rng:NextNumber() * 0.5
+			streak.Rotation = math.deg(angle)
+			streak.Position = UDim2.fromScale(x, y)
+			streak.BackgroundTransparency = 1
+			streak.Visible = true
+			Lib.Tween(streak, life, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, {
+				Position = UDim2.fromScale(x + math.cos(angle) * dist / size.X, y + math.sin(angle) * dist / size.Y)
+			})
+			Lib.Tween(streak, life * 0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, { BackgroundTransparency = 0.1 }).Completed:Once(function()
+				Lib.Tween(streak, life * 0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.In, { BackgroundTransparency = 1 }).Completed:Once(function()
+					streak.Visible = false
+					shooting = false
+				end)
+			end)
+		end
+
+		local conn, acc, clock, nextShot = nil, 0, 0, 3
+
+		local function Tick(dt)
+			acc = acc + dt
+			if acc < 0.0333 then return end
+			local step = math.min(acc, 0.1)
+			acc = 0
+			if State.Unloaded or State.Minimized or not UI.Main.Visible then return end
+			clock = clock + step
+			for i = 1, #flakes do
+				local f = flakes[i]
+				local y = f.y + f.speed * step
+				if y > 1.04 then
+					y = -0.04
+					f.x = rng:NextNumber()
+				end
+				f.y = y
+				f.obj.Position = UDim2.fromScale(f.x + math.sin(clock * f.freq + f.phase) * f.amp, y)
+			end
+			for i = 1, #stars do
+				local s = stars[i]
+				s.obj.BackgroundTransparency = s.low + (0.92 - s.low) * (0.5 + 0.5 * math.sin(clock * s.speed + s.phase))
+			end
+			for i = 1, #glints do
+				local g = glints[i]
+				local x, y = g.x + g.vx * step, g.y + g.vy * step
+				if y < -0.05 then
+					y = 1.05
+					x = rng:NextNumber()
+				elseif x > 1.05 then
+					x = -0.05
+				elseif x < -0.05 then
+					x = 1.05
+				end
+				g.x, g.y = x, y
+				g.obj.Position = UDim2.fromScale(x, y)
+				g.obj.BackgroundTransparency = g.base + math.sin(clock * g.freq + g.phase) * 0.06
+			end
+			if Fx.Shooting then
+				nextShot = nextShot - step
+				if nextShot <= 0 then
+					nextShot = rng:NextNumber(5, 12) * 100 / (50 + Fx.Intensity)
+					Shoot()
+				end
+			end
+		end
+
+		local function Sync()
+			local need = Fx.Snow or Fx.Twinkle or Fx.Particles or Fx.Shooting
+			if need and not conn then
+				acc = 0
+				conn = Run.Heartbeat:Connect(Tick)
+			elseif not need and conn then
+				conn:Disconnect()
+				conn = nil
+			end
+		end
+
+		local spin
+		local function ApplySpin()
+			if spin then
+				spin:Cancel()
+				spin = nil
+			end
+			gradient.Rotation = Fx.Angle
+			if Fx.Gradient and Fx.Spin and UI.Main.Visible then
+				spin = Tween:Create(gradient, TweenInfo.new(45, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, -1), { Rotation = Fx.Angle + 360 })
+				spin:Play()
+			end
+		end
+
+		local function ApplyGradient()
+			layer.Visible = Fx.Gradient
+			if not Fx.Gradient then return end
+			local a, b, c = Custom.A, Custom.A:Lerp(Custom.B, 0.5), Custom.B
+			for _, preset in ipairs(Presets) do
+				if preset[1] == Fx.Style then
+					a, b, c = preset[2], preset[3], preset[4]
+					break
+				end
+			end
+			gradient.Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, a), ColorSequenceKeypoint.new(0.5, b), ColorSequenceKeypoint.new(1, c)
+			})
+			layer.BackgroundTransparency = 1 - Fx.Strength / 100
+		end
+
+		local pending = 0
+		local function QueueRebuild()
+			pending = pending + 1
+			local mine = pending
+			task.delay(0.25, function()
+				if mine ~= pending or State.Unloaded then return end
+				BuildSnow()
+				BuildStars()
+				BuildGlints()
+			end)
+		end
+
+		Lib.C(UI.Main:GetPropertyChangedSignal("Visible"), ApplySpin)
+		table.insert(Lib.ThemeHooks, function()
+			local color = Tint()
+			for _, obj in ipairs(fxLayer:GetDescendants()) do
+				if obj.Name == "Dot" then obj.BackgroundColor3 = color end
+			end
+		end)
+
+		function Lib.StopBgFx()
+			if conn then
+				conn:Disconnect()
+				conn = nil
+			end
+			if spin then
+				spin:Cancel()
+				spin = nil
+			end
+		end
+
+		local Group = Lib.CreateFeatureGroup(AppearanceScroll, "Gradient & Effects", 6)
+
+		Lib.CreateSettingToggleItem(Group, "Background Gradient", "Soft color gradient behind the interface", Fx.Gradient, function(value)
+			Fx.Gradient = value
+			ApplyGradient()
+			ApplySpin()
+		end)
+		Lib.CreateSettingChoiceItem(Group, "Gradient Style", names, Fx.Style, function(value)
+			Fx.Style = value
+			ApplyGradient()
+		end)
+
+		local function OnColor()
+			if Fx.Style ~= "Custom" then
+				Lib.ChoiceControls["Gradient Style"].Set("Custom")
+			else
+				ApplyGradient()
+			end
+		end
+		local setA = select(2, Lib.CreateColorItem(Group, "Gradient Color 1", Custom, "A", false, OnColor))
+		local setB = select(2, Lib.CreateColorItem(Group, "Gradient Color 2", Custom, "B", false, OnColor))
+
+		Lib.CreateSettingSliderItem(Group, "Gradient Strength", "How strongly the gradient shows through", 5, 100, Fx.Strength, function(value)
+			Fx.Strength = value
+			if Fx.Gradient then layer.BackgroundTransparency = 1 - value / 100 end
+		end, false, "%")
+		Lib.CreateSettingSliderItem(Group, "Gradient Angle", "Direction of the color flow", 0, 360, Fx.Angle, function(value)
+			Fx.Angle = value
+			ApplySpin()
+		end, false, "°")
+		Lib.CreateSettingToggleItem(Group, "Animated Gradient", "Slowly rotates the gradient while the menu is open", Fx.Spin, function(value)
+			Fx.Spin = value
+			ApplySpin()
+		end)
+
+		local function Effect(title, desc, key, build)
+			Lib.CreateSettingToggleItem(Group, title, desc, Fx[key], function(value)
+				Fx[key] = value
+				build()
+				Sync()
+			end)
+		end
+		Effect("Snowfall", "Calm snowflakes slowly falling behind the interface", "Snow", BuildSnow)
+		Effect("Twinkling Stars", "Tiny stars that softly fade in and out", "Twinkle", BuildStars)
+		Effect("Shooting Stars", "A rare falling star every few seconds", "Shooting", function() end)
+		Effect("Floating Particles", "Slow drifting dust and soft glints", "Particles", BuildGlints)
+		Lib.CreateSettingSliderItem(Group, "Effect Intensity", "Amount of snowflakes, stars and particles", 20, 100, Fx.Intensity, function(value)
+			Fx.Intensity = value
+			QueueRebuild()
+		end, true, "%")
+
+		local function Rgb(color)
+			return { math.round(color.R * 255), math.round(color.G * 255), math.round(color.B * 255) }
+		end
+
+		Lib.ConfigExtras.BgFx = {
+			Dump = function()
+				return {
+					Gradient = Fx.Gradient, Style = Fx.Style, Angle = Fx.Angle, Strength = Fx.Strength, Spin = Fx.Spin,
+					Snow = Fx.Snow, Twinkle = Fx.Twinkle, Shooting = Fx.Shooting, Particles = Fx.Particles,
+					Intensity = Fx.Intensity, A = Rgb(Custom.A), B = Rgb(Custom.B)
+				}
+			end,
+			Apply = function(data)
+				if type(data.A) == "table" and #data.A == 3 then setA(Color3.fromRGB(data.A[1], data.A[2], data.A[3])) end
+				if type(data.B) == "table" and #data.B == 3 then setB(Color3.fromRGB(data.B[1], data.B[2], data.B[3])) end
+				if type(data.Style) == "string" then Lib.ChoiceControls["Gradient Style"].Set(data.Style) end
+				for _, pair in ipairs({
+					{ "Gradient Strength", data.Strength }, { "Gradient Angle", data.Angle }, { "Effect Intensity", data.Intensity }
+				}) do
+					if type(pair[2]) == "number" then Lib.SliderControls[pair[1]](pair[2]) end
+				end
+				for _, pair in ipairs({
+					{ "Background Gradient", data.Gradient }, { "Animated Gradient", data.Spin }, { "Snowfall", data.Snow },
+					{ "Twinkling Stars", data.Twinkle }, { "Shooting Stars", data.Shooting }, { "Floating Particles", data.Particles }
+				}) do
+					if type(pair[2]) == "boolean" then Lib.ToggleControls[pair[1]].Set(pair[2]) end
+				end
+			end
+		}
+	end
+
 do
 	local FILE = "SeptusHub_Sounds.json"
 	local Http, Market, Debris = Services.HttpService, game:GetService("MarketplaceService"), game:GetService("Debris")
@@ -11266,7 +17221,7 @@ do
 		return selected
 	end
 
-	local SoundGroup = Lib.CreateFeatureGroup(AppearanceScroll, "Interface Sounds", 6)
+	local SoundGroup = Lib.CreateFeatureGroup(AppearanceScroll, "Interface Sounds", 7)
 
 	local AddCard = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 52), BackgroundTransparency = 1, LayoutOrder = 1, Parent = SoundGroup })
 	local input = Lib.Create("TextBox", {
@@ -11423,7 +17378,11 @@ do
 
 	Rebuild()
 end
-	Lib.BuildMusic(Lib.CreateFeatureGroup(AppearanceScroll, "Music", 7))
+	Lib.BuildMusic(Lib.CreateFeatureGroup(AppearanceScroll, "Music", 8))
+
+	Lib.BuildPreviewCard(AppearanceScroll, 0, function()
+		return View_Appearance.Visible and UI.Main.Visible and not State.Minimized
+	end)
 
 	task.spawn(function()
 		while not State.Unloaded do
@@ -11452,7 +17411,7 @@ end
 	end)
 
 	local ManageConfigGroup = Lib.CreateFeatureGroup(ConfigScroll, "Create & Save Configuration", 1)
-	local CreateCfgCard = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 50), BackgroundTransparency = 1, Parent = ManageConfigGroup })
+	local CreateCfgCard = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 84), BackgroundTransparency = 1, Parent = ManageConfigGroup })
 
 	local cfgNameInput = Lib.Create("TextBox", {
 		Size = UDim2.new(1, -110, 0, 36),
@@ -11483,6 +17442,74 @@ end
 		Parent = CreateCfgCard,
 		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
 	})
+
+	local PlaceCfg = { Only = false, Id = game.PlaceId, Name = game.Name, Cache = {} }
+
+	do
+		local market = game:GetService("MarketplaceService")
+
+		local box = Lib.Create("TextButton", {
+			Size = UDim2.fromOffset(20, 20),
+			Position = UDim2.fromOffset(12, 54),
+			BackgroundColor3 = Color3.fromRGB(35, 35, 35),
+			Text = "",
+			TextColor3 = Color3.fromRGB(0, 0, 0),
+			TextSize = 13,
+			Font = Enum.Font.GothamBold,
+			AutoButtonColor = false,
+			Parent = CreateCfgCard,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 5) })
+		})
+
+		local caption = Lib.Create("TextLabel", {
+			Size = UDim2.fromOffset(150, 20),
+			Position = UDim2.fromOffset(40, 54),
+			BackgroundTransparency = 1,
+			Text = "This place only",
+			TextColor3 = Color3.fromRGB(240, 240, 240),
+			TextSize = 12,
+			Font = Enum.Font.GothamMedium,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Parent = CreateCfgCard
+		})
+		Lib.RegisterThemeText(caption, "Primary")
+
+		local place = Lib.Create("TextLabel", {
+			Size = UDim2.new(1, -206, 0, 20),
+			Position = UDim2.fromOffset(194, 54),
+			BackgroundTransparency = 1,
+			Text = "",
+			TextColor3 = Color3.fromRGB(110, 110, 110),
+			TextSize = 11,
+			Font = Enum.Font.GothamMedium,
+			TextXAlignment = Enum.TextXAlignment.Right,
+			TextTruncate = Enum.TextTruncate.AtEnd,
+			Parent = CreateCfgCard
+		})
+
+		local function Paint()
+			box.BackgroundColor3 = PlaceCfg.Only and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(35, 35, 35)
+			box.Text = PlaceCfg.Only and "\u{2713}" or ""
+			place.Text = string.format("%s (%d)", PlaceCfg.Name, PlaceCfg.Id)
+			place.TextColor3 = PlaceCfg.Only and Color3.fromRGB(46, 213, 115) or Color3.fromRGB(110, 110, 110)
+		end
+
+		box.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			PlaceCfg.Only = not PlaceCfg.Only
+			Paint()
+		end)
+
+		task.spawn(function()
+			local ok, info = pcall(market.GetProductInfo, market, PlaceCfg.Id)
+			if ok and type(info) == "table" and type(info.Name) == "string" then
+				PlaceCfg.Name = info.Name
+				if place.Parent then Paint() end
+			end
+		end)
+
+		Paint()
+	end
 
 	local SavedConfigsGroup = Lib.CreateFeatureGroup(ConfigScroll, "Saved Profiles", 2)
 	local SavedListContainer = Lib.Create("Frame", {
@@ -11531,7 +17558,7 @@ end
 	}
 
 	local function GetStateDump()
-		local dump = { ThemeIndex = State.SelectedThemeIndex, FontIndex = State.SelectedFontIndex, CustomBg = State.CustomBackgroundId, ClickSound = Lib.GetClickSoundKey() }
+		local dump = { ThemeIndex = State.SelectedThemeIndex, FontIndex = State.SelectedFontIndex, FontId = State.SelectedFontId, CustomBg = State.CustomBackgroundId, ClickSound = Lib.GetClickSoundKey() }
 		for _, field in ipairs(ConfigFields) do
 			dump[field[1]] = State[field[2]]
 		end
@@ -11546,8 +17573,13 @@ end
 		if data.ThemeIndex and Lib.ResolveTheme(data.ThemeIndex) then
 			Lib.SelectTheme(data.ThemeIndex)
 		end
-		local selectFont = data.FontIndex and Lib.FontSelectors[data.FontIndex]
-		if selectFont then selectFont() end
+		local fontId = type(data.FontId) == "string" and data.FontId:match("^%d+$")
+		local selectFont = Lib.FontSelectors[fontId and ("c" .. fontId) or data.FontIndex]
+		if selectFont then
+			selectFont()
+		elseif fontId and Lib.AddCustomFont then
+			task.spawn(Lib.AddCustomFont, fontId)
+		end
 		if type(data.ClickSound) == "string" then Lib.SelectClickSound(data.ClickSound) end
 		for _, field in ipairs(ConfigFields) do
 			local value = data[field[1]]
@@ -11590,7 +17622,7 @@ end
 				count = count + 1
 				local cName = f:match("([^/\\]+)%.json$") or f
 				local item = Lib.Create("Frame", {
-					Size = UDim2.new(1, 0, 0, 44),
+					Size = UDim2.new(1, 0, 0, 52),
 					BackgroundColor3 = Color3.fromRGB(22, 22, 22),
 					Parent = SavedListContainer,
 					Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
@@ -11598,8 +17630,8 @@ end
 				Lib.RegisterThemeElement(item, "BackgroundColor3", 0.7, true)
 
 				local nameLabel = Lib.Create("TextLabel", {
-					Size = UDim2.new(1, -255, 1, 0),
-					Position = UDim2.new(0, 14, 0, 0),
+					Size = UDim2.new(1, -255, 0, 20),
+					Position = UDim2.new(0, 14, 0, 9),
 					BackgroundTransparency = 1,
 					Text = cName,
 					TextColor3 = Color3.fromRGB(240, 240, 240),
@@ -11609,6 +17641,42 @@ end
 					Parent = item
 				})
 				Lib.RegisterThemeText(nameLabel, "Primary")
+
+				local placeLabel = Lib.Create("TextLabel", {
+					Size = UDim2.new(1, -255, 0, 14),
+					Position = UDim2.new(0, 14, 0, 30),
+					BackgroundTransparency = 1,
+					Text = "Place: ...",
+					TextColor3 = Color3.fromRGB(130, 130, 130),
+					TextSize = 10,
+					Font = Enum.Font.GothamMedium,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					TextTruncate = Enum.TextTruncate.AtEnd,
+					Parent = item
+				})
+				local function ShowPlace(info)
+					if not placeLabel.Parent then return end
+					if info.pid then
+						placeLabel.Text = string.format("Place: %s (%d)", info.pn ~= "" and info.pn or "Unknown", info.pid)
+						placeLabel.TextColor3 = info.pid == game.PlaceId and Color3.fromRGB(46, 213, 115) or Color3.fromRGB(235, 170, 60)
+					else
+						placeLabel.Text = "All places"
+					end
+				end
+				if PlaceCfg.Cache[f] then
+					ShowPlace(PlaceCfg.Cache[f])
+				else
+					task.spawn(function()
+						local info = { pn = "" }
+						pcall(function()
+							local data = Services.HttpService:JSONDecode(readfile(f))
+							info.pid = tonumber(data.PlaceId)
+							info.pn = type(data.PlaceName) == "string" and data.PlaceName or ""
+						end)
+						PlaceCfg.Cache[f] = info
+						ShowPlace(info)
+					end)
+				end
 
 				local loadBtn = Lib.Create("TextButton", {
 					Size = UDim2.fromOffset(65, 28),
@@ -11676,6 +17744,10 @@ end
 						local dump = Services.HttpService:JSONDecode(content)
 						ApplyStateDump(dump)
 						Lib.Notify({ Title = "Config", Text = "Loaded config: " .. cName })
+						local pid = type(dump) == "table" and tonumber(dump.PlaceId)
+						if pid and pid ~= game.PlaceId then
+							Lib.Notify({ Title = "Config", Text = "Saved for another place: " .. tostring(dump.PlaceName or pid) })
+						end
 					end)
 				end)
 
@@ -11714,10 +17786,12 @@ end
 		if name == "" then name = "Default" end
 		if writefile then
 			local dump = GetStateDump()
+			if PlaceCfg.Only then dump.PlaceId, dump.PlaceName = PlaceCfg.Id, PlaceCfg.Name end
 			local json = Services.HttpService:JSONEncode(dump)
 			pcall(writefile, CONFIG_FOLDER .. "/" .. name .. ".json", json)
+			table.clear(PlaceCfg.Cache)
 			RefreshConfigsList()
-			Lib.Notify({ Title = "Config", Text = "Saved config: " .. name })
+			Lib.Notify({ Title = "Config", Text = PlaceCfg.Only and ("Saved config for this place: " .. name) or ("Saved config: " .. name) })
 		end
 	end)
 
@@ -11726,9 +17800,16 @@ end
 	if autoName then
 		task.defer(function()
 			pcall(function()
+				if not game:IsLoaded() then game.Loaded:Wait() end
 				local path = CONFIG_FOLDER .. "/" .. autoName .. ".json"
 				if isfile(path) then
-					ApplyStateDump(Services.HttpService:JSONDecode(readfile(path)))
+					local dump = Services.HttpService:JSONDecode(readfile(path))
+					local pid = type(dump) == "table" and tonumber(dump.PlaceId)
+					if pid and pid ~= game.PlaceId then
+						Lib.Notify({ Title = "Config", Text = "Auto-load skipped: " .. autoName .. " is for " .. tostring(dump.PlaceName or pid) })
+						return
+					end
+					ApplyStateDump(dump)
 					Lib.Notify({ Title = "Config", Text = "Auto-loaded config: " .. autoName })
 				end
 			end)
@@ -11737,7 +17818,8 @@ end
 end
 
 Lib.FeatureToggles = {
-	"Bunny Hop", "Esp Name", "ESP Outline", "Box ESP", "Tracers", "Boost FPS", "FullBright", "Remove Texture", "Part Deleted",
+	"Bunny Hop", "Box ESP", "Name ESP", "Health ESP", "Distance ESP", "Tool ESP", "Tracer ESP", "Off-Screen Arrows", "Head Dot", "View Direction Line", "Skeleton ESP", "Chams", "History ESP", "Gradient ESP", "Hat", "Face Mask", "Halo", "Orbit", "Custom Crosshair", "Custom Mouse", "Boost FPS", "FullBright", "Remove Texture", "Part Deleted",
+	"No Fog", "Time Changer", "Ambient Color", "Atmosphere Tint", "Color Grade", "Bloom", "Custom Skybox", "Terrain Recolor", "World Recolor",
 	"Fly", "Anti Fling", "Anti Sit", "Anti Void", "Anti Stun", "Anti Ragdoll", "RTX Realistic", "Cyberpunk Neon", "Silent Hill Fog",
 	"Stalk Active", "Complete Suspension", "Usual Lag", "Anti-AFK", "Noclip", "Invisibility", "Auto Reconnect", "Teleport Tool",
 	"Cframe Aim", "Mouse Aim", "Silent Aim", "Trigger Bot", "Zero Recoil", "Zero Spread"
@@ -11754,7 +17836,7 @@ function Lib.Unload()
 	end
 
 	State.FlingTarget = nil
-	for _, name in ipairs({ "StopBring", "StopMacro", "StopCurrentEmote", "ClearAllESP", "StopMusic", "ReleaseBgSaturation", "StopCombat" }) do
+	for _, name in ipairs({ "StopBring", "StopMacro", "StopCurrentEmote", "StopEsp", "StopWorld", "StopMusic", "ReleaseBgSaturation", "StopCombat", "StopBgFx" }) do
 		local cleanup = Lib[name]
 		if cleanup then pcall(cleanup) end
 	end
