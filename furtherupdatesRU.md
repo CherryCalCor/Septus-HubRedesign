@@ -27,3 +27,11 @@ Bing manager привязка любой функции
 Настраиваемый HUB - FPS, Ping, Players, Clock, список активных функций.
 
 LZM компрессор + Base64 для экспорта конфигов ввиде байт кода.
+
+Подраздел Collections (папки) для Scripts и Emotes.
+
+Стиль Dynamic Island для SH Button.
+
+3 звука для уведомления.
+
+Поисковая строка в подразделе Config в Settings.
