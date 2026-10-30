@@ -49,6 +49,7 @@ local App = {
 		CurrentTab = "", CurrentScriptsTab = "", CurrentEmotesTab = "", CurrentFeaturesTab = "", CurrentSettingsTab = "",
 		OriginalSize = UDim2.fromOffset(800, 540),
 		MenuAnim = "Standard",
+		SHStyle = "Classic",
 		CornerRadius = 10,
 		SelectedThemeIndex = 1,
 		SelectedFontIndex = 1,
@@ -70,6 +71,8 @@ local App = {
 		MusicVisualizer = true,
 
 		NotificationsEnabled = true,
+		NotifAnim = "Slide",
+		NotifSound = "Off",
 		PlayerNotifsEnabled = true,
 
 		ScriptsPage = 1, ScriptsTotalPages = 1, ScriptsLoading = false, ScriptsCache = {}, ScriptsGen = 0, ScriptsCount = 0, ScriptsBackoff = 0,
@@ -272,6 +275,12 @@ do
 
 	function Lib.PinFont(inst)
 		FontRoles[inst] = 0
+	end
+
+	function Lib.FontRole(inst)
+		local role = FontRoles[inst]
+		if role == nil then return BoldFonts[inst.Font] and 2 or 1 end
+		return role
 	end
 end
 
@@ -627,6 +636,1727 @@ function Lib.ApplyGlobalFont(regularFont, boldFont, regularFace, boldFace)
 	end
 end
 
+do
+	local LANG_FILE = "SeptusHub_Language.txt"
+	local Dict = {
+		["10 HOURS PLAYED"] = "10 ЧАСОВ В ИГРЕ",
+		["A live copy of your interface. Nothing changes in the real UI until you press Apply."] = "Живая копия вашего интерфейса. Настоящий UI не меняется, пока вы не нажмёте Apply.",
+		["A separate window with a full copy of the UI. Customize everything, save it as a preset and apply it."] = "Отдельное окно с полной копией UI. Настройте всё, сохраните как пресет и примените.",
+		["Account"] = "Аккаунт",
+		["Achievement Unlocked"] = "Достижение получено",
+		["Achievements"] = "Достижения",
+		["Actor Support"] = "Поддержка акторов",
+		["Add"] = "Добавить",
+		["Adjust character movement speed"] = "Изменяет скорость передвижения персонажа",
+		["Adjust flight speed velocity"] = "Изменяет скорость полёта",
+		["Adjust forward/backward distance behind target"] = "Расстояние вперёд/назад относительно цели",
+		["Adjust horizontal lateral stalk offset"] = "Горизонтальное смещение при преследовании",
+		["Adjust jump power height"] = "Изменяет силу прыжка",
+		["Adjust opacity of the setting panels and cards"] = "Прозрачность панелей и карточек настроек",
+		["Adjust overall background window opacity"] = "Общая прозрачность фона окна",
+		["Adjust the camera field of view angle"] = "Угол обзора камеры",
+		["Adjust the music volume"] = "Громкость музыки",
+		["Adjust the roundness of the main window corners"] = "Скругление углов главного окна",
+		["Adjust vertical stalk offset height"] = "Вертикальное смещение при преследовании",
+		["Aim Assist"] = "Помощник прицеливания",
+		["Allows replacing return values of functions"] = "Позволяет подменять возвращаемые значения функций",
+		["Already in the playlist"] = "Уже в плейлисте",
+		["Already saved"] = "Уже сохранено",
+		["Amount of snowflakes, stars and particles"] = "Количество снежинок, звёзд и частиц",
+		["Animated Drift Effect"] = "Анимированный дрейф",
+		["Animated Gradient"] = "Анимированный градиент",
+		["Anti Fling"] = "Анти-флинг",
+		["Anti Ragdoll"] = "Анти-рэгдолл",
+		["Anti Sit"] = "Анти-сидение",
+		["Anti Stun"] = "Анти-стан",
+		["Anti Void"] = "Анти-бездна",
+		["Anti-AFK"] = "Анти-AFK",
+		["App Configuration"] = "Настройки приложения",
+		["App Font"] = "Шрифт приложения",
+		["Appearance"] = "Внешний вид",
+		["Applied to the interface"] = "Применено к интерфейсу",
+		["Applies high-speed rotational thrust against target"] = "Применяет к цели высокоскоростное вращение",
+		["Apply"] = "Применить",
+		["Asset ID"] = "Asset ID",
+		["Asset ID or image URL..."] = "Asset ID или ссылка на изображение...",
+		["Asset ID saved"] = "Asset ID сохранён",
+		["Attaches physics parts to target"] = "Притягивает физические детали к цели",
+		["Auto Clean Spam"] = "Автоочистка спама",
+		["Auto Jump"] = "Автопрыжок",
+		["Auto Load"] = "Автозагрузка",
+		["Auto Reconnect"] = "Автопереподключение",
+		["Automatically saves and teleports you back when falling into void"] = "Автоматически возвращает вас назад при падении в бездну",
+		["Background"] = "Фон",
+		["Background Gradient"] = "Фоновый градиент",
+		["Background Opacity"] = "Прозрачность фона",
+		["Background Saturation"] = "Насыщенность фона",
+		["Background Zoom"] = "Масштаб фона",
+		["Behavior"] = "Поведение",
+		["Boost FPS"] = "Повышение FPS",
+		["Boost FPS & World"] = "Повышение FPS и мир",
+		["Bring Parts"] = "Притягивание деталей",
+		["Browse"] = "Обзор",
+		["Bunny Hop"] = "Банни-хоп",
+		["Call Tracing"] = "Трассировка вызовов",
+		["Call code copied"] = "Код вызова скопирован",
+		["Camera & Utilities"] = "Камера и утилиты",
+		["Cancel"] = "Отмена",
+		["Chains jumps to build up speed"] = "Цепочка прыжков для набора скорости",
+		["Character Defense"] = "Защита персонажа",
+		["Character Speed & Jump"] = "Скорость и прыжок персонажа",
+		["Character not found"] = "Персонаж не найден",
+		["Choose player to bring unanchored parts to"] = "Выберите игрока, к которому притягивать незакреплённые детали",
+		["Choose player to fling"] = "Выберите игрока для флинга",
+		["Claim"] = "Забрать",
+		["Claim Reward"] = "Забрать награду",
+		["Claimed ✓"] = "Получено ✓",
+		["Click sound"] = "Звук кликов",
+		["Click to load servers..."] = "Нажмите, чтобы загрузить серверы...",
+		["Click to select player to stalk"] = "Нажмите, чтобы выбрать игрока для преследования",
+		["Color intensity of the custom background image"] = "Яркость цвета пользовательского фона",
+		["Combat"] = "Бой",
+		["Combat Diagnostics"] = "Диагностика боя",
+		["Compatibility"] = "Совместимость",
+		["Complete Suspension"] = "Полная заморозка",
+		["Config"] = "Конфиг",
+		["Connecting to Job ID..."] = "Подключение к Job ID...",
+		["Copied!"] = "Скопировано!",
+		["Copy"] = "Копировать",
+		["Copy script"] = "Копировать скрипт",
+		["Copying..."] = "Копирование...",
+		["Corner Radius"] = "Радиус углов",
+		["Corner radius, transparency, background and font come from your current Appearance settings."] = "Радиус углов, прозрачность, фон и шрифт берутся из ваших текущих настроек внешнего вида.",
+		["Create & Save Configuration"] = "Создание и сохранение конфига",
+		["Custom & Animated Background"] = "Свой и анимированный фон",
+		["Custom Keybinds"] = "Свои бинды",
+		["Custom background applied!"] = "Свой фон применён!",
+		["Custom font Asset ID..."] = "Asset ID своего шрифта...",
+		["Cyberpunk Neon"] = "Киберпанк неон",
+		["Delete"] = "Удалить",
+		["Developer Console"] = "Консоль разработчика",
+		["Developer Utilities"] = "Утилиты разработчика",
+		["Developers"] = "Разработчики",
+		["Direct Connect (Place & Server ID)"] = "Прямое подключение (Place и Server ID)",
+		["Direction of the color flow"] = "Направление потока цвета",
+		["Disable Movement"] = "Отключить движение",
+		["Disable Speed Limit"] = "Отключить лимит скорости",
+		["Disable darkness, shadows and set maximum ambient brightness"] = "Убирает темноту и тени, ставит максимальную яркость",
+		["Disables auto-sitting on chairs/cars while flying"] = "Отключает авто-посадку на стулья и машины во время полёта",
+		["Disables freeze/stun platform states and keeps control active"] = "Отключает заморозку и оглушение, сохраняя управление",
+		["Discord"] = "Discord",
+		["Drops character movement to appear frozen to others"] = "Обнуляет движение, чтобы для других вы выглядели замороженным",
+		["Dynamic sun rays, realistic soft bloom, atmosphere scattering & rich HDR"] = "Динамические лучи солнца, мягкое свечение, рассеяние атмосферы и насыщенный HDR",
+		["Effect Intensity"] = "Интенсивность эффектов",
+		["Emotes"] = "Эмоции",
+		["Enable or disable custom GUI notifications popup"] = "Включает или отключает всплывающие уведомления",
+		["Enables search and the ignore list"] = "Включает поиск и список игнорирования",
+		["Endless repetition"] = "Бесконечное повторение",
+		["Enlarges the image so corners baked into it get cropped by the window"] = "Увеличивает изображение, чтобы окно обрезало углы, нарисованные на картинке",
+		["Enter a valid font Asset ID"] = "Введите корректный Asset ID шрифта",
+		["Enter a valid http(s) URL"] = "Введите корректную http(s) ссылку",
+		["Enter an Asset ID first"] = "Сначала введите Asset ID",
+		["Enter config name..."] = "Введите имя конфига...",
+		["Equip"] = "Надеть",
+		["Equipped"] = "Надето",
+		["Error messages"] = "Сообщения об ошибках",
+		["Every UNC / sUNC function used by this hub. Run the test to check your executor."] = "Все функции UNC / sUNC, которые использует хаб. Запустите тест, чтобы проверить ваш эксплойт.",
+		["Execute"] = "Выполнить",
+		["Execute Fling"] = "Выполнить флинг",
+		["Executing..."] = "Выполняется...",
+		["Executor Functions"] = "Функции эксплойта",
+		["Executor does not support clipboard"] = "Ваш эксплойт не поддерживает буфер обмена",
+		["Executor lacks hookmetamethod: outgoing calls cannot be logged"] = "В эксплойте нет hookmetamethod: исходящие вызовы не логируются",
+		["FE Server-sided invisible character glitch"] = "Серверная невидимость персонажа (FE)",
+		["Failed"] = "Ошибка",
+		["Failed to fetch servers (HTTP / Proxy error)."] = "Не удалось получить серверы (ошибка HTTP / прокси).",
+		["Failed to get the script loadstring"] = "Не удалось получить loadstring скрипта",
+		["Failed to load emotes"] = "Не удалось загрузить эмоции",
+		["Failed to load scripts"] = "Не удалось загрузить скрипты",
+		["Failed to load the track"] = "Не удалось загрузить трек",
+		["Fake Lag"] = "Фейк-лаг",
+		["Features"] = "Функции",
+		["Fetching servers..."] = "Получение серверов...",
+		["Filters"] = "Фильтры",
+		["Filters and Cleanup"] = "Фильтры и очистка",
+		["Finds and teleports you to a random active public server"] = "Находит случайный публичный сервер и телепортирует вас",
+		["Fire and Event between client scripts"] = "Fire и Event между клиентскими скриптами",
+		["FireServer and OnClientEvent"] = "FireServer и OnClientEvent",
+		["FireServer, InvokeServer, Fire and Invoke calls"] = "Вызовы FireServer, InvokeServer, Fire и Invoke",
+		["Firing"] = "Стрельба",
+		["Flight System"] = "Система полёта",
+		["Fling"] = "Флинг",
+		["Fling Target"] = "Цель флинга",
+		["Fly"] = "Полёт",
+		["Fly Speed"] = "Скорость полёта",
+		["Font used throughout the entire application"] = "Шрифт для всего приложения",
+		["Fov Changer"] = "Изменение FOV",
+		["Free 3D flight (WASD & Mobile Joystick)"] = "Свободный 3D-полёт (WASD и мобильный джойстик)",
+		["FullBright"] = "Полная яркость",
+		["Funny"] = "Приколы",
+		["Game"] = "Игра",
+		["General ESP Settings"] = "Общие настройки ESP",
+		["Gives a tool to click anywhere on map to instantly teleport"] = "Выдаёт инструмент для мгновенной телепортации по клику",
+		["Gives a tool to remove textures & decals from hovered parts"] = "Выдаёт инструмент для удаления текстур и декалей с деталей",
+		["Gives a tool with red hover highlight to destroy any clicked part locally"] = "Выдаёт инструмент для локального удаления деталей по клику",
+		["Gradient & Effects"] = "Градиент и эффекты",
+		["Gradient Angle"] = "Угол градиента",
+		["Gradient Strength"] = "Сила градиента",
+		["Gradient Style"] = "Стиль градиента",
+		["Heavy, dense fog, low visibility & desaturated horror atmosphere"] = "Густой туман, плохая видимость и мрачная атмосфера хоррора",
+		["Hide Logo"] = "Скрыть логотип",
+		["Hide Name"] = "Скрыть название",
+		["Hide Place Errors"] = "Скрывать ошибки плейса",
+		["Hides errors and stack traces that come from the game's own scripts"] = "Скрывает ошибки и трассировки из скриптов самой игры",
+		["Hides the icon in the main window header"] = "Скрывает иконку в шапке главного окна",
+		["Hides the title next to the logo in the main window header"] = "Скрывает название рядом с логотипом в шапке окна",
+		["Home"] = "Главная",
+		["How strongly the gradient shows through"] = "Насколько сильно виден градиент",
+		["How visible the custom background image is"] = "Насколько заметен пользовательский фон",
+		["Ignore list cleared"] = "Список игнорирования очищен",
+		["Ignore names, comma separated"] = "Игнорировать имена, через запятую",
+		["Ignores the max speed value completely"] = "Полностью игнорирует максимальную скорость",
+		["Incoming calls of this type cannot be replayed"] = "Входящие вызовы этого типа нельзя воспроизвести",
+		["Info"] = "Инфо",
+		["Informational engine messages"] = "Информационные сообщения движка",
+		["Instantly rejoins the game upon being kicked or disconnected"] = "Мгновенно перезаходит в игру после кика или отключения",
+		["Interface Sounds"] = "Звуки интерфейса",
+		["Invalid Asset ID"] = "Неверный Asset ID",
+		["Invisibility"] = "Невидимость",
+		["Invoke and OnInvoke between client scripts"] = "Invoke и OnInvoke между клиентскими скриптами",
+		["InvokeServer and OnClientInvoke"] = "InvokeServer и OnClientInvoke",
+		["Join"] = "Зайти",
+		["Jump Power"] = "Сила прыжка",
+		["Jumps automatically on every landing while moving"] = "Автоматически прыгает при каждом приземлении во время движения",
+		["LATEST"] = "НОВОЕ",
+		["Live"] = "Онлайн",
+		["Live target, ammo, wallbang and aim state"] = "Текущая цель, патроны, wallbang и состояние прицела",
+		["Load"] = "Загрузить",
+		["Loading emotes..."] = "Загрузка эмоций...",
+		["Loading more scripts..."] = "Загрузка новых скриптов...",
+		["Loading script..."] = "Загрузка скрипта...",
+		["Loading scripts..."] = "Загрузка скриптов...",
+		["Locked"] = "Закрыто",
+		["Locked (Reach 10h achievement)"] = "Закрыто (достижение «10 часов»)",
+		["Locks character anchoring in place while stalking"] = "Фиксирует персонажа на месте во время преследования",
+		["Locks your position relative to the target player"] = "Фиксирует вашу позицию относительно цели",
+		["Log Incoming"] = "Логировать входящие",
+		["Log Outgoing"] = "Логировать исходящие",
+		["Logging"] = "Логирование",
+		["Loop"] = "Повтор",
+		["Macro Recorder"] = "Запись макросов",
+		["Macro Recorder Settings"] = "Настройки записи макросов",
+		["Macro name..."] = "Имя макроса...",
+		["Max Speed"] = "Макс. скорость",
+		["Maximum horizontal speed in studs per second"] = "Максимальная горизонтальная скорость в стадах в секунду",
+		["Menu Animation"] = "Анимация меню",
+		["SH Button Style"] = "Стиль кнопки SH",
+		["Merges looped and repeated calls into one entry"] = "Объединяет повторяющиеся вызовы в одну запись",
+		["Message Types"] = "Типы сообщений",
+		["Midnight atmosphere, hyper-saturated neon glow & violet-cyan tone"] = "Полночная атмосфера, насыщенное неоновое свечение и фиолетово-голубой тон",
+		["Misc"] = "Прочее",
+		["Mobile Version (1.5x Smaller)"] = "Мобильная версия (в 1.5 раза меньше)",
+		["Movement"] = "Движение",
+		["Music"] = "Музыка",
+		["NO TRACK"] = "НЕТ ТРЕКА",
+		["No Player Selected"] = "Игрок не выбран",
+		["No features found"] = "Функции не найдены",
+		["No other players in this server"] = "На сервере нет других игроков",
+		["No saved configs found."] = "Сохранённых конфигов нет.",
+		["No saved movements yet"] = "Сохранённых движений пока нет",
+		["No saved presets yet"] = "Сохранённых пресетов пока нет",
+		["No scripts found"] = "Скрипты не найдены",
+		["No servers found matching filters."] = "Серверы по фильтрам не найдены.",
+		["Noclip"] = "Ноклип",
+		["None"] = "Нет",
+		["Nothing found"] = "Ничего не найдено",
+		["Nothing playing"] = "Ничего не играет",
+		["Nothing recorded yet"] = "Пока ничего не записано",
+		["Notification Animation"] = "Анимация уведомлений",
+		["Notification System"] = "Система уведомлений",
+		["Notifications"] = "Уведомления",
+		["Offset X"] = "Смещение X",
+		["Offset Y"] = "Смещение Y",
+		["Offset Z"] = "Смещение Z",
+		["OnClientEvent, OnClientInvoke, Event and OnInvoke"] = "OnClientEvent, OnClientInvoke, Event и OnInvoke",
+		["Only When Focused"] = "Только в фокусе",
+		["Open UI Studio"] = "Открыть UI Studio",
+		["Overview"] = "Обзор",
+		["Panel Transparency"] = "Прозрачность панелей",
+		["Part Deleted"] = "Удаление деталей",
+		["Paste Asset ID or Image URL..."] = "Вставьте Asset ID или ссылку на изображение...",
+		["Paste a Sound Asset ID..."] = "Вставьте Asset ID звука...",
+		["Paste an Asset ID..."] = "Вставьте Asset ID...",
+		["Pause the music when the window loses focus"] = "Ставит музыку на паузу, когда окно теряет фокус",
+		["Place: unknown (saved before place tracking)"] = "Плейс: неизвестен (сохранено до учёта плейсов)",
+		["Play"] = "Играть",
+		["Playback"] = "Воспроизведение",
+		["Player & Movement"] = "Игрок и движение",
+		["Player Activity Notifications"] = "Уведомления об игроках",
+		["Player Joined"] = "Игрок зашёл",
+		["Player Left"] = "Игрок вышел",
+		["Playlist is empty"] = "Плейлист пуст",
+		["Playlist is full"] = "Плейлист заполнен",
+		["Post-Processing & Atmosphere"] = "Постобработка и атмосфера",
+		["Power, thickness limit and origin of wallbang checks"] = "Сила, лимит толщины и начало проверок wallbang",
+		["Powered by API"] = "На базе API",
+		["Prediction"] = "Упреждение",
+		["Preset name..."] = "Имя пресета...",
+		["Press key..."] = "Нажмите клавишу...",
+		["Prevent Seating in Flight"] = "Запрет посадки в полёте",
+		["Prevents Roblox 20-minute idle disconnect"] = "Защищает от отключения Roblox за 20 минут бездействия",
+		["Prevents joints breaking, ragdoll tripping and physics lock"] = "Защищает от разрыва суставов, рэгдолла и блокировки физики",
+		["Prevents your character from forcibly sitting down or getting seated"] = "Не даёт насильно посадить вашего персонажа",
+		["Profile Decoration"] = "Украшение профиля",
+		["Profile Decorations"] = "Украшения профиля",
+		["Protect"] = "Защита",
+		["Protects you from high-velocity player collisions & flinging"] = "Защищает от столкновений на высокой скорости и флинга",
+		["QoL"] = "Удобство",
+		["RTX Realistic"] = "RTX реализм",
+		["Recent"] = "Недавние",
+		["Reconnects you back to the current server"] = "Переподключает вас к текущему серверу",
+		["Record"] = "Запись",
+		["Record a movement first"] = "Сначала запишите движение",
+		["Recorded in another place: "] = "Записано в другом плейсе: ",
+		["Registration date"] = "Дата регистрации",
+		["Regular print() output"] = "Обычный вывод print()",
+		["Rejoin"] = "Перезайти",
+		["Rejoining server..."] = "Перезаход на сервер...",
+		["Remote Spy"] = "Remote Spy",
+		["Remote Types"] = "Типы ремоутов",
+		["Remote no longer exists"] = "Ремоут больше не существует",
+		["Remove Texture"] = "Удаление текстур",
+		["Replays the recording until you stop it"] = "Повторяет запись, пока вы её не остановите",
+		["Resolving..."] = "Определение...",
+		["Retry"] = "Повторить",
+		["Roblox Marketplace"] = "Магазин Roblox",
+		["Run Test"] = "Запустить тест",
+		["Saturation is not supported for this image or executor"] = "Насыщенность не поддерживается для этого изображения или эксплойта",
+		["Save"] = "Сохранить",
+		["Saved"] = "Сохранённые",
+		["Saved Movements"] = "Сохранённые движения",
+		["Saved Profiles"] = "Сохранённые профили",
+		["Saved list is full"] = "Список сохранений заполнен",
+		["Script Preview"] = "Просмотр скрипта",
+		["Script page link is unavailable"] = "Ссылка на страницу скрипта недоступна",
+		["Scripts"] = "Скрипты",
+		["Search by remote name or arguments..."] = "Поиск по имени ремоута или аргументам...",
+		["Searching for a server..."] = "Поиск сервера...",
+		["Select Target"] = "Выбрать цель",
+		["Select Target Player"] = "Выбрать игрока-цель",
+		["Select an active player from the menu below"] = "Выберите активного игрока из списка ниже",
+		["Server"] = "Сервер",
+		["Server Hop"] = "Смена сервера",
+		["Server List"] = "Список серверов",
+		["Server List Settings"] = "Настройки списка серверов",
+		["Server Management"] = "Управление сервером",
+		["Settings"] = "Настройки",
+		["Shaders"] = "Шейдеры",
+		["Show Errors"] = "Показывать ошибки",
+		["Show Information"] = "Показывать информацию",
+		["Show Output"] = "Показывать вывод",
+		["Show Warnings"] = "Показывать предупреждения",
+		["Show alerts when players join or leave the server"] = "Показывает уведомления, когда игроки заходят или выходят",
+		["Show bars for the playing track in the title bar"] = "Показывает полоски играющего трека в заголовке",
+		["Silent Hill Fog"] = "Туман Сайлент Хилл",
+		["Simulates realistic high ping latency and movement stutters"] = "Имитирует высокий пинг и рывки движения",
+		["Slowly pans and animates the custom background image"] = "Плавно двигает и анимирует пользовательский фон",
+		["Slowly rotates the gradient while the menu is open"] = "Медленно вращает градиент, пока меню открыто",
+		["Soft color gradient behind the interface"] = "Мягкий цветной градиент за интерфейсом",
+		["Sound failed to load"] = "Не удалось загрузить звук",
+		["Sound is too long (max 5 seconds)"] = "Звук слишком длинный (макс. 5 секунд)",
+		["Sound saved"] = "Звук сохранён",
+		["Sounds"] = "Звуки",
+		["Sources"] = "Источники",
+		["Spectate"] = "Наблюдать",
+		["Spoof Returns"] = "Подмена возвратов",
+		["Spoof value is not valid Lua"] = "Значение подмены — некорректный Lua",
+		["Spoof: OFF"] = "Подмена: ВЫКЛ",
+		["Spoof: ON"] = "Подмена: ВКЛ",
+		["Spy BindableEvent"] = "Следить за BindableEvent",
+		["Spy BindableFunction"] = "Следить за BindableFunction",
+		["Spy RemoteEvent"] = "Следить за RemoteEvent",
+		["Spy RemoteFunction"] = "Следить за RemoteFunction",
+		["Stalk Active"] = "Преследование",
+		["Stalk Mode"] = "Режим преследования",
+		["Stop"] = "Стоп",
+		["Stop Spectating"] = "Закончить наблюдение",
+		["Stopped bringing parts"] = "Притягивание деталей остановлено",
+		["Stores the calling script and the call traceback"] = "Сохраняет вызывающий скрипт и трассировку вызова",
+		["System Notifications"] = "Системные уведомления",
+		["Target: None"] = "Цель: нет",
+		["Targeting"] = "Прицеливание",
+		["Targets"] = "Цели",
+		["Targets, distance, team check, text and visible check"] = "Цели, дистанция, проверка команды, текст и видимость",
+		["Teleport"] = "Телепорт",
+		["Teleport Tool"] = "Инструмент телепорта",
+		["Teleport Utilities"] = "Утилиты телепорта",
+		["Teleported! ✓"] = "Телепортировано! ✓",
+		["Testing..."] = "Тестирование...",
+		["Text"] = "Текст",
+		["Thanks for spending 10 hours with us!"] = "Спасибо, что провели с нами 10 часов!",
+		["The first script launch"] = "Первый запуск скрипта",
+		["Theme"] = "Тема",
+		["Theme name"] = "Название темы",
+		["This executor cannot play audio from URLs"] = "Этот эксплойт не может воспроизводить аудио по ссылкам",
+		["This place only"] = "Только для этого плейса",
+		["Titlebar Visualizer"] = "Визуализатор в заголовке",
+		["Toggle Bring Parts"] = "Вкл/выкл притягивание деталей",
+		["Tools"] = "Инструменты",
+		["Total playtime"] = "Всего наиграно",
+		["Trigger"] = "Триггер",
+		["Trigger Bot"] = "Триггер-бот",
+		["UI Studio"] = "UI Studio",
+		["Unlocked from 10 Hours Played"] = "Открыто за 10 часов в игре",
+		["Update Log"] = "Обновления",
+		["Use"] = "Использовать",
+		["Use Filters"] = "Использовать фильтры",
+		["Usual Lag"] = "Обычный лаг",
+		["Very strong texture compression & maximum performance boost"] = "Сильное сжатие текстур и максимальный прирост производительности",
+		["Visuals"] = "Визуалы",
+		["Visuals & Utilities"] = "Визуалы и утилиты",
+		["Volume"] = "Громкость",
+		["Walk Speed"] = "Скорость ходьбы",
+		["Walk through walls, doors and solid obstacles"] = "Проход сквозь стены, двери и препятствия",
+		["Wallbang"] = "Wallbang",
+		["Wallbang Settings"] = "Настройки wallbang",
+		["Warning messages"] = "Предупреждения",
+		["We strongly advise against using this script in games with powerful anti-cheats for the safety of your progress."] = "Мы настоятельно не советуем использовать этот скрипт в играх с мощным античитом, чтобы сохранить ваш прогресс.",
+		["Weapon"] = "Оружие",
+		["White Pulse Glow"] = "Белое пульсирующее свечение",
+		["Window Customization"] = "Настройка окна",
+		["Window Transparency"] = "Прозрачность окна",
+		["World"] = "Мир",
+		["You unlocked Profile Decoration!"] = "Вы открыли украшение профиля!",
+		["Your executor does not support file saving"] = "Ваш эксплойт не поддерживает сохранение файлов",
+		["⚠  SECURITY WARNING  ⚠"] = "⚠  ПРЕДУПРЕЖДЕНИЕ БЕЗОПАСНОСТИ  ⚠",
+		["Applied to the real UI"] = "Применяется к настоящему UI",
+		["Apply to UI"] = "Применить к UI",
+		["Applies in the real UI"] = "Применяется в настоящем UI",
+		["Saved UI Presets"] = "Сохранённые UI-пресеты",
+		["Custom Colors"] = "Свои цвета",
+		["Secondary Text"] = "Вторичный текст",
+		["Switch Off"] = "Выключатель (выкл)",
+		["Calm falling snowflakes"] = "Спокойно падающие снежинки",
+		["Floating Particles"] = "Плавающие частицы",
+		["Shooting Stars"] = "Падающие звёзды",
+		["Twinkling Stars"] = "Мерцающие звёзды",
+		["Softly fading stars"] = "Мягко мерцающие звёзды",
+		["A rare falling star"] = "Редкая падающая звезда",
+		["Slow drifting dust"] = "Медленно дрейфующая пыль",
+		["Config loaded"] = "Конфиг загружен",
+		["Theme changed"] = "Тема изменена",
+		["Script copied"] = "Скрипт скопирован",
+		["Welcome back"] = "С возвращением",
+		["Recent activity"] = "Недавняя активность",
+		["A small visual update of the image upload."] = "Небольшое визуальное обновление загрузки изображений.",
+		["AFK Time"] = "Время AFK",
+		["Added Anti-AFK to the Misc subsection"] = "Добавлен Anti-AFK в раздел «Прочее»",
+		["Added support for the official Rscripts v1 API and its sorting options."] = "Добавлена поддержка официального API Rscripts v1 и его сортировки.",
+		["Added the ability to resize the main menu."] = "Добавлена возможность менять размер главного меню.",
+		["Added two types of animations for the menu."] = "Добавлено два типа анимаций для меню.",
+		["Adding Music to Appearance."] = "Добавлена музыка в «Внешний вид».",
+		["Adding a Combat subsection to Features."] = "Добавлен раздел «Бой» в «Функции».",
+		["Adding a Discord button to Home."] = "Добавлена кнопка Discord на главную.",
+		["Adding a color change feature to the Cyberpunk shader."] = "Добавлена смена цвета для шейдера «Киберпанк».",
+		["Adding a gradient background with style presets, custom colors, strength, angle and slow animation."] = "Добавлен градиентный фон со стилями, своими цветами, силой, углом и медленной анимацией.",
+		["Adding auto-loading for the selected config."] = "Добавлена автозагрузка выбранного конфига.",
+		["Adding background effects: snowfall, twinkling stars, shooting stars and floating particles."] = "Добавлены эффекты фона: снегопад, мерцающие звёзды, падающие звёзды и плавающие частицы.",
+		["Adding custom fonts via Asset ID."] = "Добавлены свои шрифты через Asset ID.",
+		["Adding flexible ESP settings [colors, gradients, and much more]."] = "Добавлены гибкие настройки ESP [цвета, градиенты и многое другое].",
+		["Adding icons to some subsection buttons."] = "Добавлены иконки на некоторые кнопки разделов.",
+		["Adding information about the developers."] = "Добавлена информация о разработчиках.",
+		["Adding multiple visuals."] = "Добавлено несколько визуалов.",
+		["Adding search bars to the Features, Emotes, and Scripts sections."] = "Добавлен поиск в разделы «Функции», «Эмоции» и «Скрипты».",
+		["Adding the Info subsection to Home."] = "Добавлен раздел «Инфо» на главную.",
+		["Adding two subsections to Scripts and Emotes: Saved and Recent."] = "Добавлены два раздела в «Скрипты» и «Эмоции»: «Сохранённые» и «Недавние».",
+		["Addition of the new script search service HaxHell."] = "Добавлен новый сервис поиска скриптов HaxHell.",
+		["Adds a glow around bright areas"] = "Добавляет свечение вокруг ярких областей",
+		["Adds a middle color"] = "Добавляет средний цвет",
+		["Aim Check"] = "Проверка прицела",
+		["Aim Key"] = "Клавиша прицеливания",
+		["Aim assist mouse movement"] = "Движение мыши для помощи прицеливания",
+		["Aim smoothing speed"] = "Скорость сглаживания прицела",
+		["All places"] = "Все плейсы",
+		["Almost Empty"] = "Почти пусто",
+		["Almost Full"] = "Почти полно",
+		["Ambient Animated"] = "Анимация окружения",
+		["Ambient Color"] = "Цвет окружения",
+		["Ambient Color 1"] = "Цвет окружения 1",
+		["Ambient Color 2"] = "Цвет окружения 2",
+		["Ambient Speed"] = "Скорость окружения",
+		["Animated gradient colors for ESP"] = "Анимированные градиентные цвета для ESP",
+		["Animation Pack"] = "Пак анимаций",
+		["Animation Packs"] = "Паки анимаций",
+		["Animation speed"] = "Скорость анимации",
+		["Apply To"] = "Применять к",
+		["Arrow Color"] = "Цвет стрелки",
+		["Arrow Distance Scale"] = "Масштаб стрелки по дистанции",
+		["Arrow Distance Text"] = "Текст дистанции у стрелки",
+		["Arrow Filled"] = "Заливка стрелки",
+		["Arrow Outline"] = "Контур стрелки",
+		["Arrow Radius"] = "Радиус стрелок",
+		["Arrow Size"] = "Размер стрелки",
+		["Arrow Style"] = "Стиль стрелки",
+		["Arrow size"] = "Размер стрелки",
+		["Arrows and head dot"] = "Стрелки и точка на голове",
+		["Arrows pointing to targets out of view"] = "Стрелки на цели вне поля зрения",
+		["Atmosphere Animated"] = "Анимация атмосферы",
+		["Atmosphere Color 1"] = "Цвет атмосферы 1",
+		["Atmosphere Color 2"] = "Цвет атмосферы 2",
+		["Atmosphere Speed"] = "Скорость атмосферы",
+		["Atmosphere Tint"] = "Оттенок атмосферы",
+		["Auto-Fire"] = "Автоогонь",
+		["Auto-load disabled"] = "Автозагрузка отключена",
+		["Auto-load disabled for this place"] = "Автозагрузка для этого плейса отключена",
+		["Block Mouse"] = "Блокировать мышь",
+		["Blends between both colors"] = "Смешивает оба цвета",
+		["Blends between both tints"] = "Смешивает оба оттенка",
+		["Bloom Intensity"] = "Интенсивность свечения",
+		["Bloom Size"] = "Размер свечения",
+		["Bloom Threshold"] = "Порог свечения",
+		["Bone lines on targets"] = "Линии костей у целей",
+		["Box Color"] = "Цвет рамки",
+		["Box Corner Height"] = "Высота углов рамки",
+		["Box Corner Width"] = "Ширина углов рамки",
+		["Box ESP"] = "ESP рамки",
+		["Box Fill Opacity"] = "Прозрачность заливки рамки",
+		["Box Filled"] = "Заливка рамки",
+		["Box Outline"] = "Контур рамки",
+		["Box Scale"] = "Масштаб рамки",
+		["Box Style"] = "Стиль рамки",
+		["Box Thickness"] = "Толщина рамки",
+		["Box Width"] = "Ширина рамки",
+		["Box fill"] = "Заливка рамки",
+		["Box width relative to its height"] = "Ширина рамки относительно высоты",
+		["Boxes around targets with several styles"] = "Рамки вокруг целей в нескольких стилях",
+		["Bunny Hop Settings"] = "Настройки банни-хопа",
+		["Cached Tools"] = "Кэшированные инструменты",
+		["Cat Ears"] = "Кошачьи ушки",
+		["Cat Face"] = "Кошачья мордочка",
+		["Center dot size"] = "Размер центральной точки",
+		["Cframe Aim"] = "CFrame Aim",
+		["Chams Fill Color"] = "Цвет заливки Chams",
+		["Chams Fill Transparency"] = "Прозрачность заливки Chams",
+		["Chams Mode"] = "Режим Chams",
+		["Chams Outline Color"] = "Цвет контура Chams",
+		["Chams Outline Transparency"] = "Прозрачность контура Chams",
+		["Chams Pulse"] = "Пульсация Chams",
+		["Chams Through Walls"] = "Chams сквозь стены",
+		["Chams colors"] = "Цвета Chams",
+		["Changes the Lighting technology for Boost FPS and lighting features"] = "Меняет технологию освещения для повышения FPS и световых функций",
+		["Changing the settings icons and the Features icon."] = "Изменены иконки настроек и иконка «Функций».",
+		["Check Ammo"] = "Проверка патронов",
+		["Check Jammed"] = "Проверка осечки",
+		["Checks that saved data and cached images exist"] = "Проверяет наличие сохранённых данных и кэша изображений",
+		["Checks the config, macro, font and image cache folders"] = "Проверяет папки конфигов, макросов, шрифтов и кэша изображений",
+		["Click Interval"] = "Интервал кликов",
+		["Clicks Count"] = "Количество кликов",
+		["Clicks automatically when a target is locked"] = "Кликает автоматически, когда цель захвачена",
+		["Clicks fired per cycle"] = "Кликов за цикл",
+		["Clock Time"] = "Время суток",
+		["Color Grade"] = "Цветокоррекция",
+		["Color bands, 0 = smooth"] = "Цветовые полосы, 0 = плавно",
+		["Color correction with animated tint"] = "Цветокоррекция с анимированным оттенком",
+		["Color saturation"] = "Насыщенность цвета",
+		["Colors targets by line of sight"] = "Красит цели по линии видимости",
+		["Compatibility Report"] = "Отчёт о совместимости",
+		["Complete overhaul of the RTX shader."] = "Полностью переработан шейдер RTX.",
+		["Copy Code"] = "Копировать код",
+		["Copy Link"] = "Копировать ссылку",
+		["Copy Script"] = "Копировать скрипт",
+		["Copy buttons, loadstring copying and Remote Spy code export"] = "Кнопки копирования, копирование loadstring и экспорт кода Remote Spy",
+		["Correcting the display of images in the script."] = "Исправлено отображение изображений в скриптах.",
+		["Could not prepare the font file"] = "Не удалось подготовить файл шрифта",
+		["Creates the config, macro, font and image cache folders"] = "Создаёт папки конфигов, макросов, шрифтов и кэша изображений",
+		["Crosshair Center Dot"] = "Центральная точка прицела",
+		["Crosshair Color"] = "Цвет прицела",
+		["Crosshair Color 2"] = "Цвет прицела 2",
+		["Crosshair Color Mode"] = "Режим цвета прицела",
+		["Crosshair Dot Size"] = "Размер точки прицела",
+		["Crosshair Dynamic Amount"] = "Величина динамики прицела",
+		["Crosshair Dynamic Gap"] = "Динамический зазор прицела",
+		["Crosshair Follow Mouse"] = "Прицел следует за мышью",
+		["Crosshair Gap"] = "Зазор прицела",
+		["Crosshair Offset X"] = "Смещение прицела X",
+		["Crosshair Offset Y"] = "Смещение прицела Y",
+		["Crosshair Opacity"] = "Прозрачность прицела",
+		["Crosshair Outline"] = "Контур прицела",
+		["Crosshair Size"] = "Размер прицела",
+		["Crosshair Spin"] = "Вращение прицела",
+		["Crosshair Spin Speed"] = "Скорость вращения прицела",
+		["Crosshair Style"] = "Стиль прицела",
+		["Crosshair Thickness"] = "Толщина прицела",
+		["Crosshair opacity"] = "Прозрачность прицела",
+		["Crosshair size"] = "Размер прицела",
+		["Cursor Bounce"] = "Подпрыгивание курсора",
+		["Cursor Color 1"] = "Цвет курсора 1",
+		["Cursor Color 2"] = "Цвет курсора 2",
+		["Cursor Color Mode"] = "Режим цвета курсора",
+		["Cursor Hide System"] = "Скрывать системный курсор",
+		["Cursor Offset X"] = "Смещение курсора X",
+		["Cursor Offset Y"] = "Смещение курсора Y",
+		["Cursor Opacity"] = "Прозрачность курсора",
+		["Cursor Outline"] = "Контур курсора",
+		["Cursor Size"] = "Размер курсора",
+		["Cursor Spin"] = "Вращение курсора",
+		["Cursor Spin Speed"] = "Скорость вращения курсора",
+		["Cursor Style"] = "Стиль курсора",
+		["Cursor Trail"] = "След курсора",
+		["Cursor Trail Length"] = "Длина следа курсора",
+		["Cursor opacity"] = "Прозрачность курсора",
+		["Cursor size"] = "Размер курсора",
+		["Custom Crosshair"] = "Свой прицел",
+		["Custom Mouse"] = "Свой курсор",
+		["Custom Skybox"] = "Своё небо",
+		["Custom crosshair in the screen center"] = "Свой прицел в центре экрана",
+		["Custom cursor with effects"] = "Свой курсор с эффектами",
+		["Custom wallbang power"] = "Своя сила wallbang",
+		["Dark outline"] = "Тёмный контур",
+		["Dark outline around bones"] = "Тёмный контур вокруг костей",
+		["Dark outline around the arrow"] = "Тёмный контур вокруг стрелки",
+		["Dark outline around the box"] = "Тёмный контур вокруг рамки",
+		["Deep Tap"] = "Глубокий тап",
+		["Delay between target detection and the shot"] = "Задержка между обнаружением цели и выстрелом",
+		["Deletes configs, macros and old cached images"] = "Удаляет конфиги, макросы и старый кэш изображений",
+		["Deputy Chief Developer"] = "Заместитель главного разработчика",
+		["UI Designer"] = "UI-дизайнер",
+		["Functions Developer"] = "Разработчик функций",
+		["Function Developer"] = "Разработчик функций",
+		["Detailed information about the script is available in the Script section."] = "Подробная информация о скрипте доступна в разделе «Скрипты».",
+		["Displays downloaded script images, URL music and custom fonts"] = "Показывает загруженные изображения скриптов, музыку по ссылкам и свои шрифты",
+		["Distance Color"] = "Цвет дистанции",
+		["Distance ESP"] = "ESP дистанции",
+		["Distance Size"] = "Размер дистанции",
+		["Distance from the screen center"] = "Расстояние от центра экрана",
+		["Distance text size"] = "Размер текста дистанции",
+		["Distance that counts as a teleport"] = "Расстояние, считающееся телепортом",
+		["Distance to the target"] = "Расстояние до цели",
+		["Does not shoot with a jammed weapon"] = "Не стреляет заклинившим оружием",
+		["Does not shoot with an empty magazine"] = "Не стреляет с пустым магазином",
+		["Dot in the center"] = "Точка в центре",
+		["Dot on target heads"] = "Точка на головах целей",
+		["Dot size"] = "Размер точки",
+		["Dots orbiting your character"] = "Точки, вращающиеся вокруг персонажа",
+		["Downloads scripts, emotes, music and images"] = "Загружает скрипты, эмоции, музыку и изображения",
+		["Draws ESP on your own character"] = "Рисует ESP на вашем персонаже",
+		["Draws a trail behind the cursor"] = "Рисует след за курсором",
+		["Draws mask outlines"] = "Рисует контуры масок",
+		["Draws the Silent Aim FOV around the cursor"] = "Рисует FOV Silent Aim вокруг курсора",
+		["ESP Bold Text"] = "Жирный текст ESP",
+		["ESP Font"] = "Шрифт ESP",
+		["ESP Hidden Color"] = "Цвет скрытых целей ESP",
+		["ESP Max Distance"] = "Макс. дистанция ESP",
+		["ESP Targets"] = "Цели ESP",
+		["ESP Team Check"] = "Проверка команды ESP",
+		["ESP Visible Check"] = "Проверка видимости ESP",
+		["ESP Visible Color"] = "Цвет видимых целей ESP",
+		["ESP tracers and box rendering"] = "Трассеры и рамки ESP",
+		["Emote Filters"] = "Фильтры эмоций",
+		["Enter Place ID..."] = "Введите Place ID...",
+		["Enter Server Job ID..."] = "Введите Job ID сервера...",
+		["Executed!"] = "Выполнено!",
+		["Executor lacks writefile / getcustomasset"] = "В эксплойте нет writefile / getcustomasset",
+		["FOV Radius"] = "Радиус FOV",
+		["Face Mask"] = "Маска на лицо",
+		["Failed to get the script source"] = "Не удалось получить исходник скрипта",
+		["Failed to write the file"] = "Не удалось записать файл",
+		["Fetches Scripts browser sources and loadstring-based scripts"] = "Получает источники браузера скриптов и скрипты на loadstring",
+		["Filled + Wireframe"] = "Заливка + каркас",
+		["Fills the arrow"] = "Заливает стрелку",
+		["Fills the box with color"] = "Заливает рамку цветом",
+		["Fills the mask"] = "Заливает маску",
+		["Finds actors to hook inside parallel Lua"] = "Находит акторы для хука внутри параллельного Lua",
+		["Fires automatically when the crosshair is on a target"] = "Стреляет автоматически, когда прицел на цели",
+		["Fixed Time"] = "Фиксированное время",
+		["Fixed an issue where some objects did not change their transparency."] = "Исправлена проблема, из-за которой некоторые объекты не меняли прозрачность.",
+		["Fixed failed image downloads never being retried until the next launch."] = "Исправлено: неудачные загрузки изображений не повторялись до следующего запуска.",
+		["Fixed loading of the config with a low-quality image."] = "Исправлена загрузка конфига с изображением низкого качества.",
+		["Fixed menu-related bugs."] = "Исправлены баги меню.",
+		["Fixed script card images not loading when a site served WebP or relative image links."] = "Исправлена загрузка картинок карточек скриптов, когда сайт отдавал WebP или относительные ссылки.",
+		["Fixed the Scripts list getting stuck on loading after an error while building cards."] = "Исправлено зависание списка скриптов на загрузке после ошибки при создании карточек.",
+		["Fixed the copying of loadstring references for scripts."] = "Исправлено копирование ссылок loadstring для скриптов.",
+		["Fixed the hub GUI and its sounds being visible to the game inside PlayerGui and SoundService."] = "Исправлено: GUI хаба и его звуки были видны игре внутри PlayerGui и SoundService.",
+		["Fixed the image cache folder growing without a limit."] = "Исправлен неограниченный рост папки кэша изображений.",
+		["Fixing Corner Radius bugs for Custom Background."] = "Исправлены баги радиуса углов для своего фона.",
+		["Fixing bugs and sliders/switches not changing their position when loading the config."] = "Исправлены баги: ползунки и переключатели не меняли положение при загрузке конфига.",
+		["Floating animation"] = "Плавающая анимация",
+		["Follows the cursor"] = "Следует за курсором",
+		["Gap grows while moving"] = "Зазор растёт при движении",
+		["Gap growth amount"] = "Величина роста зазора",
+		["Gap in the center"] = "Зазор в центре",
+		["Ghost fades out over time"] = "Призрак постепенно исчезает",
+		["Ghost of a target that left or died"] = "Призрак цели, которая ушла или погибла",
+		["Glow spread"] = "Распространение свечения",
+		["Glow strength"] = "Сила свечения",
+		["Grade Animated"] = "Анимация цветокоррекции",
+		["Grade Brightness"] = "Яркость цветокоррекции",
+		["Grade Contrast"] = "Контраст цветокоррекции",
+		["Grade Saturation"] = "Насыщенность цветокоррекции",
+		["Grade Speed"] = "Скорость цветокоррекции",
+		["Grade Tint 1"] = "Оттенок цветокоррекции 1",
+		["Grade Tint 2"] = "Оттенок цветокоррекции 2",
+		["Gradient Bands"] = "Полосы градиента",
+		["Gradient Chams"] = "Градиентные Chams",
+		["Gradient Color 1"] = "Цвет градиента 1",
+		["Gradient Color 2"] = "Цвет градиента 2",
+		["Gradient Color 3"] = "Цвет градиента 3",
+		["Gradient ESP"] = "Градиентный ESP",
+		["Gradient Extras"] = "Доп. настройки градиента",
+		["Gradient Fill"] = "Градиентная заливка",
+		["Gradient Fill Type"] = "Тип градиентной заливки",
+		["Gradient Mode"] = "Режим градиента",
+		["Gradient Repeat"] = "Повтор градиента",
+		["Gradient Reverse"] = "Реверс градиента",
+		["Gradient Shape"] = "Форма градиента",
+		["Gradient Skeleton"] = "Градиентный скелет",
+		["Gradient Speed"] = "Скорость градиента",
+		["Gradient Text"] = "Градиентный текст",
+		["Gradient Third Color"] = "Третий цвет градиента",
+		["Gradient Tracer"] = "Градиентный трассер",
+		["Gradient length in studs"] = "Длина градиента в стадах",
+		["HTML response (blocked or rate limited)"] = "HTML-ответ (заблокировано или лимит запросов)",
+		["Halo Back Forward"] = "Нимб вперёд/назад",
+		["Halo Bobbing"] = "Покачивание нимба",
+		["Halo Color"] = "Цвет нимба",
+		["Halo Hide Distance"] = "Дистанция скрытия нимба",
+		["Halo Left Right"] = "Нимб влево/вправо",
+		["Halo Radius"] = "Радиус нимба",
+		["Halo Rainbow"] = "Радужный нимб",
+		["Halo Style"] = "Стиль нимба",
+		["Halo Thickness"] = "Толщина нимба",
+		["Halo Up Down"] = "Нимб вверх/вниз",
+		["Halo above heads"] = "Нимб над головами",
+		["Halo radius"] = "Радиус нимба",
+		["Hat Apply To"] = "Шляпа: применять к",
+		["Hat Back Forward"] = "Шляпа вперёд/назад",
+		["Hat Base Outline"] = "Контур основания шляпы",
+		["Hat Color 1"] = "Цвет шляпы 1",
+		["Hat Color 2"] = "Цвет шляпы 2",
+		["Hat Height"] = "Высота шляпы",
+		["Hat Hide Distance"] = "Дистанция скрытия шляпы",
+		["Hat Left Right"] = "Шляпа влево/вправо",
+		["Hat Opacity"] = "Прозрачность шляпы",
+		["Hat Player Distance"] = "Дистанция до игрока для шляпы",
+		["Hat Radius"] = "Радиус шляпы",
+		["Hat Rainbow"] = "Радужная шляпа",
+		["Hat Segments"] = "Сегменты шляпы",
+		["Hat Size"] = "Размер шляпы",
+		["Hat Spin"] = "Вращение шляпы",
+		["Hat Spin Speed"] = "Скорость вращения шляпы",
+		["Hat Style"] = "Стиль шляпы",
+		["Hat Thickness"] = "Толщина шляпы",
+		["Hat Type"] = "Тип шляпы",
+		["Hat Up Down"] = "Шляпа вверх/вниз",
+		["Hat height"] = "Высота шляпы",
+		["Hat opacity"] = "Прозрачность шляпы",
+		["Hat radius"] = "Радиус шляпы",
+		["Hats above heads"] = "Шляпы над головами",
+		["Head Dot"] = "Точка на голове",
+		["Head Dot Color"] = "Цвет точки на голове",
+		["Head Dot Size"] = "Размер точки на голове",
+		["Health Bar"] = "Полоска здоровья",
+		["Health Black Zone"] = "Чёрная зона здоровья",
+		["Health Custom Color"] = "Свой цвет здоровья",
+		["Health ESP"] = "ESP здоровья",
+		["Health Mode"] = "Режим здоровья",
+		["Health Number"] = "Число здоровья",
+		["Health Side"] = "Сторона здоровья",
+		["Health Thickness"] = "Толщина здоровья",
+		["Health bar next to the box"] = "Полоска здоровья рядом с рамкой",
+		["Health bar thickness"] = "Толщина полоски здоровья",
+		["Hides the header icon"] = "Скрывает иконку в шапке",
+		["Hides the header title"] = "Скрывает название в шапке",
+		["Hides the system cursor"] = "Скрывает системный курсор",
+		["Hides when the camera is closer"] = "Скрывается, когда камера ближе",
+		["Hides your own ESP in first person"] = "Скрывает ваш ESP от первого лица",
+		["Highlights targets through walls"] = "Подсвечивает цели сквозь стены",
+		["History Color"] = "Цвет истории",
+		["History Duration"] = "Длительность истории",
+		["History ESP"] = "ESP истории",
+		["History Fade Out"] = "Затухание истории",
+		["History Show Timer"] = "Таймер истории",
+		["History Teleport Distance"] = "Дистанция телепорта для истории",
+		["History Timer Mode"] = "Режим таймера истории",
+		["History Triggers"] = "Триггеры истории",
+		["Hold After Shot"] = "Удержание после выстрела",
+		["Hold Before Shot"] = "Удержание перед выстрелом",
+		["Hooks __namecall to log outgoing remotes and bindables"] = "Хукает __namecall для логирования исходящих ремоутов и bindable",
+		["Hooks calls made inside Actors"] = "Хукает вызовы внутри акторов",
+		["Horizontal length of corner lines"] = "Горизонтальная длина уголков",
+		["Horizontal offset"] = "Горизонтальное смещение",
+		["How long a ghost stays"] = "Как долго живёт призрак",
+		["How many times the gradient repeats"] = "Сколько раз повторяется градиент",
+		["How many times the recording replays"] = "Сколько раз повторяется запись",
+		["How strongly parts are recolored"] = "Насколько сильно перекрашиваются детали",
+		["How strongly terrain is recolored"] = "Насколько сильно перекрашивается ландшафт",
+		["Ignore targets behind walls"] = "Игнорировать цели за стенами",
+		["Ignores calls made by the executor itself"] = "Игнорирует вызовы самого эксплойта",
+		["Ignores players from your team"] = "Игнорирует игроков вашей команды",
+		["Ignores targets behind walls"] = "Игнорирует цели за стенами",
+		["Image brightness"] = "Яркость изображения",
+		["Image contrast"] = "Контраст изображения",
+		["In experience search is denied"] = "Поиск внутри игры запрещён",
+		["Increased the z-index for all menus and script objects so they are not overlapped by the game interface."] = "Увеличен z-index всех меню и объектов скриптов, чтобы интерфейс игры их не перекрывал.",
+		["Invalid font asset"] = "Неверный ассет шрифта",
+		["Junior Developer"] = "Младший разработчик",
+		["Keeps momentum while jumping"] = "Сохраняет инерцию при прыжках",
+		["Keeps the locked target until it dies or leaves view"] = "Держит захваченную цель, пока она не погибнет или не пропадёт из виду",
+		["Key System"] = "Система ключей",
+		["Least Liked"] = "Меньше всего лайков",
+		["Least Players"] = "Меньше всего игроков",
+		["Least Viewed"] = "Меньше всего просмотров",
+		["Left Arm"] = "Левая рука",
+		["Left Leg"] = "Левая нога",
+		["Legacy GUI protection on older Synapse-style executors"] = "Защита GUI для старых эксплойтов типа Synapse",
+		["Line length in studs"] = "Длина линии в стадах",
+		["Line showing where targets look"] = "Линия, показывающая, куда смотрят цели",
+		["Line thickness"] = "Толщина линии",
+		["Lines from the screen to targets"] = "Линии от экрана к целям",
+		["Lists saved configs and macros and trims the image cache"] = "Показывает сохранённые конфиги и макросы и чистит кэш изображений",
+		["Loading animation packs..."] = "Загрузка паков анимаций...",
+		["Loads saved configs, themes, macros, keybinds, playtime and custom fonts"] = "Загружает сохранённые конфиги, темы, макросы, бинды, время игры и свои шрифты",
+		["Locks the cursor while the shot is fired"] = "Фиксирует курсор на время выстрела",
+		["Locks the time of day"] = "Фиксирует время суток",
+		["Logs remotes and bindables with details, filters and spoofing"] = "Логирует ремоуты и bindable с деталями, фильтрами и подменой",
+		["Loop Speed"] = "Скорость цикла",
+		["Macro Play"] = "Воспроизвести макрос",
+		["Macro Record"] = "Записать макрос",
+		["Main Developer"] = "Главный разработчик",
+		["The ideologist"] = "Идеолог",
+		["Main state"] = "Главное состояние",
+		["Makes ESP text thicker"] = "Делает текст ESP толще",
+		["Mask Apply To"] = "Маска: применять к",
+		["Mask Back Forward"] = "Маска вперёд/назад",
+		["Mask Color 1"] = "Цвет маски 1",
+		["Mask Color 2"] = "Цвет маски 2",
+		["Mask Fill"] = "Заливка маски",
+		["Mask Hide Distance"] = "Дистанция скрытия маски",
+		["Mask Left Right"] = "Маска влево/вправо",
+		["Mask Opacity"] = "Прозрачность маски",
+		["Mask Outline"] = "Контур маски",
+		["Mask Player Distance"] = "Дистанция до игрока для маски",
+		["Mask Rainbow"] = "Радужная маска",
+		["Mask Size"] = "Размер маски",
+		["Mask Style"] = "Стиль маски",
+		["Mask Thickness"] = "Толщина маски",
+		["Mask Up Down"] = "Маска вверх/вниз",
+		["Mask opacity"] = "Прозрачность маски",
+		["Masks drawn on faces"] = "Маски на лицах",
+		["Material Override"] = "Подмена материала",
+		["Max Distance"] = "Макс. дистанция",
+		["Max Wall Thickness"] = "Макс. толщина стены",
+		["Maximum distance for other players"] = "Максимальная дистанция до других игроков",
+		["Maximum distance of ESP targets"] = "Максимальная дистанция целей ESP",
+		["Maximum target distance"] = "Максимальная дистанция до цели",
+		["Maximum thickness of a single wall"] = "Максимальная толщина одной стены",
+		["Minimum brightness that glows"] = "Минимальная яркость для свечения",
+		["Most Liked"] = "Больше всего лайков",
+		["Most Players"] = "Больше всего игроков",
+		["Most Viewed"] = "Больше всего просмотров",
+		["Mounts the hub in a hidden container the game cannot see"] = "Размещает хаб в скрытом контейнере, который игра не видит",
+		["Mouse Aim"] = "Mouse Aim",
+		["Move freely through the air"] = "Свободно перемещайтесь по воздуху",
+		["Movement Macro"] = "Макрос движения",
+		["Moves the gradient over time"] = "Двигает градиент со временем",
+		["Moves the mouse towards the closest target"] = "Двигает мышь к ближайшей цели",
+		["Multiplies the weapon wallbang power"] = "Умножает силу wallbang оружия",
+		["Name Color"] = "Цвет имени",
+		["Name ESP"] = "ESP имён",
+		["Name Size"] = "Размер имени",
+		["Name Use Display Name"] = "Использовать отображаемое имя",
+		["Name of the held tool"] = "Название предмета в руках",
+		["Name text size"] = "Размер текста имени",
+		["Name, distance and tool text"] = "Текст имени, дистанции и предмета",
+		["New Halloween menu theme."] = "Новая тема меню «Хэллоуин».",
+		["New Theme"] = "Новая тема",
+		["No Fog"] = "Без тумана",
+		["No saved backgrounds yet"] = "Сохранённых фонов пока нет",
+		["Not supported by this executor"] = "Не поддерживается этим эксплойтом",
+		["Npc Humanoid (better)"] = "Npc Humanoid (лучше)",
+		["Npc WorkSpace"] = "Npc WorkSpace",
+		["Number of orbiting dots"] = "Количество вращающихся точек",
+		["Number of repetitions"] = "Количество повторов",
+		["Number of stars"] = "Количество звёзд",
+		["Occupancy Percent"] = "Заполненность",
+		["Off Sale"] = "Не продаётся",
+		["Off-Screen Arrows"] = "Стрелки за экраном",
+		["Opacity of the box fill"] = "Прозрачность заливки рамки",
+		["Optional, unavailable"] = "Необязательно, недоступно",
+		["Orbit Back Forward"] = "Орбита вперёд/назад",
+		["Orbit Color 1"] = "Цвет орбиты 1",
+		["Orbit Color 2"] = "Цвет орбиты 2",
+		["Orbit Count"] = "Количество на орбите",
+		["Orbit Dot Size"] = "Размер точек орбиты",
+		["Orbit Left Right"] = "Орбита влево/вправо",
+		["Orbit Radius"] = "Радиус орбиты",
+		["Orbit Rainbow"] = "Радужная орбита",
+		["Orbit Speed"] = "Скорость орбиты",
+		["Orbit Style"] = "Стиль орбиты",
+		["Orbit Up Down"] = "Орбита вверх/вниз",
+		["Orbit radius"] = "Радиус орбиты",
+		["Outline at the hat base"] = "Контур у основания шляпы",
+		["Overall colour scheme applied to the application background"] = "Общая цветовая схема фона приложения",
+		["Overall hat scale"] = "Общий масштаб шляпы",
+		["Overall mask scale"] = "Общий масштаб маски",
+		["Overall size of the box"] = "Общий размер рамки",
+		["Override Value"] = "Подменное значение",
+		["Parts processed each frame"] = "Деталей за кадр",
+		["Paste an audio URL..."] = "Вставьте ссылку на аудио...",
+		["Pause before every click"] = "Пауза перед каждым кликом",
+		["Pause between shots"] = "Пауза между выстрелами",
+		["Pause between shots in Time mode, 0 = until death"] = "Пауза между выстрелами в режиме времени, 0 = до смерти",
+		["Place ID"] = "Place ID",
+		["Player Humanoid"] = "Humanoid игрока",
+		["Prediction time"] = "Время упреждения",
+		["Prevents your character from sitting"] = "Не даёт вашему персонажу сидеть",
+		["Preview updates live. Press Add to save."] = "Предпросмотр обновляется сразу. Нажмите Add, чтобы сохранить.",
+		["Pulsing animation"] = "Пульсирующая анимация",
+		["Rainbow colors"] = "Радужные цвета",
+		["Reads the Lighting technology before Boost FPS changes it"] = "Запоминает технологию освещения до изменений Boost FPS",
+		["Reads the method name inside the __namecall hook"] = "Читает имя метода внутри хука __namecall",
+		["Reads the optional Rscripts API key"] = "Читает необязательный ключ API Rscripts",
+		["Recolor Animated"] = "Анимация перекраски",
+		["Recolor Axis"] = "Ось перекраски",
+		["Recolor Color 1"] = "Цвет перекраски 1",
+		["Recolor Color 2"] = "Цвет перекраски 2",
+		["Recolor Decals / Textures"] = "Перекраска декалей / текстур",
+		["Recolor Gradient Length"] = "Длина градиента перекраски",
+		["Recolor Mode"] = "Режим перекраски",
+		["Recolor Parts Per Frame"] = "Деталей перекраски за кадр",
+		["Recolor Speed"] = "Скорость перекраски",
+		["Recolor Strength"] = "Сила перекраски",
+		["Recolor Water"] = "Перекраска воды",
+		["Recolors decals and textures"] = "Перекрашивает декали и текстуры",
+		["Recolors parts, decals and textures"] = "Перекрашивает детали, декали и текстуры",
+		["Recolors terrain materials and water"] = "Перекрашивает материалы ландшафта и воду",
+		["Recolors the water too"] = "Перекрашивает и воду",
+		["Refine how the hub is browsed"] = "Настройте, как просматривается хаб",
+		["Removes fog and atmosphere haze"] = "Убирает туман и дымку атмосферы",
+		["Removes weapon recoil"] = "Убирает отдачу оружия",
+		["Removes weapon spread and inaccuracy"] = "Убирает разброс и неточность оружия",
+		["Repeat Mode"] = "Режим повтора",
+		["Replaces the sky with a custom skybox"] = "Заменяет небо на своё",
+		["Replaces the weapon value with your own"] = "Заменяет значение оружия на ваше",
+		["Replays logged RemoteEvent calls to the client"] = "Воспроизводит записанные вызовы RemoteEvent на клиенте",
+		["Restores the method name after the hook runs"] = "Возвращает имя метода после работы хука",
+		["Reverses the direction"] = "Меняет направление",
+		["Reworked Settings for the Scripts and Emotes sections [Now called Filters]"] = "Переработаны настройки разделов «Скрипты» и «Эмоции» [теперь называются «Фильтры»]",
+		["Reworked the Halloween theme: new logo and icon, cobweb corner decorations."] = "Переработана тема «Хэллоуин»: новый логотип и иконка, паутина в углах.",
+		["Right Arm"] = "Правая рука",
+		["Right Leg"] = "Правая нога",
+		["Roblox Default"] = "Стандартный Roblox",
+		["Roblox Scripts"] = "Скрипты Roblox",
+		["Rotates the crosshair"] = "Вращает прицел",
+		["Rotates the cursor"] = "Вращает курсор",
+		["Rotates the hat"] = "Вращает шляпу",
+		["Rotates the skybox"] = "Вращает небо",
+		["Rotation speed"] = "Скорость вращения",
+		["Runs scripts from the Scripts details window and compiles Remote Spy spoof values and copied loadstring references"] = "Запускает скрипты из окна деталей и компилирует значения подмены Remote Spy и ссылки loadstring",
+		["Runs the spy hook inside each actor"] = "Запускает хук слежения внутри каждого актора",
+		["Saved Asset IDs"] = "Сохранённые Asset ID",
+		["Saves configs, themes, macros, keybinds, playtime, custom fonts and image caches"] = "Сохраняет конфиги, темы, макросы, бинды, время игры, шрифты и кэш изображений",
+		["Scales arrows by target distance"] = "Масштабирует стрелки по дистанции до цели",
+		["Search a Roblox game..."] = "Поиск игры Roblox...",
+		["Search by place or script name..."] = "Поиск по названию плейса или скрипта...",
+		["Search emotes by name..."] = "Поиск эмоций по названию...",
+		["Search features"] = "Поиск функций",
+		["Search scripts..."] = "Поиск скриптов...",
+		["Segments of the China hat"] = "Сегменты китайской шляпы",
+		["Select Bring Target"] = "Выбрать цель для притягивания",
+		["Select Fling Target"] = "Выбрать цель флинга",
+		["Select Stalk Target"] = "Выбрать цель преследования",
+		["Self ESP"] = "ESP на себе",
+		["Self ESP Hide In First Person"] = "Скрывать ESP на себе от первого лица",
+		["Sends actor logs back to the main environment"] = "Отправляет логи акторов в основное окружение",
+		["Server Density / State"] = "Заполненность / состояние сервера",
+		["Server ID"] = "Server ID",
+		["Share of the bar treated as empty"] = "Доля полоски, считающаяся пустой",
+		["Shot Cooldown"] = "Откат выстрела",
+		["Show FOV Circle"] = "Показывать круг FOV",
+		["Show or hide the hub window"] = "Показать или скрыть окно хаба",
+		["Shows display names instead of usernames"] = "Показывает отображаемые имена вместо юзернеймов",
+		["Shows the executor name in the compatibility report"] = "Показывает название эксплойта в отчёте о совместимости",
+		["Shows the health value"] = "Показывает значение здоровья",
+		["Shows the remaining time"] = "Показывает оставшееся время",
+		["Shows the sun and moon"] = "Показывает солнце и луну",
+		["Shows the target distance"] = "Показывает дистанцию до цели",
+		["Shows which script fired a remote"] = "Показывает, какой скрипт вызвал ремоут",
+		["Silent Aim Settings"] = "Настройки Silent Aim",
+		["Silent Aim and Trigger Bot target NPCs"] = "Silent Aim и Trigger Bot целятся в NPC",
+		["Silent Aim and Trigger Bot target players"] = "Silent Aim и Trigger Bot целятся в игроков",
+		["Silent Aim field of view radius"] = "Радиус поля зрения Silent Aim",
+		["Silent Target Part"] = "Часть тела для Silent Aim",
+		["Singleplayer / Studio"] = "Одиночная игра / Studio",
+		["Skeleton Color"] = "Цвет скелета",
+		["Skeleton ESP"] = "ESP скелета",
+		["Skeleton Outline"] = "Контур скелета",
+		["Skeleton Thickness"] = "Толщина скелета",
+		["Skeleton lines"] = "Линии скелета",
+		["Skips players from your own team"] = "Пропускает игроков вашей команды",
+		["Skips targets that cannot be hit through walls"] = "Пропускает цели, в которые нельзя попасть сквозь стены",
+		["Sky Custom IDs"] = "Свои ID неба",
+		["Sky Preset"] = "Пресет неба",
+		["Sky Rotation"] = "Поворот неба",
+		["Sky Spin"] = "Вращение неба",
+		["Sky Spin Speed"] = "Скорость вращения неба",
+		["Skybox angle"] = "Угол неба",
+		["Slow drifting dust and soft glints"] = "Медленно дрейфующая пыль и мягкие блики",
+		["Smoothly rotates the camera towards the closest target"] = "Плавно поворачивает камеру к ближайшей цели",
+		["Snap Delay"] = "Задержка снапа",
+		["Snaps the camera to the target, fires and returns it back"] = "Резко наводит камеру на цель, стреляет и возвращает назад",
+		["Sort by"] = "Сортировка",
+		["Sort by Players"] = "По игрокам",
+		["Sources (pick one or more)"] = "Источники (выберите один или несколько)",
+		["Space Nebula"] = "Космическая туманность",
+		["Speed multiplier of the aim loop"] = "Множитель скорости цикла прицеливания",
+		["Star Count"] = "Количество звёзд",
+		["Starts or stops macro playback"] = "Запускает или останавливает воспроизведение макроса",
+		["Starts or stops recording a macro"] = "Начинает или останавливает запись макроса",
+		["Sun / Moon"] = "Солнце / Луна",
+		["T-Shape"] = "Т-образная",
+		["Target NPCs"] = "Цель: NPC",
+		["Target Players"] = "Цель: игроки",
+		["Target names above the box"] = "Имена целей над рамкой",
+		["Team Check"] = "Проверка команды",
+		["Terrain Animated"] = "Анимация ландшафта",
+		["Terrain Color 1"] = "Цвет ландшафта 1",
+		["Terrain Color 2"] = "Цвет ландшафта 2",
+		["Terrain Recolor"] = "Перекраска ландшафта",
+		["Terrain Speed"] = "Скорость ландшафта",
+		["Terrain Strength"] = "Сила ландшафта",
+		["The Live Preview in Appearance has been replaced with UI Studio."] = "Live Preview во «Внешнем виде» заменён на UI Studio.",
+		["The theme editor now shows a preview of the theme before saving it."] = "Редактор тем теперь показывает предпросмотр темы перед сохранением.",
+		["Time Changer"] = "Изменение времени",
+		["Time of day in hours"] = "Время суток в часах",
+		["Time the camera is held on target before the shot"] = "Время удержания камеры на цели перед выстрелом",
+		["Time the camera stays on target after the shot"] = "Время удержания камеры на цели после выстрела",
+		["Tints the sky atmosphere"] = "Окрашивает атмосферу неба",
+		["Tints the world ambient light"] = "Окрашивает окружающий свет мира",
+		["Tiny stars that softly fade in and out"] = "Крошечные звёзды, мягко появляющиеся и исчезающие",
+		["Toggle Fly"] = "Вкл/выкл полёт",
+		["Toggle Invisibility"] = "Вкл/выкл невидимость",
+		["Toggle Menu"] = "Показать/скрыть меню",
+		["Toggle Noclip"] = "Вкл/выкл ноклип",
+		["Tool Color"] = "Цвет предмета",
+		["Tool ESP"] = "ESP предметов",
+		["Tool Size"] = "Размер предмета",
+		["Tool text size"] = "Размер текста предмета",
+		["Top Hat"] = "Цилиндр",
+		["Tracer Color"] = "Цвет трассера",
+		["Tracer ESP"] = "ESP трассеров",
+		["Tracer Origin"] = "Начало трассера",
+		["Tracer Thickness"] = "Толщина трассера",
+		["Tracer lines"] = "Линии трассеров",
+		["Trail length"] = "Длина следа",
+		["Transparency of the fill"] = "Прозрачность заливки",
+		["Transparency of the outline"] = "Прозрачность контура",
+		["Trigger Bot Settings"] = "Настройки Trigger Bot",
+		["Trigger Parts"] = "Части для триггера",
+		["Trigger Wall Check"] = "Проверка стен для триггера",
+		["Turns flight on or off"] = "Включает или выключает полёт",
+		["Turns the invisibility glitch on or off"] = "Включает или выключает глитч невидимости",
+		["Turns walking through walls on or off"] = "Включает или выключает проход сквозь стены",
+		["Unignore All"] = "Не игнорировать никого",
+		["Unknown Emote"] = "Неизвестная эмоция",
+		["Unknown Script"] = "Неизвестный скрипт",
+		["Unknown executor"] = "Неизвестный эксплойт",
+		["UI Studio covers themes and custom colors, fonts, corners, transparency, header, background image, gradient and effects."] = "UI Studio охватывает темы и свои цвета, шрифты, углы, прозрачность, шапку, фоновое изображение, градиент и эффекты.",
+		["Vertical length of corner lines"] = "Вертикальная длина уголков",
+		["Vertical offset"] = "Вертикальное смещение",
+		["View Direction Line"] = "Линия направления взгляда",
+		["View Line"] = "Линия взгляда",
+		["View Line Color"] = "Цвет линии взгляда",
+		["View Line Length"] = "Длина линии взгляда",
+		["View Line Thickness"] = "Толщина линии взгляда",
+		["Visible Check"] = "Проверка видимости",
+		["Visible through obstacles"] = "Видно сквозь препятствия",
+		["Visual change to certain objects."] = "Визуальное изменение некоторых объектов.",
+		["Visual redesign of Script cards."] = "Визуальный редизайн карточек скриптов.",
+		["Visual update of certain objects."] = "Визуальное обновление некоторых объектов.",
+		["Wall Check"] = "Проверка стен",
+		["Wall Origin"] = "Начало проверки стен",
+		["Wallbang Multiplier"] = "Множитель wallbang",
+		["Wallbang Override"] = "Подмена wallbang",
+		["Warnings, errors and client memory in a separate window"] = "Предупреждения, ошибки и память клиента в отдельном окне",
+		["Works only while the aim key is held"] = "Работает только при зажатой клавише прицеливания",
+		["World Recolor"] = "Перекраска мира",
+		["Zero Recoil"] = "Нулевая отдача",
+		["Zero Spread"] = "Нулевой разброс",
+		["Deleted config"] = "Конфиг удалён",
+		["Saved config for this place"] = "Конфиг сохранён для этого плейса",
+		["Place ID (number)"] = "Place ID (число)",
+		["Accent"] = "Акцент",
+		["Adornment"] = "Adornment",
+		["Advanced"] = "Расширенные",
+		["All"] = "Все",
+		["Ambient"] = "Окружение",
+		["Ammo"] = "Патроны",
+		["Angle"] = "Угол",
+		["Arrows"] = "Стрелки",
+		["Ascending"] = "По возрастанию",
+		["Asphalt"] = "Асфальт",
+		["Atmo"] = "Атмо",
+		["Auto"] = "Авто",
+		["Basalt"] = "Базальт",
+		["Basic"] = "Основные",
+		["Bottom"] = "Снизу",
+		["Box"] = "Рамка",
+		["Brackets"] = "Скобки",
+		["Brick"] = "Кирпич",
+		["Brightness"] = "Яркость",
+		["Burst"] = "Очередь",
+		["Center"] = "Центр",
+		["Chams"] = "Chams",
+		["Chat"] = "Чат",
+		["Checker"] = "Шашки",
+		["Cheer"] = "Ура",
+		["Chevron"] = "Шеврон",
+		["Circle"] = "Круг",
+		["Classic"] = "Классика",
+		["Cobblestone"] = "Булыжник",
+		["Compass"] = "Компас",
+		["Concrete"] = "Бетон",
+		["Countdown"] = "Обратный отсчёт",
+		["Cross"] = "Крест",
+		["Crown"] = "Корона",
+		["Custom"] = "Свой",
+		["Cyber"] = "Кибер",
+		["Dance"] = "Танец",
+		["Dart"] = "Дротик",
+		["Dashed"] = "Пунктир",
+		["Death"] = "Смерть",
+		["Demon"] = "Демон",
+		["Descending"] = "По убыванию",
+		["Diagonal"] = "Диагональ",
+		["Distance"] = "Дистанция",
+		["Domino"] = "Домино",
+		["Dot"] = "Точка",
+		["Double"] = "Двойной",
+		["Drop"] = "Падение",
+		["Dynamic"] = "Динамика",
+		["Elapsed"] = "Прошло",
+		["Fade"] = "Затухание",
+		["Flower"] = "Цветок",
+		["Foil"] = "Фольга",
+		["ForceField"] = "Силовое поле",
+		["Glacier"] = "Ледник",
+		["Glass"] = "Стекло",
+		["Glow"] = "Свечение",
+		["Gone"] = "Исчез",
+		["Gradient"] = "Градиент",
+		["Grass"] = "Трава",
+		["Ground"] = "Земля",
+		["Halo"] = "Нимб",
+		["Hat"] = "Шляпа",
+		["Head"] = "Голова",
+		["Heart"] = "Сердце",
+		["Height"] = "Высота",
+		["Helix"] = "Спираль",
+		["Highlight"] = "Подсветка",
+		["History"] = "История",
+		["Horizontal"] = "Горизонтально",
+		["Horns"] = "Рога",
+		["Humanoids"] = "Humanoid",
+		["Ice"] = "Лёд",
+		["Intensity"] = "Интенсивность",
+		["Item"] = "Элемент",
+		["Jammed"] = "Осечка",
+		["Kite"] = "Ромб",
+		["LMB"] = "ЛКМ",
+		["Laugh"] = "Смех",
+		["LeafyGrass"] = "Листва",
+		["Left"] = "Слева",
+		["Likes"] = "Лайки",
+		["Limestone"] = "Известняк",
+		["Line"] = "Линия",
+		["Mask"] = "Маска",
+		["Metal"] = "Металл",
+		["Mouse"] = "Мышь",
+		["Mud"] = "Грязь",
+		["Muted"] = "Приглушённый",
+		["Name"] = "Имя",
+		["Needle"] = "Игла",
+		["Neon"] = "Неон",
+		["New"] = "Новые",
+		["Newest"] = "Новые",
+		["Off"] = "Выкл",
+		["Oldest"] = "Старые",
+		["Orbit"] = "Орбита",
+		["Particles"] = "Частицы",
+		["Pavement"] = "Мостовая",
+		["Plane"] = "Плоскость",
+		["Plastic"] = "Пластик",
+		["Player"] = "Игрок",
+		["Players"] = "Игроки",
+		["Point"] = "Точка",
+		["Pointer"] = "Указатель",
+		["Pop"] = "Всплытие",
+		["Pulse"] = "Пульс",
+		["RMB"] = "ПКМ",
+		["Radial"] = "Радиальный",
+		["Rainbow"] = "Радуга",
+		["Recolor"] = "Перекраска",
+		["Relevance"] = "Релевантность",
+		["Removed"] = "Удалено",
+		["Reverse"] = "Реверс",
+		["Right"] = "Справа",
+		["Ring"] = "Кольцо",
+		["Rock"] = "Камень",
+		["Salt"] = "Соль",
+		["Salute"] = "Салют",
+		["Sand"] = "Песок",
+		["Sandstone"] = "Песчаник",
+		["Scroll"] = "Прокрутка",
+		["Self"] = "Я",
+		["Shine"] = "Блеск",
+		["Shooting"] = "Падающие",
+		["Shrug"] = "Пожатие плечами",
+		["Sit"] = "Сидеть",
+		["Skeleton"] = "Скелет",
+		["Sky"] = "Небо",
+		["Slate"] = "Сланец",
+		["Slide"] = "Скольжение",
+		["Slide Up"] = "Подъём",
+		["Smile"] = "Улыбка",
+		["Smooth"] = "Плавно",
+		["SmoothPlastic"] = "Гладкий пластик",
+		["Snow"] = "Снег",
+		["Solid"] = "Сплошной",
+		["Sparkle"] = "Искры",
+		["Spin"] = "Вращение",
+		["Square"] = "Квадрат",
+		["Standard"] = "Стандартная",
+		["Star"] = "Звезда",
+		["Static"] = "Статика",
+		["Strength"] = "Сила",
+		["Stripes"] = "Полосы",
+		["Sunglasses"] = "Очки",
+		["Surface"] = "Поверхность",
+		["Tester"] = "Тестер",
+		["Time"] = "Время",
+		["Timer"] = "Таймер",
+		["Tint"] = "Оттенок",
+		["Tool"] = "Предмет",
+		["Top"] = "Сверху",
+		["Torso"] = "Торс",
+		["Tracer"] = "Трассер",
+		["Trending"] = "В тренде",
+		["Triangle"] = "Треугольник",
+		["Twinkle"] = "Мерцание",
+		["Unfold"] = "Раскрытие",
+		["Vertical"] = "Вертикально",
+		["Views"] = "Просмотры",
+		["Visor"] = "Козырёк",
+		["Wave"] = "Волна",
+		["Wizard"] = "Волшебник",
+		["Binds"] = "Бинды",
+		["HUD"] = "HUD",
+		["Bind Settings"] = "Настройки биндов",
+		["Bind Notifications"] = "Уведомления о биндах",
+		["Show a notification when a bind turns a feature on or off"] = "Показывать уведомление, когда бинд включает или выключает функцию",
+		["Actions"] = "Действия",
+		["Toggle feature"] = "Переключение функции",
+		["Search binds..."] = "Поиск биндов...",
+		["Toggle"] = "Перекл.",
+		["Hold"] = "Удерж.",
+		["Enabled"] = "Включено",
+		["Disabled"] = "Выключено",
+		["Language"] = "Язык",
+		["Interface Language"] = "Язык интерфейса",
+		["Share"] = "Поделиться",
+		["Paste a share code..."] = "Вставьте код...",
+		["Import"] = "Импорт",
+		["Export Current Settings"] = "Экспорт текущих настроек",
+		["Creates a code with your current settings that you can send to anyone"] = "Создаёт код с вашими текущими настройками, который можно отправить кому угодно",
+		["Settings imported"] = "Настройки импортированы",
+		["Settings code copied"] = "Код настроек скопирован",
+		["Clipboard unavailable, copy the code from the field"] = "Буфер обмена недоступен, скопируйте код из поля",
+		["Invalid code"] = "Неверный код",
+		["Damaged code"] = "Код повреждён",
+		["This is a UI Studio preset code, import it in UI Studio"] = "Это код пресета UI Studio, импортируйте его в UI Studio",
+		["This is a settings code, import it in Config > Share"] = "Это код настроек, импортируйте его в Конфиг > Поделиться",
+		["Preset code copied"] = "Код пресета скопирован",
+		["Paste a preset code..."] = "Вставьте код пресета...",
+		["Preset imported, press Apply or Save"] = "Пресет импортирован, нажмите Apply или Save",
+		["Enable HUD"] = "Включить HUD",
+		["Shows a compact overlay with live information on your screen"] = "Показывает на экране компактную панель с актуальной информацией",
+		["HUD Position"] = "Позиция HUD",
+		["Top Left"] = "Сверху слева",
+		["Top Right"] = "Сверху справа",
+		["Bottom Left"] = "Снизу слева",
+		["Bottom Right"] = "Снизу справа",
+		["HUD Scale"] = "Масштаб HUD",
+		["Size of the overlay"] = "Размер панели",
+		["HUD Opacity"] = "Непрозрачность HUD",
+		["How solid the overlay background is"] = "Насколько плотный фон панели",
+		["HUD Information"] = "Информация в HUD",
+		["HUD FPS"] = "FPS в HUD",
+		["Frames per second"] = "Кадров в секунду",
+		["HUD Ping"] = "Пинг в HUD",
+		["Network latency to the server"] = "Задержка сети до сервера",
+		["HUD Players"] = "Игроки в HUD",
+		["Players in the current server"] = "Игроков на текущем сервере",
+		["HUD Clock"] = "Часы в HUD",
+		["Your local time"] = "Ваше местное время",
+		["HUD Active Features"] = "Активные функции в HUD",
+		["Lists every feature that is currently enabled"] = "Список всех включённых функций",
+		["HUD Show Binds"] = "Бинды в HUD",
+		["Shows the bound key next to each active feature"] = "Показывает клавишу бинда рядом с каждой функцией",
+		["Ping"] = "Пинг",
+		["ms"] = "мс",
+		["Gallery"] = "Галерея",
+		["Layout"] = "Раскладка",
+		["Window Width"] = "Ширина окна",
+		["Window Height"] = "Высота окна",
+		["Navigation Position"] = "Положение навигации",
+		["Bind moved"] = "Бинд перенесён",
+		["Adding Russian localization, English is still available in Appearance > Language."] = "Добавлена русская локализация, английский по-прежнему доступен во «Внешний вид» > «Язык».",
+		["Adding the Bind Manager: bind any feature to a key with Toggle and Hold modes in Settings > Binds."] = "Добавлен менеджер биндов: любая функция привязывается к клавише в режимах переключения и удержания, в «Настройки» > «Бинды».",
+		["Adding code sharing: export your settings or UI Studio presets as a short code and import codes from others."] = "Добавлен шеринг кодом: экспортируйте настройки или пресеты UI Studio коротким кодом и импортируйте чужие.",
+		["Adding a customizable HUD with FPS, ping, players, clock and the list of active features."] = "Добавлен настраиваемый HUD с FPS, пингом, игроками, часами и списком активных функций.",
+		["UI Studio now has a Gallery of ready-made presets and a Layout section for window size and navigation position."] = "В UI Studio появилась галерея готовых пресетов и раздел «Раскладка» для размера окна и положения навигации.",
+		["Custom Keybinds from Features > QoL have moved into the Bind Manager."] = "Свои бинды из «Функции» > «Удобство» перенесены в менеджер биндов.",
+		["Keybinds for every feature now live in Settings > Binds"] = "Бинды для всех функций теперь находятся в «Настройки» > «Бинды»",
+		["Bind Manager"] = "Менеджер биндов",
+		["Open"] = "Открыть",
+		["Adding UI Studio: a separate window with a full copy of the interface where you can customize the whole look, save it as a preset and apply it to the current UI."] = "Добавлена UI Studio: отдельное окно с полной копией интерфейса, где можно настроить весь внешний вид, сохранить его как пресет и применить к текущему UI.",
+		["Adding automatic config loading for separate places, each place can have its own auto-load config."] = "Добавлена автозагрузка конфигов для отдельных плейсов: у каждого плейса может быть свой автоконфиг.",
+		["Adding 3 new animations for notifications: Pop, Drop and Fade."] = "Добавлены 3 новые анимации уведомлений: «Всплытие», «Падение» и «Затухание».",
+		["Start"] = "Начать",
+		["Midnight"] = "Полночь",
+		["Aurora"] = "Аврора",
+		["Sakura"] = "Сакура",
+		["Mono Light"] = "Моно светлая",
+		["Ocean"] = "Океан",
+		["Ember"] = "Угли",
+		["Forest"] = "Лес",
+		["Blood Moon"] = "Кровавая луна",
+		["Sunset"] = "Закат",
+		["Violet"] = "Фиолетовый",
+		["Emerald"] = "Изумруд",
+		["Rose"] = "Роза",
+		["A rare falling star every few seconds"] = "Редкая падающая звезда раз в несколько секунд",
+		["API returned no items"] = "API не вернул элементов",
+		["Adding a live UI preview window to Appearance that shows every appearance setting before you apply it."] = "Добавлено окно живого предпросмотра UI во «Внешний вид», показывающее каждую настройку до применения.",
+		["Adding saving configs for a specific place, the saved list shows the place where each config was saved."] = "Добавлено сохранение конфигов для конкретного плейса, в списке видно, где сохранён каждый конфиг.",
+		["Calm snowflakes slowly falling behind the interface"] = "Спокойные снежинки медленно падают за интерфейсом",
+		["Check your discord or clipboard."] = "Проверьте Discord или буфер обмена.",
+		["China Hat"] = "Китайская шляпа",
+		["Cyber Neon"] = "Кибер неон",
+		["Depth offset"] = "Смещение по глубине",
+		["Lead Developer."] = "Ведущий разработчик.",
+		["REWARD:"] = "НАГРАДА:",
+		["Script Filters"] = "Фильтры скриптов",
+		["Soft Tick"] = "Мягкий тик",
+		["Soft color gradient"] = "Мягкий цветной градиент",
+		["Speed"] = "Скорость",
+		["Walk through walls and objects"] = "Проход сквозь стены и объекты",
+		["Neon Color"] = "Цвет неона",
+		["NPC Folders"] = "Папки NPC",
+		["NPC Humanoid"] = "NPC Humanoid",
+		["Notification Sound"] = "Звук уведомлений",
+		["Blip"] = "Блип",
+		["Search configs..."] = "Поиск конфигов...",
+		["No configs found"] = "Конфиги не найдены",
+		["Collections"] = "Коллекции",
+		["Create"] = "Создать",
+		["New collection name..."] = "Название новой коллекции...",
+		["Add to Collection"] = "Добавить в коллекцию",
+		["Confirm?"] = "Подтвердить?",
+		["No collections yet\nCreate one above, then press the folder button on any card"] = "Коллекций пока нет\nСоздайте её выше, затем нажмите кнопку папки на любой карточке",
+		["This collection is empty\nPress the folder button on a card to add it here"] = "Коллекция пуста\nНажмите кнопку папки на карточке, чтобы добавить её сюда",
+		["Adding the Dynamic Island style for the SH button, choose it in Appearance > Window Customization."] = "Добавлен стиль Dynamic Island для кнопки SH, выбрать его можно во «Внешний вид» > «Настройка окна».",
+		["Adding global search to Home, Features and Settings: type a name to find any feature or setting from any section."] = "Добавлен общий поиск в «Главная», «Функции» и «Настройки»: введите название, чтобы найти любую функцию или настройку из любого раздела.",
+		["Search"] = "Поиск",
+		["Adding a search bar to Config for finding saved configs by name."] = "Добавлена строка поиска в «Конфиг» для поиска сохранённых конфигов по названию.",
+		["Adding 3 notification sounds to Appearance > Notification System: Ping, Blip and Pop."] = "Добавлено 3 звука уведомлений во «Внешний вид» > «Система уведомлений»: Ping, Blip и Pop.",
+		["Adding Collections to Scripts and Emotes: create folders and save scripts or emotes into them."] = "Добавлены коллекции в «Скрипты» и «Эмоции»: создавайте папки и сохраняйте в них скрипты или эмоции.",
+		["Adding the robloxscripts.com service to Scripts."] = "Добавлен сервис robloxscripts.com в «Скрипты».",
+	}
+	local Prefixes = {
+		{ "Items: ", "Элементов: " },
+		{ "Collection ", "Коллекция " },
+		{ "Animation: ", "Анимация: " },
+		{ "Applying fling on ", "Флинг на игроке " },
+		{ "Auto-load skipped: ", "Автозагрузка пропущена: " },
+		{ "Bringing physics objects to ", "Детали притягиваются к " },
+		{ "Connecting to Place: ", "Подключение к плейсу: " },
+		{ "Deleted config: ", "Конфиг удалён: " },
+		{ "Errors: ", "Ошибки: " },
+		{ "Failed to load ", "Не удалось загрузить " },
+		{ "Ignoring ", "Игнорируется " },
+		{ "Loaded config: ", "Конфиг загружен: " },
+		{ "Macro ", "Макрос " },
+		{ "Page ", "Страница " },
+		{ "Place: ", "Плейс: " },
+		{ "Preset ", "Пресет " },
+		{ "Reg: ", "Рег.: " },
+		{ "Registered: ", "Регистрация: " },
+		{ "Saved config: ", "Конфиг сохранён: " },
+		{ "Saved for another place: ", "Сохранено для другого плейса: " },
+		{ "Saved preset: ", "Пресет сохранён: " },
+		{ "Script error: ", "Ошибка скрипта: " },
+		{ "Source: ", "Источник: " },
+		{ "Sound ", "Звук " },
+		{ "Target: ", "Цель: " },
+		{ "Test failed: ", "Тест не пройден: " },
+		{ "Time: ", "Время: " },
+		{ "Updated ", "Обновлено " },
+		{ "Warnings: ", "Предупреждения: " },
+		{ "Method: ", "Метод: " },
+		{ "Affects: ", "Влияет на: " },
+		{ "Auto-loaded config for this place: ", "Автозагрузка конфига для этого плейса: " },
+		{ "Auto-loaded config: ", "Автозагрузка конфига: " },
+		{ "Auto-load for ", "Автозагрузка для " },
+		{ "Auto-load: ", "Автозагрузка: " },
+		{ "Compile error: ", "Ошибка компиляции: " },
+		{ "API error: ", "Ошибка API: " },
+		{ "HttpGet error ", "Ошибка HttpGet " },
+		{ "BLOCKED: ", "ЗАБЛОКИРОВАНО: " },
+		{ "Saved config for this place, auto-load enabled: ", "Конфиг сохранён для этого плейса, автозагрузка включена: " },
+		{ "Saved config for this place: ", "Конфиг сохранён для этого плейса: " },
+		{ "Recorded in another place: ", "Записано в другом плейсе: " },
+		{ "Clipboard is unavailable: ", "Буфер обмена недоступен: " },
+		{ "Repeated: ", "Повторов: " },
+		{ "Custom ", "Свой " },
+		{ "Asset ", "Asset " },
+	}
+	local Months = { Jan = "янв", Feb = "фев", Mar = "мар", Apr = "апр", May = "мая", Jun = "июн", Jul = "июл", Aug = "авг", Sep = "сен", Oct = "окт", Nov = "ноя", Dec = "дек" }
+	local Rules = {
+		{ "^Recorded ([%d%.]+)s %((%d+) frames%)$", "Записано %1 с (%2 кадров)" },
+		{ "^Recording saved in memory %(([%d%.]+)s%)$", "Запись сохранена в памяти (%1 с)" },
+		{ "^Recording%.%.%. ([%d%.]+)s$", "Запись... %1 с" },
+		{ "^Playing%.%.%. (%d+)/(%d+)$", "Воспроизведение... %1/%2" },
+		{ "^Playing%.%.%. loop (%d+)$", "Воспроизведение... цикл %1" },
+		{ "^Client Memory: (%d+) MB$", "Память клиента: %1 МБ" },
+		{ "^(%d+) Players$", "%1 игроков" },
+		{ "^Received (%d+) argument%(s%) via (.+)$", "Получено аргументов: %1 через %2" },
+		{ "^Sent (%d+) argument%(s%) to (.-) through (.+)$", "Отправлено аргументов: %1 в %2 через %3" },
+		{ "^Auto%-load for (.-): (.+)$", "Автозагрузка для %1: %2" }
+	}
+	local Orig = setmetatable({}, { __mode = "k" })
+	local OrigHolder = setmetatable({}, { __mode = "k" })
+	local Watching = setmetatable({}, { __mode = "k" })
+	local active, busy, added = false, false, nil
+
+	State.Language = "English"
+	pcall(function()
+		if isfile and readfile and isfile(LANG_FILE) and readfile(LANG_FILE) == "Русский" then State.Language = "Русский" end
+	end)
+
+	local function Translate(text)
+		local value = Dict[text]
+		if value then return value end
+		for i = 1, #Prefixes do
+			local prefix = Prefixes[i]
+			if text:sub(1, #prefix[1]) == prefix[1] then
+				return prefix[2] .. text:sub(#prefix[1] + 1)
+			end
+		end
+		for i = 1, #Rules do
+			local rule = Rules[i]
+			local out, count = text:gsub(rule[1], rule[2])
+			if count > 0 then return out end
+		end
+		if text:find(" | ", 1, true) then
+			local parts, changed = {}, false
+			for part in (text .. " | "):gmatch("(.-) | ") do
+				local value = Dict[part]
+				if value then changed = true end
+				parts[#parts + 1] = value or part
+			end
+			if changed then return table.concat(parts, " | ") end
+		end
+		local month, day = text:match("^(%a%a%a) (%d+)$")
+		if month and Months[month] then return day .. " " .. Months[month] end
+		return text
+	end
+
+	function Lib.Ru(text)
+		return Translate(text)
+	end
+
+	function Lib.Tr(text)
+		if active and type(text) == "string" then return Translate(text) end
+		return text
+	end
+
+	function Lib.Lower(text)
+		if not text:find("[\128-\255]") then return text:lower() end
+		local ok, result = pcall(function()
+			local out = {}
+			for _, cp in utf8.codes(text) do
+				if cp >= 0x410 and cp <= 0x42F then
+					cp = cp + 32
+				elseif cp == 0x401 then
+					cp = 0x451
+				elseif cp < 128 then
+					cp = string.byte(string.lower(string.char(cp)))
+				end
+				out[#out + 1] = utf8.char(cp)
+			end
+			return table.concat(out)
+		end)
+		return ok and result or text:lower()
+	end
+
+	function Lib.OrigText(inst)
+		return Orig[inst] or inst.Text
+	end
+
+	local function Refresh(inst)
+		local text = inst.Text
+		local original = Orig[inst]
+		if original and Translate(original) == text then return end
+		local translated = Translate(text)
+		if translated ~= text then
+			Orig[inst] = text
+			busy = true
+			inst.Text = translated
+			busy = false
+		else
+			Orig[inst] = nil
+		end
+	end
+
+	local function Prepare(inst)
+		local class = inst.ClassName
+		if class == "TextLabel" or class == "TextButton" then
+			if inst.Text ~= "" then Refresh(inst) end
+			if not Watching[inst] then
+				Watching[inst] = inst:GetPropertyChangedSignal("Text"):Connect(function()
+					if not busy and active then Refresh(inst) end
+				end)
+			end
+		elseif class == "TextBox" then
+			local holder = inst.PlaceholderText
+			if holder ~= "" then
+				local translated = Translate(holder)
+				if translated ~= holder then
+					OrigHolder[inst] = holder
+					inst.PlaceholderText = translated
+				end
+			end
+		end
+	end
+
+	local function Restore()
+		for inst, connection in pairs(Watching) do
+			connection:Disconnect()
+			Watching[inst] = nil
+		end
+		for inst, text in pairs(Orig) do
+			if inst.Parent then
+				local translated = Translate(text)
+				if inst.Text == translated then inst.Text = text end
+			end
+			Orig[inst] = nil
+		end
+		for inst, text in pairs(OrigHolder) do
+			if inst.Parent and inst.PlaceholderText == Translate(text) then inst.PlaceholderText = text end
+			OrigHolder[inst] = nil
+		end
+	end
+
+	function Lib.SetLanguage(language, silent)
+		language = language == "Русский" and "Русский" or "English"
+		State.Language = language
+		if writefile and not silent then pcall(writefile, LANG_FILE, language) end
+		if added then
+			added:Disconnect()
+			added = nil
+		end
+		if language == "Русский" then
+			active = true
+			added = UI.Screen.DescendantAdded:Connect(function(inst)
+				if active then Prepare(inst) end
+			end)
+			task.spawn(function()
+				local list = UI.Screen:GetDescendants()
+				for i = 1, #list do
+					local inst = list[i]
+					if inst.Parent then Prepare(inst) end
+					if i % 1200 == 0 then
+						task.wait()
+						if not active then return end
+					end
+				end
+			end)
+		else
+			active = false
+			Restore()
+		end
+	end
+end
+
+do
+	local B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+	local Chars, Index = {}, {}
+	for i = 0, 63 do
+		Chars[i] = B64:sub(i + 1, i + 1)
+		Index[B64:byte(i + 1)] = i
+	end
+
+	local function Compress(input)
+		local dict, size = {}, 256
+		for i = 0, 255 do dict[string.char(i)] = i end
+		local codes, w = {}, ""
+		for i = 1, #input do
+			local c = input:sub(i, i)
+			local wc = w .. c
+			if dict[wc] then
+				w = wc
+			else
+				codes[#codes + 1] = dict[w]
+				if size < 4096 then
+					dict[wc] = size
+					size = size + 1
+				end
+				w = c
+			end
+		end
+		if w ~= "" then codes[#codes + 1] = dict[w] end
+		return codes
+	end
+
+	local function Decompress(codes)
+		local dict, size = {}, 256
+		for i = 0, 255 do dict[i] = string.char(i) end
+		local w = dict[codes[1]]
+		if not w then return nil end
+		local out = { w }
+		for i = 2, #codes do
+			local k = codes[i]
+			local entry = dict[k]
+			if not entry then
+				if k == size then
+					entry = w .. w:sub(1, 1)
+				else
+					return nil
+				end
+			end
+			out[#out + 1] = entry
+			if size < 4096 then
+				dict[size] = w .. entry:sub(1, 1)
+				size = size + 1
+			end
+			w = entry
+		end
+		return table.concat(out)
+	end
+
+	local function PackCodes(codes)
+		local bytes = {}
+		for i = 1, #codes, 2 do
+			local a, b = codes[i], codes[i + 1]
+			bytes[#bytes + 1] = a // 16
+			if b then
+				bytes[#bytes + 1] = (a % 16) * 16 + b // 256
+				bytes[#bytes + 1] = b % 256
+			else
+				bytes[#bytes + 1] = (a % 16) * 16
+			end
+		end
+		return bytes
+	end
+
+	local function UnpackCodes(bytes, count)
+		local codes, i = {}, 1
+		while #codes < count do
+			local x, y = bytes[i], bytes[i + 1]
+			if not x or not y then return nil end
+			codes[#codes + 1] = x * 16 + y // 16
+			if #codes < count then
+				local z = bytes[i + 2]
+				if not z then return nil end
+				codes[#codes + 1] = (y % 16) * 256 + z
+			end
+			i = i + 3
+		end
+		return codes
+	end
+
+	local function Encode64(bytes)
+		local out = {}
+		for i = 1, #bytes, 3 do
+			local v = bytes[i] * 65536 + (bytes[i + 1] or 0) * 256 + (bytes[i + 2] or 0)
+			out[#out + 1] = Chars[v // 262144] .. Chars[(v // 4096) % 64] .. Chars[(v // 64) % 64] .. Chars[v % 64]
+		end
+		return table.concat(out)
+	end
+
+	local function Decode64(text, byteCount)
+		local clean = text:gsub("[^%w%+/]", "")
+		local bytes = {}
+		for i = 1, #clean, 4 do
+			local v = 0
+			for j = 0, 3 do
+				local ch = clean:byte(i + j)
+				v = v * 64 + (ch and Index[ch] or 0)
+			end
+			bytes[#bytes + 1] = v // 65536
+			bytes[#bytes + 1] = (v // 256) % 256
+			bytes[#bytes + 1] = v % 256
+		end
+		while #bytes > byteCount do bytes[#bytes] = nil end
+		return bytes
+	end
+
+	function Lib.ShareEncode(kind, data)
+		local json = Services.HttpService:JSONEncode(data)
+		local codes = Compress(json)
+		return string.format("SH1.%s.%d.%s", kind, #codes, Encode64(PackCodes(codes)))
+	end
+
+	function Lib.ShareDecode(text)
+		if type(text) ~= "string" or #text > 400000 then return nil, "Invalid code" end
+		local clean = text:gsub("%s", "")
+		local kind, count, body = clean:match("^SH1%.(%u+)%.(%d+)%.(.+)$")
+		if not kind then return nil, "Invalid code" end
+		count = tonumber(count)
+		if not count or count < 1 then return nil, "Invalid code" end
+		local byteCount = (count // 2) * 3 + (count % 2) * 2
+		local codes = UnpackCodes(Decode64(body, byteCount), count)
+		if not codes then return nil, "Damaged code" end
+		local json = Decompress(codes)
+		if not json then return nil, "Damaged code" end
+		local ok, data = pcall(Services.HttpService.JSONDecode, Services.HttpService, json)
+		if not ok or type(data) ~= "table" then return nil, "Damaged code" end
+		return kind, data
+	end
+
+	function Lib.CopyText(text)
+		local copy = setclipboard or toclipboard
+		if not copy then return false end
+		return (pcall(copy, text))
+	end
+end
+
+
+Lib.NotifSounds = {
+	Ping = { "rbxasset://sounds/electronicpingshort.wav", 0.6, 0.16 },
+	Blip = { "rbxasset://sounds/electronicpingshort.wav", 0.78, 0.14 },
+	Pop = { "rbxasset://sounds/snap.mp3", 0.55, 0.2 }
+}
+
+function Lib.PlayNotifSound(name)
+	local preset = Lib.NotifSounds[name or State.NotifSound]
+	if not preset or not UI.Screen then return end
+	local sound = Lib.NotifSound
+	if not sound then
+		sound = Instance.new("Sound")
+		sound.Name = "NotifSound"
+		local eq = Instance.new("EqualizerSoundEffect")
+		eq.HighGain, eq.MidGain, eq.LowGain = -30, -6, 2
+		eq.Parent = sound
+		sound.Parent = UI.Screen
+		Lib.NotifSound = sound
+	end
+	sound:Stop()
+	sound.SoundId, sound.PlaybackSpeed, sound.Volume = preset[1], preset[2], preset[3]
+	sound:Play()
+end
+
 function Lib.Notify(options)
 	if not State.NotificationsEnabled then return end
 	if not UI.NotifContainer then return end
@@ -636,14 +2366,17 @@ function Lib.Notify(options)
 	local textColor = isWhite and Color3.fromRGB(20, 20, 20) or Color3.fromRGB(250, 250, 250)
 	local subTextColor = isWhite and Color3.fromRGB(100, 100, 100) or Color3.fromRGB(140, 140, 140)
 
-	local title = options.Title or "Notification"
-	local text = options.Text or ""
+	local title = Lib.Tr(options.Title or "Notification")
+	local text = Lib.Tr(options.Text or "")
 	local duration = options.Duration or 3.5
 	local userId = options.UserId
+	local mode = State.NotifAnim or "Slide"
+	Lib.PlayNotifSound()
 
-	local notifFrame = Lib.Create("Frame", {
+	local notifFrame = Lib.Create("CanvasGroup", {
 		Size = UDim2.fromOffset(260, 60),
-		Position = UDim2.new(1, 280, 1, 0),
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(1, 410, 1, 30),
 		BackgroundColor3 = bgColor,
 		BorderSizePixel = 0,
 		Parent = UI.NotifContainer,
@@ -653,7 +2386,7 @@ function Lib.Notify(options)
 	local contentX = 12
 	if userId then
 		contentX = 52
-		local avatar = Lib.Create("ImageLabel", {
+		Lib.Create("ImageLabel", {
 			Size = UDim2.fromOffset(36, 36),
 			Position = UDim2.new(0, 8, 0.5, -18),
 			BackgroundTransparency = 1,
@@ -663,7 +2396,7 @@ function Lib.Notify(options)
 		})
 	end
 
-	local tLbl = Lib.Create("TextLabel", {
+	Lib.Create("TextLabel", {
 		Size = UDim2.new(1, -(contentX + 10), 0, 18),
 		Position = UDim2.new(0, contentX, 0, 10),
 		BackgroundTransparency = 1,
@@ -676,7 +2409,7 @@ function Lib.Notify(options)
 		Parent = notifFrame
 	})
 
-	local mText = Lib.Create("TextLabel", {
+	Lib.Create("TextLabel", {
 		Size = UDim2.new(1, -(contentX + 10), 0, 16),
 		Position = UDim2.new(0, contentX, 0, 28),
 		BackgroundTransparency = 1,
@@ -691,25 +2424,63 @@ function Lib.Notify(options)
 
 	table.insert(UI.ActiveNotifs, notifFrame)
 
-	local function RepositionNotifs()
+	local function Rest(i)
+		return UDim2.new(1, -140, 1, 30 - i * 68)
+	end
+
+	local function RepositionNotifs(skip)
 		for i, n in ipairs(UI.ActiveNotifs) do
-			local targetY = -(i * 68)
-			Lib.Tween(n, 0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { Position = UDim2.new(1, -270, 1, targetY) })
+			if n ~= skip then
+				Lib.Tween(n, 0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { Position = Rest(i) })
+			end
 		end
 	end
 
-	RepositionNotifs()
+	local rest = Rest(#UI.ActiveNotifs)
+	local pop
+	if mode == "Pop" then
+		pop = Lib.Create("UIScale", { Scale = 0.55, Parent = notifFrame })
+		notifFrame.Position = rest
+		notifFrame.GroupTransparency = 1
+		Lib.Tween(notifFrame, 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { GroupTransparency = 0 })
+		Lib.Tween(pop, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out, { Scale = 1 })
+		RepositionNotifs(notifFrame)
+	elseif mode == "Drop" then
+		notifFrame.Position = rest - UDim2.fromOffset(0, 70)
+		notifFrame.GroupTransparency = 1
+		Lib.Tween(notifFrame, 0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { GroupTransparency = 0 })
+		Lib.Tween(notifFrame, 0.6, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out, { Position = rest })
+		RepositionNotifs(notifFrame)
+	elseif mode == "Fade" then
+		notifFrame.Position = rest + UDim2.fromOffset(0, 16)
+		notifFrame.GroupTransparency = 1
+		Lib.Tween(notifFrame, 0.35, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, { GroupTransparency = 0, Position = rest })
+		RepositionNotifs(notifFrame)
+	else
+		RepositionNotifs()
+	end
 
 	task.delay(duration, function()
-		if notifFrame and notifFrame.Parent then
-			local out = Lib.Tween(notifFrame, 0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In, { Position = UDim2.new(1, 280, notifFrame.Position.Y.Scale, notifFrame.Position.Y.Offset) })
-			out.Completed:Connect(function()
-				local idx = table.find(UI.ActiveNotifs, notifFrame)
-				if idx then table.remove(UI.ActiveNotifs, idx) end
-				notifFrame:Destroy()
-				RepositionNotifs()
-			end)
+		if not (notifFrame and notifFrame.Parent) then return end
+		local out
+		if mode == "Pop" then
+			Lib.Tween(pop, 0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In, { Scale = 0.8 })
+			out = Lib.Tween(notifFrame, 0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In, { GroupTransparency = 1 })
+		elseif mode == "Drop" or mode == "Fade" then
+			out = Lib.Tween(notifFrame, 0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In, {
+				GroupTransparency = 1, Position = notifFrame.Position - UDim2.fromOffset(0, 16)
+			})
+		else
+			out = Lib.Tween(notifFrame, 0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In, {
+				Position = UDim2.new(1, 410, notifFrame.Position.Y.Scale, notifFrame.Position.Y.Offset)
+			})
 		end
+		out.Completed:Connect(function()
+			local idx = table.find(UI.ActiveNotifs, notifFrame)
+			if idx then table.remove(UI.ActiveNotifs, idx) end
+			notifFrame:Destroy()
+			RepositionNotifs()
+		end)
 	end)
 end
 
@@ -828,7 +2599,7 @@ function Lib.CreateTabSystem(section, sideBar, stateKey, onSwitch)
 		return view
 	end
 
-	return Switch, Make
+	return Switch, Make, views
 end
 
 function Lib.Timed(fn, limit)
@@ -1964,7 +3735,7 @@ function Lib.ApplyWindowState()
 	local tween = Lib.Tween(UI.Main, 0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut, { Size = size, Position = position })
 	Lib.WindowTween = tween
 	Lib.Tween(UI.TopNavContainer, 0.38, Enum.EasingStyle.Quint, minimized and Enum.EasingDirection.In or Enum.EasingDirection.Out, {
-		Position = UDim2.new(0.5, 0, 0, minimized and -44 or 11)
+		Position = Lib.NavPosition(minimized and -44 or 11)
 	})
 	if minimized then
 		tween.Completed:Connect(function()
@@ -2300,7 +4071,29 @@ end
 function Lib.BuildUpdateLog(view)
 	local releases = {
 		{
-			version = "V3.5", date = "Oct 23", latest = true,
+			version = "V3.6", date = "Oct 29", latest = true,
+			notes = {
+				"Adding the Dynamic Island style for the SH button, choose it in Appearance > Window Customization.",
+				"Adding global search to Home, Features and Settings: type a name to find any feature or setting from any section.",
+				"Adding UI Studio: a separate window with a full copy of the interface where you can customize the whole look, save it as a preset and apply it to the current UI.",
+				"UI Studio covers themes and custom colors, fonts, corners, transparency, header, background image, gradient and effects.",
+				"UI Studio now has a Gallery of ready-made presets and a Layout section for window size and navigation position.",
+				"Adding Russian localization, English is still available in Appearance > Language.",
+				"Adding the Bind Manager: bind any feature to a key with Toggle and Hold modes in Settings > Binds.",
+				"Custom Keybinds from Features > QoL have moved into the Bind Manager.",
+				"Adding code sharing: export your settings or UI Studio presets as a short code and import codes from others.",
+				"Adding a customizable HUD with FPS, ping, players, clock and the list of active features.",
+				"Adding automatic config loading for separate places, each place can have its own auto-load config.",
+				"Adding 3 new animations for notifications: Pop, Drop and Fade.",
+				"The Live Preview in Appearance has been replaced with UI Studio.",
+				"Adding a search bar to Config for finding saved configs by name.",
+				"Adding 3 notification sounds to Appearance > Notification System: Ping, Blip and Pop.",
+				"Adding Collections to Scripts and Emotes: create folders and save scripts or emotes into them.",
+				"Adding the robloxscripts.com service to Scripts."
+			}
+		},
+		{
+			version = "V3.5", date = "Oct 23",
 			notes = {
 				"Adding flexible ESP settings [colors, gradients, and much more].",
 				"Adding a color change feature to the Cyberpunk shader.",
@@ -2894,8 +4687,14 @@ do
 
 	local SideBar = Lib.Create("Frame", { Size = UDim2.new(0, 180, 1, 0), BackgroundTransparency = 1, Parent = HomeSection, HomeTitle })
 
-	local MakeTab
-	Lib.SwitchTab, MakeTab = Lib.CreateTabSystem(HomeSection, SideBar, "CurrentTab")
+	local HomeTabs = Lib.Create("ScrollingFrame", {
+		Size = UDim2.new(1, 0, 1, -90), Position = UDim2.fromOffset(0, 34), BackgroundTransparency = 1, BorderSizePixel = 0,
+		ScrollBarThickness = 2, ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), ScrollingDirection = Enum.ScrollingDirection.Y,
+		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = SideBar
+	})
+
+	local MakeTab, HomeViews
+	Lib.SwitchTab, MakeTab, HomeViews = Lib.CreateTabSystem(HomeSection, HomeTabs, "CurrentTab")
 
 	local View_Overview = MakeTab("Overview", 50)
 	local View_Account = MakeTab("Account", 90)
@@ -2904,6 +4703,7 @@ do
 	Lib.BuildUpdateLog(MakeTab("Update Log", 210))
 	Lib.BuildInfo(MakeTab("Info", 250))
 	Lib.BuildDiscordButton(SideBar)
+	UI.HomeSearch = { SideBar, HomeTabs, HomeViews }
 
 	Lib.Create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 15), Parent = View_Overview })
 
@@ -3211,7 +5011,7 @@ do
 		if not Lib.SearchGroups[card] then return end
 		local list = Lib.SearchItems
 		local index = #list + 1
-		list[index] = { Item = item, Parent = card, Title = title:lower() }
+		list[index] = { Item = item, Parent = card, Title = Lib.Lower(title), Alt = Lib.Lower(Lib.Ru(title)) }
 		item.LayoutOrder = index
 	end
 
@@ -3840,9 +5640,10 @@ do
 	end
 end
 
-function Lib.BuildFeatureSearch(section, sideBar, tabs)
-	local list = Lib.SearchItems
-	local shown = {}
+Lib.SearchShown = {}
+
+function Lib.BuildGlobalSearch(section, sideBar, tabs, views, stateKey)
+	local list, shown = Lib.SearchItems, Lib.SearchShown
 	local active = false
 
 	local results = Lib.Create("ScrollingFrame", {
@@ -3864,23 +5665,27 @@ function Lib.BuildFeatureSearch(section, sideBar, tabs)
 	Lib.RegisterThemeText(empty, "Secondary")
 
 	local function SetViews(current)
-		for _, view in ipairs(section:GetChildren()) do
-			if view:IsA("CanvasGroup") then view.Visible = view.Name == current end
+		for name, view in pairs(views) do
+			view.Visible = name == current
+		end
+	end
+
+	local function Release()
+		for i = #shown, 1, -1 do
+			local entry = shown[i]
+			if entry.Item.Parent then entry.Item.Parent = entry.Parent end
+			shown[i] = nil
 		end
 	end
 
 	local function Apply(text)
-		local query = text:lower()
-		for i = #shown, 1, -1 do
-			local entry = shown[i]
-			entry.Item.Parent = entry.Parent
-			shown[i] = nil
-		end
+		local query = Lib.Lower(text)
+		Release()
 		if query == "" then
 			if active then
 				active = false
 				results.Visible = false
-				SetViews(State.CurrentFeaturesTab)
+				SetViews(State[stateKey])
 			end
 			return
 		end
@@ -3889,21 +5694,25 @@ function Lib.BuildFeatureSearch(section, sideBar, tabs)
 			SetViews(nil)
 			results.Visible = true
 		end
-		local length = #query
+		local length, count = #query, 0
 		for i = 1, #list do
 			local entry = list[i]
-			local title = entry.Title
-			if title:sub(1, length) == query or title:find(" " .. query, 1, true) then
-				entry.Item.Parent = card
-				shown[#shown + 1] = entry
+			local item = entry.Item
+			if item.Parent then
+				local title, alt = entry.Title, entry.Alt
+				if title:sub(1, length) == query or title:find(" " .. query, 1, true) or alt:sub(1, length) == query or alt:find(" " .. query, 1, true) then
+					item.Parent = card
+					count += 1
+					shown[count] = entry
+				end
 			end
 		end
-		card.Visible = #shown > 0
-		empty.Visible = #shown == 0
+		card.Visible = count > 0
+		empty.Visible = count == 0
 		results.CanvasPosition = Vector2.zero
 	end
 
-	local box = Lib.MakeSearchBox(sideBar, "Search features", UDim2.fromOffset(15, 46), UDim2.new(1, -30, 0, 28), 0, Apply)
+	local box = Lib.MakeSearchBox(sideBar, "Search", UDim2.fromOffset(15, 46), UDim2.new(1, -30, 0, 28), 0, Apply)
 	for _, button in ipairs(tabs:GetChildren()) do
 		if button:IsA("TextButton") then
 			button.MouseButton1Click:Connect(function()
@@ -3911,6 +5720,9 @@ function Lib.BuildFeatureSearch(section, sideBar, tabs)
 			end)
 		end
 	end
+	section:GetPropertyChangedSignal("Visible"):Connect(function()
+		if not section.Visible and box.Text ~= "" then box.Text = "" end
+	end)
 end
 
 function Lib.BuildBrowseSearch(view, scroll, bottom, placeholder, onQuery)
@@ -4062,6 +5874,17 @@ function Lib.MiniIcon(kind, parent, position, color)
 			Size = UDim2.fromOffset(4, 4), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundColor3 = color, BorderSizePixel = 0, Parent = box,
 			Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) })
 		})
+	elseif kind == "folder" then
+		Lib.Create("Frame", {
+			Size = UDim2.fromOffset(6, 4), Position = UDim2.fromOffset(0, 1), BackgroundTransparency = 1, Parent = box,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 2) }),
+			Lib.Create("UIStroke", { Color = color, Thickness = 1.3 })
+		})
+		Lib.Create("Frame", {
+			Size = UDim2.fromOffset(14, 9), Position = UDim2.fromOffset(0, 4), BackgroundTransparency = 1, Parent = box,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 3) }),
+			Lib.Create("UIStroke", { Color = color, Thickness = 1.3 })
+		})
 	else
 		Lib.Create("Frame", {
 			Size = UDim2.fromOffset(13, 13), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundTransparency = 1, Parent = box,
@@ -4103,6 +5926,385 @@ function Lib.MakeCardList(view, emptyText, cell, gap, padX)
 	})
 	Lib.RegisterThemeText(empty, "Secondary")
 	return scroll, empty
+end
+
+function Lib.MakeFolderButton(parent, position, field, key, itemData, label)
+	local gold, white = Color3.fromRGB(255, 200, 40), Color3.new(1, 1, 1)
+	local button = Lib.Create("TextButton", {
+		Size = UDim2.fromOffset(24, 24), Position = position, BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.5,
+		AutoButtonColor = false, Text = "", ZIndex = 9, Parent = parent,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
+	})
+	local strokes = {}
+	for _, descendant in ipairs(Lib.MiniIcon("folder", button, UDim2.fromOffset(5, 5), white):GetDescendants()) do
+		if descendant:IsA("UIStroke") then strokes[#strokes + 1] = descendant end
+	end
+	local function Paint()
+		local collections = Lib[field]
+		local color = collections and collections.Has(key) and gold or white
+		for _, stroke in ipairs(strokes) do stroke.Color = color end
+	end
+	Paint()
+	button.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		local collections = Lib[field]
+		if collections then collections.Pick(key, itemData, label, Paint) end
+	end)
+	return button
+end
+
+function Lib.BuildCollections(view, file, cell, gap, padX, makeCard)
+	local Http = Services.HttpService
+	local api, data, owners, openId, armed = {}, { next = 1, list = {} }, {}, nil, 0
+	local gray, light = Color3.fromRGB(145, 145, 145), Color3.fromRGB(240, 240, 240)
+
+	if isfile and readfile then
+		pcall(function()
+			if isfile(file) then
+				local decoded = Http:JSONDecode(readfile(file))
+				if type(decoded) == "table" and type(decoded.list) == "table" then data = decoded end
+			end
+		end)
+	end
+
+	local top = 0
+	for index = #data.list, 1, -1 do
+		local folder = data.list[index]
+		if type(folder) == "table" and type(folder.id) == "number" and type(folder.name) == "string" and type(folder.items) == "table" then
+			top = math.max(top, folder.id)
+			for item = #folder.items, 1, -1 do
+				local entry = folder.items[item]
+				if type(entry) ~= "table" or entry.key == nil or type(entry.data) ~= "table" then table.remove(folder.items, item) end
+			end
+		else
+			table.remove(data.list, index)
+		end
+	end
+	data.next = top + 1
+
+	local function Commit()
+		if writefile then pcall(writefile, file, Http:JSONEncode(data)) end
+	end
+
+	local function Find(id)
+		for index, folder in ipairs(data.list) do
+			if folder.id == id then return folder, index end
+		end
+	end
+
+	local function Index(folder, key)
+		for index, entry in ipairs(folder.items) do
+			if entry.key == key then return index end
+		end
+	end
+
+	local function Reindex()
+		table.clear(owners)
+		for _, folder in ipairs(data.list) do
+			for _, entry in ipairs(folder.items) do owners[entry.key] = true end
+		end
+	end
+	Reindex()
+
+	local function Clean(text)
+		text = text:match("^%s*(.-)%s*$")
+		local cut = utf8.offset(text, 33)
+		return cut and text:sub(1, cut - 1) or text
+	end
+
+	local function Clear(scroll)
+		for _, child in ipairs(scroll:GetChildren()) do
+			if child:IsA("GuiObject") then child:Destroy() end
+		end
+	end
+
+	function api.Has(key)
+		return owners[key] == true
+	end
+
+	function api.Create(name)
+		name = Clean(name or "")
+		if name == "" then name = "Collection " .. data.next end
+		local folder = { id = data.next, name = name, items = {} }
+		data.next += 1
+		data.list[#data.list + 1] = folder
+		Commit()
+		return folder
+	end
+
+	function api.Toggle(id, key, itemData)
+		local folder = Find(id)
+		if not folder then return false end
+		local index = Index(folder, key)
+		if index then
+			table.remove(folder.items, index)
+		else
+			table.insert(folder.items, 1, { key = key, data = itemData })
+		end
+		Commit()
+		Reindex()
+		return index == nil
+	end
+
+	local rootBar = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, Parent = view })
+	local nameInput = Lib.Create("TextBox", {
+		Size = UDim2.new(1, -112, 1, 0), Position = UDim2.fromOffset(8, 0), BackgroundColor3 = Color3.fromRGB(22, 22, 22),
+		PlaceholderText = "New collection name...", PlaceholderColor3 = Color3.fromRGB(110, 110, 110), TextColor3 = light,
+		TextSize = 12, Font = Enum.Font.GothamMedium, Text = "", ClearTextOnFocus = false, TextXAlignment = Enum.TextXAlignment.Left, Parent = rootBar,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 7) }),
+		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
+	})
+	Lib.RegisterThemeElement(nameInput, "BackgroundColor3", 0.7, true)
+	Lib.RegisterThemeText(nameInput, "Primary")
+	local createBtn = Lib.Create("TextButton", {
+		Size = UDim2.fromOffset(88, 30), Position = UDim2.new(1, -96, 0, 0), BackgroundColor3 = Color3.new(1, 1, 1), Text = "Create",
+		TextColor3 = Color3.new(0, 0, 0), TextSize = 12, Font = Enum.Font.GothamBold, AutoButtonColor = false, Parent = rootBar,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 7) })
+	})
+
+	local folderBar = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, Visible = false, Parent = view })
+	local backBtn = Lib.Create("TextButton", {
+		Size = UDim2.fromOffset(30, 30), Position = UDim2.fromOffset(8, 0), BackgroundColor3 = Color3.fromRGB(22, 22, 22), Text = "\u{2039}",
+		TextColor3 = light, TextSize = 20, Font = Enum.Font.GothamBold, AutoButtonColor = false, Parent = folderBar,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 7) })
+	})
+	Lib.RegisterThemeElement(backBtn, "BackgroundColor3", 0.7, true)
+	Lib.RegisterThemeText(backBtn, "Primary")
+	local nameBox = Lib.Create("TextBox", {
+		Size = UDim2.new(1, -146, 1, 0), Position = UDim2.fromOffset(46, 0), BackgroundColor3 = Color3.fromRGB(22, 22, 22), TextColor3 = light,
+		TextSize = 13, Font = Enum.Font.GothamBold, Text = "", ClearTextOnFocus = false, TextXAlignment = Enum.TextXAlignment.Left, Parent = folderBar,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 7) }),
+		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
+	})
+	Lib.RegisterThemeElement(nameBox, "BackgroundColor3", 0.7, true)
+	Lib.RegisterThemeText(nameBox, "Primary")
+	local deleteBtn = Lib.Create("TextButton", {
+		Size = UDim2.fromOffset(88, 30), Position = UDim2.new(1, -96, 0, 0), BackgroundColor3 = Color3.fromRGB(35, 35, 35), Text = "Delete",
+		TextColor3 = Color3.fromRGB(220, 80, 80), TextSize = 12, Font = Enum.Font.GothamBold, AutoButtonColor = false, Parent = folderBar,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 7) })
+	})
+	Lib.RegisterThemeElement(deleteBtn, "BackgroundColor3", 0.7, true)
+
+	local foldersScroll, foldersEmpty = Lib.MakeCardList(view, "No collections yet\nCreate one above, then press the folder button on any card", UDim2.fromOffset(190, 72), UDim2.fromOffset(12, 12), padX)
+	local itemsScroll, itemsEmpty = Lib.MakeCardList(view, "This collection is empty\nPress the folder button on a card to add it here", cell, gap, padX)
+	for _, scroll in ipairs({ foldersScroll, itemsScroll }) do
+		scroll.Position, scroll.Size = UDim2.fromOffset(0, 38), UDim2.new(1, 0, 1, -38)
+	end
+	itemsScroll.Visible = false
+
+	local Render
+
+	local function Tile(folder, order)
+		local tile = Lib.Create("TextButton", {
+			BackgroundColor3 = Color3.fromRGB(15, 15, 15), Text = "", AutoButtonColor = false, LayoutOrder = order, Parent = foldersScroll,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 10) })
+		})
+		Lib.RegisterThemeElement(tile, "BackgroundColor3", 0.5)
+		local stroke = Lib.Create("UIStroke", { Color = Color3.fromRGB(35, 35, 35), Thickness = 1, Transparency = 0.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = tile })
+		local icon = Lib.MiniIcon("folder", tile, UDim2.fromOffset(34, 36), gray)
+		icon.AnchorPoint = Vector2.new(0.5, 0.5)
+		Lib.Create("UIScale", { Scale = 2.2, Parent = icon })
+		local name = Lib.Create("TextLabel", {
+			Size = UDim2.new(1, -78, 0, 18), Position = UDim2.fromOffset(66, 17), BackgroundTransparency = 1, Text = folder.name, TextColor3 = Color3.fromRGB(245, 245, 245),
+			TextSize = 14, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = tile
+		})
+		Lib.RegisterThemeText(name, "Primary")
+		local count = Lib.Create("TextLabel", {
+			Size = UDim2.new(1, -78, 0, 14), Position = UDim2.fromOffset(66, 38), BackgroundTransparency = 1, Text = "Items: " .. #folder.items, TextColor3 = gray,
+			TextSize = 11, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, Parent = tile
+		})
+		Lib.RegisterThemeText(count, "Secondary")
+		tile.MouseEnter:Connect(function()
+			Lib.Tween(tile, 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundColor3 = Lib.Lighten(Lib.Theme.Card, 0.05) })
+			Lib.Tween(stroke, 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { Color = Color3.fromRGB(120, 120, 120), Transparency = 0 })
+		end)
+		tile.MouseLeave:Connect(function()
+			Lib.Tween(tile, 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundColor3 = Lib.Theme.Card })
+			Lib.Tween(stroke, 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { Color = Color3.fromRGB(35, 35, 35), Transparency = 0.5 })
+		end)
+		tile.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			openId = folder.id
+			Render()
+		end)
+	end
+
+	function Render()
+		local folder = openId and Find(openId)
+		if not folder then openId = nil end
+		armed = 0
+		deleteBtn.Text = "Delete"
+		rootBar.Visible = not folder
+		folderBar.Visible = folder ~= nil
+		foldersScroll.Visible = not folder
+		itemsScroll.Visible = folder ~= nil
+		Clear(foldersScroll)
+		Clear(itemsScroll)
+		if folder then
+			nameBox.Text = folder.name
+			for index, entry in ipairs(folder.items) do makeCard(entry.data, index, itemsScroll) end
+			itemsEmpty.Visible = #folder.items == 0
+			foldersEmpty.Visible = false
+		else
+			for index, entry in ipairs(data.list) do Tile(entry, index) end
+			foldersEmpty.Visible = #data.list == 0
+			itemsEmpty.Visible = false
+		end
+	end
+
+	local function Submit(needText)
+		local name = Clean(nameInput.Text)
+		if needText and name == "" then return end
+		nameInput.Text = ""
+		api.Create(name)
+		Render()
+	end
+
+	createBtn.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		Submit(false)
+	end)
+	nameInput.FocusLost:Connect(function(enter)
+		if enter then Submit(true) end
+	end)
+	backBtn.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		openId = nil
+		Render()
+	end)
+	nameBox.FocusLost:Connect(function()
+		local folder = openId and Find(openId)
+		if not folder then return end
+		local text = Clean(nameBox.Text)
+		if text == "" then text = folder.name end
+		nameBox.Text = text
+		if text ~= folder.name then
+			folder.name = text
+			Commit()
+		end
+	end)
+	deleteBtn.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		if armed > 0 and os.clock() - armed < 2.5 then
+			local _, index = Find(openId)
+			if index then
+				table.remove(data.list, index)
+				Commit()
+				Reindex()
+			end
+			openId = nil
+			Render()
+			return
+		end
+		local stamp = os.clock()
+		armed = stamp
+		deleteBtn.Text = "Confirm?"
+		task.delay(2.5, function()
+			if armed == stamp then
+				armed = 0
+				deleteBtn.Text = "Delete"
+			end
+		end)
+	end)
+
+	local picker, pickerList, pickerInput
+	local current = {}
+
+	local function FillPicker()
+		Clear(pickerList)
+		for order, folder in ipairs(data.list) do
+			local row = Lib.Create("TextButton", {
+				Size = UDim2.new(1, 0, 0, 40), BackgroundColor3 = Color3.fromRGB(22, 22, 22), Text = "", AutoButtonColor = false, LayoutOrder = order, Parent = pickerList,
+				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
+			})
+			Lib.RegisterThemeElement(row, "BackgroundColor3", 0.7, true)
+			local name = Lib.Create("TextLabel", {
+				Size = UDim2.new(1, -128, 1, 0), Position = UDim2.fromOffset(12, 0), BackgroundTransparency = 1, Text = folder.name, TextColor3 = light,
+				TextSize = 12, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = row
+			})
+			Lib.RegisterThemeText(name, "Primary")
+			local count = Lib.Create("TextLabel", {
+				Size = UDim2.fromOffset(70, 40), Position = UDim2.new(1, -108, 0, 0), BackgroundTransparency = 1, Text = "", TextColor3 = Color3.fromRGB(130, 130, 130),
+				TextSize = 11, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Right, Parent = row
+			})
+			Lib.RegisterThemeText(count, "Secondary")
+			local box = Lib.Create("TextLabel", {
+				Size = UDim2.fromOffset(20, 20), Position = UDim2.new(1, -32, 0.5, -10), BackgroundColor3 = Color3.fromRGB(35, 35, 35), Text = "",
+				TextColor3 = Color3.new(0, 0, 0), TextSize = 13, Font = Enum.Font.GothamBold, Parent = row,
+				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 5) })
+			})
+			local function Paint(on)
+				box.BackgroundColor3 = on and Color3.new(1, 1, 1) or Color3.fromRGB(35, 35, 35)
+				box.Text = on and "\u{2713}" or ""
+				count.Text = "Items: " .. #folder.items
+			end
+			Paint(Index(folder, current.key) ~= nil)
+			row.MouseButton1Click:Connect(function()
+				Lib.PlayClick()
+				Paint(api.Toggle(folder.id, current.key, current.data))
+				if current.done then current.done() end
+				api.Changed()
+			end)
+		end
+	end
+
+	local function BuildPicker()
+		picker = Lib.BuildFilterModal("Add to Collection", "")
+		picker.Backdrop.ZIndex = 40
+		local bar = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1, LayoutOrder = 1, Parent = picker.Content })
+		pickerInput = Lib.Create("TextBox", {
+			Size = UDim2.new(1, -98, 1, 0), BackgroundColor3 = Color3.fromRGB(22, 22, 22), PlaceholderText = "New collection name...", PlaceholderColor3 = Color3.fromRGB(110, 110, 110),
+			TextColor3 = light, TextSize = 12, Font = Enum.Font.GothamMedium, Text = "", ClearTextOnFocus = false, TextXAlignment = Enum.TextXAlignment.Left, Parent = bar,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 7) }),
+			Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
+		})
+		Lib.RegisterThemeElement(pickerInput, "BackgroundColor3", 0.7, true)
+		Lib.RegisterThemeText(pickerInput, "Primary")
+		local addBtn = Lib.Create("TextButton", {
+			Size = UDim2.fromOffset(88, 34), Position = UDim2.new(1, -88, 0, 0), BackgroundColor3 = Color3.new(1, 1, 1), Text = "Create",
+			TextColor3 = Color3.new(0, 0, 0), TextSize = 12, Font = Enum.Font.GothamBold, AutoButtonColor = false, Parent = bar,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 7) })
+		})
+		pickerList = Lib.Create("Frame", {
+			Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 2, Parent = picker.Content,
+			Lib.Create("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder })
+		})
+		local function Submit(needText)
+			local name = Clean(pickerInput.Text)
+			if needText and name == "" then return end
+			pickerInput.Text = ""
+			api.Toggle(api.Create(name).id, current.key, current.data)
+			FillPicker()
+			if current.done then current.done() end
+			api.Changed()
+		end
+		addBtn.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			Submit(false)
+		end)
+		pickerInput.FocusLost:Connect(function(enter)
+			if enter then Submit(true) end
+		end)
+	end
+
+	function api.Pick(key, itemData, label, done)
+		if not picker then BuildPicker() end
+		current.key, current.data, current.done = key, itemData, done
+		picker.Sub.Text = label or ""
+		pickerInput.Text = ""
+		FillPicker()
+		picker.Open()
+	end
+
+	function api.Changed()
+		if view.Visible then Render() end
+	end
+
+	function api.Show()
+		Render()
+	end
+
+	return api
 end
 
 function Lib.MakeFilterButton(sideBar, onClick)
@@ -4235,6 +6437,7 @@ function Lib.BuildFilterModal(title, subtitle)
 		Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(150, 150, 150), AutoButtonColor = false, ZIndex = 32, Parent = window
 	})
 	Lib.RegisterThemeText(close, "Secondary")
+	api.Backdrop, api.Sub = backdrop, sub
 
 	api.Content = Lib.Create("ScrollingFrame", {
 		Size = UDim2.new(1, 0, 1, -70), Position = UDim2.fromOffset(0, 70), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 2,
@@ -11457,28 +13660,7 @@ function Lib.BuildQoL(scroll)
 		{ id = "MacroPlay", title = "Macro Play", desc = "Starts or stops macro playback", run = TogglePlayback }
 	}
 
-	local binds, chips, capturing = {}, {}, nil
-
-	local function KeyLabel(id)
-		return binds[id] and binds[id].Name or "None"
-	end
-
-	local function SaveBinds()
-		if not writefile then return end
-		local out = {}
-		for id, key in pairs(binds) do out[id] = key.Name end
-		pcall(writefile, KEYBIND_FILE, Http:JSONEncode(out))
-	end
-
-	if isfile and readfile then
-		pcall(function()
-			if not isfile(KEYBIND_FILE) then return end
-			for id, name in pairs(Http:JSONDecode(readfile(KEYBIND_FILE))) do
-				local key = Enum.KeyCode[name]
-				if key then binds[id] = key end
-			end
-		end)
-	end
+	Lib.BindActions = actions
 
 	local function MakeRow(parent, title, desc, isLast, height, textWidth)
 		local row = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, height or 50), BackgroundTransparency = 1, Parent = parent })
@@ -11510,59 +13692,17 @@ function Lib.BuildQoL(scroll)
 	end
 
 	local KeybindGroup = Lib.CreateFeatureGroup(scroll, "Custom Keybinds", 1)
-	for i, action in ipairs(actions) do
-		local row = MakeRow(KeybindGroup, action.title, action.desc, i == #actions, 50, -130)
-		local chip = MakeChip(row, KeyLabel(action.id), UDim2.fromOffset(92, 28), UDim2.new(1, -106, 0.5, -14))
-		chips[action.id] = chip
-		chip.MouseButton1Click:Connect(function()
-			Lib.PlayClick()
-			if capturing == action.id then
-				capturing = nil
-				chip.Text = KeyLabel(action.id)
-				return
-			end
-			if capturing then chips[capturing].Text = KeyLabel(capturing) end
-			capturing = action.id
-			chip.Text = "Press key..."
+	local PointerRow = MakeRow(KeybindGroup, "Bind Manager", "Keybinds for every feature now live in Settings > Binds", true, 50, -130)
+	local OpenChip = MakeChip(PointerRow, "Open", UDim2.fromOffset(92, 28), UDim2.new(1, -106, 0.5, -14))
+	OpenChip.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		pcall(function()
+			Lib.SwitchMainTab("Settings")
+			Lib.SwitchSettingsTab("Binds")
 		end)
-	end
-
-	local inputConn = Lib.C(UIS.InputBegan, function(input, processed)
-		if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
-		local key = input.KeyCode
-		if capturing then
-			local id = capturing
-			capturing = nil
-			if key == Enum.KeyCode.Escape then
-				chips[id].Text = KeyLabel(id)
-				return
-			end
-			if key == Enum.KeyCode.Backspace or key == Enum.KeyCode.Delete then
-				binds[id] = nil
-			else
-				for otherId, otherKey in pairs(binds) do
-					if otherKey == key and otherId ~= id then
-						binds[otherId] = nil
-						chips[otherId].Text = "None"
-					end
-				end
-				binds[id] = key
-			end
-			chips[id].Text = KeyLabel(id)
-			SaveBinds()
-			return
-		end
-		if processed then return end
-		for _, action in ipairs(actions) do
-			if binds[action.id] == key then
-				action.run()
-				break
-			end
-		end
 	end)
 
 	UI.Screen.Destroying:Connect(function()
-		inputConn:Disconnect()
 		StopRecording(true)
 		StopPlayback(true)
 	end)
@@ -11883,7 +14023,8 @@ do
 	})
 
 	local MakeFeaturesTab
-	Lib.SwitchFeaturesTab, MakeFeaturesTab = Lib.CreateTabSystem(FeaturesSection, FeaturesTabs, "CurrentFeaturesTab")
+	local FeaturesViews
+	Lib.SwitchFeaturesTab, MakeFeaturesTab, FeaturesViews = Lib.CreateTabSystem(FeaturesSection, FeaturesTabs, "CurrentFeaturesTab")
 
 	local View_Visuals = MakeFeaturesTab("Visuals", 4)
 	local View_Movement = MakeFeaturesTab("Movement", 44)
@@ -11930,7 +14071,7 @@ do
 		Lib.BuildCombat(MakeScroll(CombatView))
 	end
 
-	Lib.BuildFeatureSearch(FeaturesSection, FeaturesSideBar, FeaturesTabs)
+	Lib.BuildGlobalSearch(FeaturesSection, FeaturesSideBar, FeaturesTabs, FeaturesViews, "CurrentFeaturesTab")
 
 	Lib.BuildEsp(VisualsScroll)
 	Lib.BuildWorld(VisualsScroll)
@@ -12937,7 +15078,7 @@ do
 		if State.CurrentScriptsTab == "Browse" then Lib.LoadScriptsPage(1) end
 	end
 
-	local Src = { Order = { "Rscripts", "ScriptBlox", "HaxHell", "Roblox Scripts" }, Off = { ["Roblox Scripts"] = true } }
+	local Src = { Order = { "Rscripts", "ScriptBlox", "HaxHell", "Roblox Scripts" }, Off = {} }
 	Lib.ScriptStores = { Saved = Lib.MakeStore("SeptusHub_SavedScripts.json"), Recent = Lib.MakeStore("SeptusHub_RecentScripts.json", 40) }
 
 	local MakeScriptsTab
@@ -13119,7 +15260,7 @@ do
 		return value
 	end
 
-	Src.Hosts = { "rscripts.net", "rawscripts.net", "scriptblox.com" }
+	Src.Hosts = { "rscripts.net", "rawscripts.net", "scriptblox.com", "robloxscripts.com" }
 
 	function Src.IsPublisher(url)
 		local host = url:match("^https?://([^/:]+)")
@@ -13249,6 +15390,74 @@ do
 		end
 		local decoded = Src.Decode(url)
 		if decoded then Src.ParseHax(decoded, result) end
+		return result
+	end
+
+	function Src.ParseRoblox(decoded, result, seen)
+		local rows = decoded.data
+		if type(rows) ~= "table" then return false end
+		result.success = true
+		local pg = decoded.pagination
+		if type(pg) == "table" then
+			local pages = tonumber(pg.totalPages or pg.pages or pg.pageCount)
+			local total, limit = tonumber(pg.total), tonumber(pg.limit)
+			if not pages and total and limit and limit > 0 then pages = math.ceil(total / limit) end
+			if not pages and (pg.hasMore or pg.hasNext) then pages = (tonumber(pg.page) or 1) + 1 end
+			result.totalPages = math.max(result.totalPages, pages or 1)
+		end
+		local host = "https://robloxscripts.com"
+		for _, s in ipairs(rows) do
+			local slug, access = s.slug, s.accessType
+			local dedupe = s.id or slug
+			if access ~= "paid" and not (dedupe and seen[dedupe]) then
+				if dedupe then seen[dedupe] = true end
+				local place = type(s.game) == "table" and s.game or {}
+				local gameImage = Src.Abs(place.iconUrl, host)
+				local code = type(s.script) == "string" and s.script or ""
+				if code:find("^https?://%S+$") then code = "" end
+				local entry = {
+					title = s.title,
+					game = place.name or "Universal",
+					imageUrl = Src.Abs(s.image, host) or gameImage,
+					gameImage = gameImage,
+					hasKey = s.key == true or access == "key",
+					isVerified = s.isVerified == true or s.verified == true,
+					script = code,
+					raw = type(s.rawScriptUrl) == "string" and s.rawScriptUrl or (slug and (host .. "/raw/" .. slug .. "?src=api") or ""),
+					id = s.id,
+					slug = slug,
+					link = Src.Abs(s.url, host),
+					origin = "Roblox Scripts"
+				}
+				Src.Meta(s, entry)
+				result.data[#result.data + 1] = entry
+			end
+		end
+		return true
+	end
+
+	Src["Roblox Scripts"] = function(page, q)
+		local result = { success = false, data = {}, totalPages = 1 }
+		local base = "https://robloxscripts.com/api/v1/scripts?limit=30&page=" .. page
+		local urls = { base }
+		if q ~= "" then
+			local encoded = Services.HttpService:UrlEncode(q)
+			urls = { base .. "&q=" .. encoded, base .. "&game=" .. encoded }
+		end
+		local bodies, pending = {}, #urls
+		for index, url in ipairs(urls) do
+			task.spawn(function()
+				local ok, decoded = pcall(Src.Decode, url)
+				bodies[index] = ok and decoded or false
+				pending -= 1
+			end)
+		end
+		local started = os.clock()
+		while pending > 0 and os.clock() - started < 30 do task.wait(0.05) end
+		local seen = {}
+		for index = 1, #urls do
+			if bodies[index] then Src.ParseRoblox(bodies[index], result, seen) end
+		end
 		return result
 	end
 
@@ -13450,10 +15659,26 @@ do
 			return button
 		end
 
-		local executeBtn = Button(actions, "Execute", UDim2.new(1, -250, 1, 0), 1, true, 13)
+		local executeBtn = Button(actions, "Execute", UDim2.new(1, -298, 1, 0), 1, true, 13)
 		local copyBtn = Button(actions, "Copy Script", UDim2.fromOffset(108, 40), 2)
 		local starBtn = Button(actions, "\u{2605}", UDim2.fromOffset(40, 40), 3, false, 18, true)
-		local linkBtn = Button(actions, "Copy Link", UDim2.fromOffset(78, 40), 4)
+		local linkBtn = Button(actions, "Copy Link", UDim2.fromOffset(78, 40), 5)
+		local folderBtn = Button(actions, "", UDim2.fromOffset(40, 40), 4, false, 13, true)
+		Lib.MiniIcon("folder", folderBtn, UDim2.fromOffset(13, 13), gray)
+
+		local function PaintFolder()
+			local collections = Lib.ScriptCollections
+			local color = state and collections and collections.Has(state.key) and gold or gray
+			for _, descendant in ipairs(folderBtn:GetDescendants()) do
+				if descendant:IsA("UIStroke") then descendant.Color = color end
+			end
+		end
+
+		folderBtn.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			local S = state
+			if S and Lib.ScriptCollections then Lib.ScriptCollections.Pick(S.key, S.data, S.data.title, PaintFolder) end
+		end)
 
 		local chips = Lib.Create("Frame", {
 			Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 4, ZIndex = 33, Parent = body,
@@ -13660,6 +15885,7 @@ do
 			Lib.LoadWebImage(heroImage, data.imageUrl)
 			Lib.LoadWebImage(thumb, data.gameImage or data.imageUrl)
 			starBtn.TextColor3 = Lib.ScriptStores.Saved.Has(key) and gold or white
+			PaintFolder()
 			BuildChips(data)
 			code.Text = "Loading script..."
 			lineCount.Text = ""
@@ -13737,7 +15963,7 @@ do
 		Lib.LoadWebImage(Image, data.imageUrl)
 
 		local Badges = Lib.Create("Frame", {
-			Size = UDim2.new(1, -44, 0, 20), Position = UDim2.fromOffset(6, 6), BackgroundTransparency = 1, ZIndex = 8, Parent = Clip,
+			Size = UDim2.new(1, -72, 0, 20), Position = UDim2.fromOffset(6, 6), BackgroundTransparency = 1, ZIndex = 8, Parent = Clip,
 			Lib.Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder })
 		})
 
@@ -13769,6 +15995,7 @@ do
 			if onChange then task.defer(onChange) end
 			return on
 		end)
+		Lib.MakeFolderButton(Clip, UDim2.new(1, -58, 0, 6), "ScriptCollections", key, data, data.title)
 
 		local gLabel = Lib.Create("TextLabel", {
 			Size = UDim2.new(1, -20, 0, 14), Position = UDim2.fromOffset(10, 130), BackgroundTransparency = 1,
@@ -13915,6 +16142,7 @@ do
 	do
 		local cell, gap = UDim2.fromOffset(190, 236), UDim2.fromOffset(15, 15)
 		local savedScroll, savedEmpty = Lib.MakeCardList(View_Saved, "No saved scripts yet\nTap the star on a script card to save it", cell, gap, 10)
+		Lib.ScriptCollections = Lib.BuildCollections(MakeScriptsTab("Collections", 170), "SeptusHub_ScriptCollections.json", cell, gap, 10, CreateScriptCard)
 		local recentScroll, recentEmpty = Lib.MakeCardList(View_Recent, "No recent scripts yet\nScripts you copy will appear here", cell, gap, 10)
 
 		local function Fill(scroll, empty, store, onChange)
@@ -13933,6 +16161,8 @@ do
 				FillSaved()
 			elseif tabName == "Recent" then
 				Fill(recentScroll, recentEmpty, Lib.ScriptStores.Recent)
+			elseif tabName == "Collections" then
+				Lib.ScriptCollections.Show()
 			end
 		end
 	end
@@ -14048,11 +16278,13 @@ do
 
 		Lib.RegisterThemeElement(Lib.Create("ImageLabel", { Size = UDim2.new(1, -16, 0, 110), Position = UDim2.new(0, 8, 0, 8), BackgroundColor3 = Color3.fromRGB(22, 22, 22), Image = thumbUrl, ScaleType = Enum.ScaleType.Fit, Parent = Card, Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }) }), "BackgroundColor3", 0.7)
 		local key = tostring(data.id)
+		local slim = { id = data.id, itemType = data.itemType, name = data.name, price = data.price, thumbnailId = data.thumbnailId }
 		Lib.MakeStar(Card, UDim2.new(1, -36, 0, 14), Lib.EmoteStores.Saved.Has(key), function()
-			local on = Lib.EmoteStores.Saved.Toggle(key, { id = data.id, itemType = data.itemType, name = data.name, price = data.price, thumbnailId = data.thumbnailId })
+			local on = Lib.EmoteStores.Saved.Toggle(key, slim)
 			if onChange then task.defer(onChange) end
 			return on
 		end)
+		Lib.MakeFolderButton(Card, UDim2.new(1, -64, 0, 14), "EmoteCollections", key, slim, data.name)
 
 		local eName = Lib.Create("TextLabel", { Size = UDim2.new(1, -16, 0, 18), Position = UDim2.new(0, 8, 0, 124), BackgroundTransparency = 1, Text = data.name, TextColor3 = Color3.fromRGB(240, 240, 240), TextSize = 13, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = Card })
 		Lib.RegisterThemeText(eName, "Primary")
@@ -14076,7 +16308,7 @@ do
 		actionBtn.MouseButton1Click:Connect(function()
 			Lib.PlayClick()
 			if State.CurrentPlayingAssetId ~= data.id then
-				Lib.EmoteStores.Recent.Add(key, { id = data.id, itemType = data.itemType, name = data.name, price = data.price, thumbnailId = data.thumbnailId })
+				Lib.EmoteStores.Recent.Add(key, slim)
 			end
 			Lib.PlayEmote(data.id, data.itemType, actionBtn)
 		end)
@@ -14085,6 +16317,7 @@ do
 	do
 		local cell, gap = UDim2.fromOffset(185, 230), UDim2.fromOffset(12, 12)
 		local savedScroll, savedEmpty = Lib.MakeCardList(View_EmotesSaved, "No saved emotes yet\nTap the star on an emote card to save it", cell, gap, 8)
+		Lib.EmoteCollections = Lib.BuildCollections(MakeEmotesTab("Collections", 170), "SeptusHub_EmoteCollections.json", cell, gap, 8, CreateEmoteCard)
 		local recentScroll, recentEmpty = Lib.MakeCardList(View_EmotesRecent, "No recent emotes yet\nEmotes you play will appear here", cell, gap, 8)
 
 		local function Fill(scroll, empty, store, onChange)
@@ -14103,6 +16336,8 @@ do
 				FillSaved()
 			elseif tabName == "Recent" then
 				Fill(recentScroll, recentEmpty, Lib.EmoteStores.Recent)
+			elseif tabName == "Collections" then
+				Lib.EmoteCollections.Show()
 			end
 		end
 	end
@@ -14764,6 +16999,7 @@ function Lib.DeriveTheme(spec)
 			end
 		end
 		out.Light = light
+		out.Base = spec
 		out.Primary = light and Color3.fromRGB(15, 15, 15) or Color3.fromRGB(245, 245, 245)
 		out.Secondary = light and Color3.fromRGB(85, 85, 85) or Color3.fromRGB(145, 145, 145)
 		out.SwitchOff = light and Color3.fromRGB(205, 205, 210) or Color3.fromRGB(38, 38, 38)
@@ -14771,6 +17007,7 @@ function Lib.DeriveTheme(spec)
 		out.Halloween = false
 	else
 		out.Light = Lib.Luma(spec.Background) > 0.6
+		out.Base = spec.Background
 		out.Main, out.Card, out.Item = spec.Background, spec.Surface, spec.Item
 		out.Primary, out.Secondary, out.SwitchOn, out.SwitchOff = spec.Text, spec.Muted, spec.Accent, spec.SwitchOff
 		out.Halloween = spec.Halloween == true
@@ -15316,76 +17553,1733 @@ function Lib.BuildUIPreview(parent, scale, layoutOrder, options)
 	return preview
 end
 
-function Lib.BuildPreviewCard(parent, layoutOrder, isVisible)
-	local STAGE_W, STAGE_H = 400, 270
+function Lib.OpenUIStudio()
+	if Lib.UIStudio then
+		Lib.UIStudio.Win.Show()
+		return
+	end
+
+	local Http = Services.HttpService
+	local FILE = "SeptusHub_UIStudio.json"
+	local KEYS = { "Background", "Surface", "Text", "Accent", "Item", "Muted", "SwitchOff" }
+	local KEY_NAMES = { Background = "Background", Surface = "Surface", Text = "Text", Accent = "Accent", Item = "Item", Muted = "Secondary Text", SwitchOff = "Switch Off" }
+	local SCALARS = { "FontIndex", "FontId", "CornerRadius", "WindowTransparency", "PanelTransparency", "HideLogo", "HideName", "CustomBg", "BgOpacity", "BgZoom", "BgSaturation", "Width", "Height", "Nav" }
+	local FX_BOOLS = { "Gradient", "Spin", "Snow", "Twinkle", "Shooting", "Particles" }
+	local FX_NUMS = { "Angle", "Strength", "Intensity" }
+	local FONTS = {
+		{ "Gotham", Enum.Font.GothamMedium, Enum.Font.GothamBold },
+		{ "Ubuntu", Enum.Font.Ubuntu, Enum.Font.Ubuntu },
+		{ "JosefinSans", Enum.Font.JosefinSans, Enum.Font.JosefinSans },
+		{ "FredokaOne", Enum.Font.FredokaOne, Enum.Font.FredokaOne },
+		{ "SciFi", Enum.Font.SciFi, Enum.Font.SciFi },
+		{ "BuilderSans", Enum.Font.BuilderSansMedium, Enum.Font.BuilderSansBold },
+		{ "Roboto", Enum.Font.Roboto, Enum.Font.Roboto },
+		{ "Nunito", Enum.Font.Nunito, Enum.Font.Nunito },
+		{ "Oswald", Enum.Font.Oswald, Enum.Font.Oswald },
+		{ "Titillium", Enum.Font.TitilliumWeb, Enum.Font.TitilliumWeb },
+		{ "Michroma", Enum.Font.Michroma, Enum.Font.Michroma },
+		{ "Jura", Enum.Font.Jura, Enum.Font.Jura },
+		{ "SourceSans", Enum.Font.SourceSans, Enum.Font.SourceSansBold },
+		{ "Merriweather", Enum.Font.Merriweather, Enum.Font.Merriweather }
+	}
+	local TABS = { "Home", "Features", "Scripts", "Emotes", "Settings" }
+	local _, _, GRADIENTS = Lib.BgFxView()
+
+	local D, P, cur, presets, win, host, canvas = {}, nil, nil, {}, nil, nil, nil
+	local refreshers, strokes, fills, queued = {}, {}, {}, {}
+	local studio = {}
+
+	local function Round(radius)
+		return Lib.Create("UICorner", { CornerRadius = UDim.new(0, radius) })
+	end
+
+	local function ColorsOf(spec)
+		local c = Lib.DeriveTheme(spec)
+		return { Background = c.Main, Surface = c.Card, Text = c.Primary, Accent = c.SwitchOn, Item = c.Item, Muted = c.Secondary, SwitchOff = c.SwitchOff }
+	end
+
+	local function Spec()
+		if D.Colors then return D.Colors end
+		return Lib.ResolveTheme(D.ThemeIndex) or Lib.ThemePresets[1]
+	end
+
+	local function FromLive()
+		local fx, custom = Lib.BgFxView()
+		D = {
+			ThemeIndex = State.SelectedThemeIndex, FontIndex = State.SelectedFontIndex, FontId = State.SelectedFontId,
+			CornerRadius = State.CornerRadius, WindowTransparency = State.WindowTransparency, PanelTransparency = State.PanelTransparency,
+			HideLogo = State.HideLogo, HideName = State.HideName, CustomBg = State.CustomBackgroundId or "",
+			BgOpacity = State.BgOpacity, BgZoom = State.BgZoom, BgSaturation = State.BgSaturation,
+			Width = State.OriginalSize.X.Offset, Height = State.OriginalSize.Y.Offset, Nav = State.NavAlign,
+			Fx = { A = custom.A, B = custom.B, Style = fx.Style }
+		}
+		for _, key in ipairs(FX_BOOLS) do D.Fx[key] = fx[key] == true end
+		for _, key in ipairs(FX_NUMS) do D.Fx[key] = fx[key] end
+	end
+
+	local function Pack(d)
+		local out = { ThemeIndex = d.ThemeIndex, Name = d.Name, Fx = {} }
+		for _, key in ipairs(SCALARS) do out[key] = d[key] end
+		local colors = d.Colors
+		if not colors and d.ThemeIndex and d.ThemeIndex > #Lib.ThemePresets then
+			colors = ColorsOf(Lib.ResolveTheme(d.ThemeIndex))
+		end
+		if colors then
+			out.ThemeIndex = nil
+			out.Colors = {}
+			for _, key in ipairs(KEYS) do out.Colors[key] = colors[key]:ToHex() end
+		end
+		for key, value in pairs(d.Fx) do
+			out.Fx[key] = typeof(value) == "Color3" and value:ToHex() or value
+		end
+		return out
+	end
+
+	local function Unpack(data)
+		local d = { ThemeIndex = data.ThemeIndex or 1, Name = data.Name, Fx = {} }
+		for _, key in ipairs(SCALARS) do d[key] = data[key] end
+		if type(data.Colors) == "table" then
+			d.Colors = {}
+			for _, key in ipairs(KEYS) do
+				local ok, color = pcall(Color3.fromHex, data.Colors[key])
+				d.Colors[key] = ok and color or Color3.new(0, 0, 0)
+			end
+		end
+		local fx = type(data.Fx) == "table" and data.Fx or {}
+		for _, key in ipairs(FX_BOOLS) do d.Fx[key] = fx[key] == true end
+		for _, key in ipairs(FX_NUMS) do d.Fx[key] = type(fx[key]) == "number" and fx[key] or 50 end
+		d.Fx.Style = type(fx.Style) == "string" and fx.Style or "Aurora"
+		for _, key in ipairs({ "A", "B" }) do
+			local ok, color = pcall(Color3.fromHex, fx[key])
+			d.Fx[key] = ok and color or Color3.new(1, 1, 1)
+		end
+		d.CustomBg = d.CustomBg or ""
+		d.CornerRadius = d.CornerRadius or 10
+		d.WindowTransparency = d.WindowTransparency or 0
+		d.PanelTransparency = d.PanelTransparency or 0
+		d.BgOpacity = d.BgOpacity or 85
+		d.BgZoom = d.BgZoom or 100
+		d.BgSaturation = d.BgSaturation or 100
+		d.Width = d.Width or State.OriginalSize.X.Offset
+		d.Height = d.Height or State.OriginalSize.Y.Offset
+		d.Nav = d.Nav or State.NavAlign
+		return d
+	end
+
+	local function ToDump()
+		local index = D.ThemeIndex
+		if D.Colors then
+			local theme = { Name = (D.Name or "UI Studio"):sub(1, 24) }
+			for _, key in ipairs(KEYS) do theme[key] = D.Colors[key] end
+			index = Lib.AddCustomTheme(theme)
+		end
+		local fx = D.Fx
+		local function Rgb(color)
+			return { math.round(color.R * 255), math.round(color.G * 255), math.round(color.B * 255) }
+		end
+		local bg = { Style = fx.Style, A = Rgb(fx.A), B = Rgb(fx.B) }
+		for _, key in ipairs(FX_BOOLS) do bg[key] = fx[key] end
+		for _, key in ipairs(FX_NUMS) do bg[key] = fx[key] end
+		local dump = { ThemeIndex = index, Extras = { BgFx = bg } }
+		for _, key in ipairs(SCALARS) do dump[key] = D[key] end
+		return dump
+	end
+
+	local function LoadPresets()
+		if not (isfile and readfile) then return end
+		pcall(function()
+			if not isfile(FILE) then return end
+			local data = Http:JSONDecode(readfile(FILE))
+			if type(data) == "table" then presets = data end
+		end)
+	end
+
+	local function SavePresets()
+		if writefile then pcall(writefile, FILE, Http:JSONEncode(presets)) end
+	end
+
+	local function Pair(map, a, b)
+		map[a] = b
+		local ac, bc = a:GetChildren(), b:GetChildren()
+		if #ac == #bc then
+			for i = 1, #ac do Pair(map, ac[i], bc[i]) end
+			return
+		end
+		local cursor = 1
+		for i = 1, #ac do
+			local x = ac[i]
+			for k = cursor, #bc do
+				local y = bc[k]
+				if y.ClassName == x.ClassName and y.Name == x.Name then
+					Pair(map, x, y)
+					cursor = k + 1
+					break
+				end
+			end
+		end
+	end
+
+	local function PaintHeader()
+		local c = cur
+		if P.headerIcon then
+			P.headerIcon.Image = c.Halloween and Lib.HalloweenHeader.Icon or Lib.DefaultHeaderIcon
+			P.headerIcon.Visible = not D.HideLogo
+		end
+		if P.headerLogo then
+			P.headerLogo.Image = c.Halloween and Lib.HalloweenHeader.Logo or (c.Light and "rbxassetid://105446913647633" or "rbxassetid://97808676894113")
+			P.headerLogo.Visible = not D.HideName
+			P.headerLogo.Position = UDim2.fromOffset(D.HideLogo and 14 or 66, 10)
+		end
+		P.decor.Visible = c.Halloween
+	end
+
+	local function PaintNav()
+		local c = cur
+		local on = c.Light and Color3.fromRGB(15, 15, 15) or Color3.new(1, 1, 1)
+		local off = c.Light and Color3.fromRGB(130, 130, 130) or Color3.fromRGB(150, 150, 150)
+		for _, rec in ipairs(P.nav) do
+			local active = rec.id == P.active
+			if rec.icon then rec.icon.ImageColor3 = active and on or off end
+			if rec.line then
+				rec.line.BackgroundColor3 = on
+				rec.line.Size = UDim2.fromOffset(active and 18 or 0, 2)
+				rec.line.Position = UDim2.new(0.5, active and -9 or 0, 1, -2)
+			end
+		end
+	end
+
+	local function PaintSubs()
+		local c = cur
+		local selected = c.Light and Color3.fromRGB(15, 15, 15) or Color3.new(1, 1, 1)
+		local idle = c.Light and Color3.fromRGB(110, 110, 110) or Color3.fromRGB(150, 150, 150)
+		for _, group in ipairs(P.subs) do
+			for name, button in pairs(group.buttons) do
+				local on = group.selected == name
+				local tint = on and selected or idle
+				button.BackgroundColor3 = c.Light and Color3.new(0, 0, 0) or Color3.new(1, 1, 1)
+				button.BackgroundTransparency = on and (c.Light and 0.88 or 0.92) or 1
+				button.TextColor3 = tint
+				local icon = button:FindFirstChildOfClass("ImageLabel")
+				if icon then icon.ImageColor3 = tint end
+			end
+		end
+	end
+
+	local function PaintFx()
+		local layer = P.fxLayer
+		if not layer then return end
+		local fx = D.Fx
+		local key = table.concat({ tostring(fx.Snow), tostring(fx.Twinkle), tostring(fx.Particles), tostring(fx.Shooting), tostring(fx.Intensity) }, "|")
+		if key ~= P.fxKey then
+			P.fxKey = key
+			layer:ClearAllChildren()
+			local rng = Random.new(7)
+			local k = fx.Intensity / 100
+			local function Dot(size, alpha)
+				Lib.Create("Frame", {
+					Name = "Dot", Size = UDim2.fromOffset(size, size), AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromScale(rng:NextNumber(), rng:NextNumber()), BackgroundTransparency = alpha,
+					BorderSizePixel = 0, Parent = layer, Round(size)
+				})
+			end
+			if fx.Snow then
+				for _ = 1, math.floor(12 + 38 * k) do Dot(rng:NextInteger(2, 4), 0.3 + rng:NextNumber() * 0.4) end
+			end
+			if fx.Twinkle then
+				for _ = 1, math.floor(14 + 40 * k) do Dot(rng:NextInteger(1, 3), 0.2 + rng:NextNumber() * 0.5) end
+			end
+			if fx.Particles then
+				for _ = 1, math.floor(8 + 18 * k) do Dot(rng:NextInteger(3, 16), 0.7 + rng:NextNumber() * 0.2) end
+			end
+			if fx.Shooting then
+				Lib.Create("Frame", {
+					Name = "Dot", Size = UDim2.fromOffset(90, 2), AnchorPoint = Vector2.new(1, 0.5), Rotation = 30,
+					Position = UDim2.fromScale(0.42, 0.22), BorderSizePixel = 0, Parent = layer,
+					Lib.Create("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0) }) })
+				})
+			end
+		end
+		local tint = cur.Light and Color3.fromRGB(88, 104, 150) or Color3.new(1, 1, 1)
+		for _, obj in ipairs(layer:GetChildren()) do
+			obj.BackgroundColor3 = tint
+		end
+	end
+
+	local function PaintBg()
+		local image = P.bgImage
+		if image then
+			if D.CustomBg ~= "" then
+				if D.CustomBg ~= P.bgId then
+					P.bgId = D.CustomBg
+					image.Image = (Lib.ResolveImage(D.CustomBg))
+				end
+				local zoom = D.BgZoom / 100
+				image.Visible = true
+				image.Position = UDim2.fromScale(0.5, 0.5)
+				image.Size = UDim2.fromScale(zoom, zoom)
+				image.ImageTransparency = (100 - D.BgOpacity) / 100
+			else
+				image.Visible = false
+			end
+		end
+		local layer, gradient, fx = P.gradLayer, P.gradient, D.Fx
+		if layer and gradient then
+			layer.Visible = fx.Gradient
+			if fx.Gradient then
+				local a, b, c = fx.A, fx.A:Lerp(fx.B, 0.5), fx.B
+				for _, entry in ipairs(GRADIENTS) do
+					if entry[1] == fx.Style then
+						a, b, c = entry[2], entry[3], entry[4]
+						break
+					end
+				end
+				gradient.Color = ColorSequence.new({
+					ColorSequenceKeypoint.new(0, a), ColorSequenceKeypoint.new(0.5, b), ColorSequenceKeypoint.new(1, c)
+				})
+				gradient.Rotation = fx.Angle
+				layer.BackgroundTransparency = 1 - fx.Strength / 100
+			end
+		end
+		PaintFx()
+	end
+
+	local function PaintWindow()
+		local radius = UDim.new(0, D.CornerRadius)
+		for _, corner in ipairs(P.corner) do corner.CornerRadius = radius end
+		P.main.BackgroundTransparency = D.WindowTransparency / 100
+		local alpha = D.PanelTransparency / 100
+		for _, frame in ipairs(P.panel) do frame.BackgroundTransparency = alpha end
+		PaintHeader()
+	end
+
+	local function PaintTheme()
+		cur = Lib.DeriveTheme(Spec())
+		local c = cur
+		P.main.BackgroundColor3 = c.Main
+		for _, rec in ipairs(P.theme) do
+			rec[1][rec[2]] = rec[3] == 0.5 and c.Card or (rec[3] == 0.7 and c.Item or c.Base)
+		end
+		for _, rec in ipairs(P.text) do
+			rec[1].TextColor3 = rec[2] == "Primary" and c.Primary or c.Secondary
+		end
+		for _, image in ipairs(P.image) do image.ImageColor3 = c.Primary end
+		for _, bar in ipairs(P.bars) do bar.BackgroundColor3 = c.Primary end
+		for _, rec in ipairs(P.switch) do
+			rec[1].BackgroundColor3 = rec[2] and c.SwitchOn or c.SwitchOff
+		end
+		PaintHeader()
+		PaintNav()
+		PaintSubs()
+		PaintFx()
+	end
+
+	local function PaintFont()
+		local font = FONTS[D.FontIndex]
+		if not font then return end
+		for _, rec in ipairs(P.font) do
+			rec[1].Font = rec[2] == 2 and font[3] or font[2]
+		end
+	end
+
+	local function PaintLayout()
+		P.main.Size = UDim2.fromOffset(D.Width, D.Height)
+		if P.navBox then P.navBox.Position = Lib.NavPosition(11, D.Nav) end
+	end
+
+	local function Paint(kind)
+		if not P then return end
+		if kind == "theme" then
+			PaintTheme()
+		elseif kind == "window" then
+			PaintWindow()
+		elseif kind == "bg" then
+			PaintBg()
+		elseif kind == "font" then
+			PaintFont()
+		elseif kind == "layout" then
+			PaintLayout()
+			studio.Fit()
+		else
+			PaintTheme()
+			PaintWindow()
+			PaintBg()
+			PaintLayout()
+		end
+	end
+
+	local function Queue(kind)
+		if queued[kind] then return end
+		queued[kind] = true
+		task.delay(0.05, function()
+			queued[kind] = nil
+			Paint(kind)
+		end)
+	end
+
+	local function Fit()
+		if not P then return end
+		local base = Lib.MenuBaseScale or 1
+		local area = canvas.AbsoluteSize / base
+		local w, h = D.Width, D.Height
+		local scale = math.clamp(math.min((area.X - 32) / w, (area.Y - 32) / h), 0.2, 1)
+		P.scale.Scale = scale
+		host.Size = UDim2.fromOffset(w * scale, h * scale)
+	end
+
+	function studio.Fit()
+		Fit()
+	end
+
+	function studio.Show(id)
+		if not P then return end
+		P.active = id
+		for name, section in pairs(P.sections) do
+			section.Visible = name == id
+		end
+		PaintNav()
+		PaintSubs()
+	end
+
+	local function WireSubs(section)
+		local views, lookup = {}, {}
+		for _, child in ipairs(section:GetChildren()) do
+			if child:IsA("CanvasGroup") then
+				views[child.Name] = child
+				lookup[child.Name] = child.Name
+				lookup[Lib.Ru(child.Name)] = child.Name
+			end
+		end
+		if next(views) == nil then return end
+		local group = { buttons = {} }
+		for _, obj in ipairs(section:GetDescendants()) do
+			local viewName = obj:IsA("TextButton") and lookup[obj.Text]
+			if viewName and not group.buttons[viewName] then
+				local inside, parent = false, obj.Parent
+				while parent and parent ~= section do
+					if views[parent.Name] == parent then
+						inside = true
+						break
+					end
+					parent = parent.Parent
+				end
+				if not inside then group.buttons[viewName] = obj end
+			end
+		end
+		for name, button in pairs(group.buttons) do
+			if views[name].Visible then group.selected = name end
+			button.MouseButton1Click:Connect(function()
+				Lib.PlayClick()
+				group.selected = name
+				for viewName, view in pairs(views) do
+					local on = viewName == name
+					view.Visible = on
+					view.GroupTransparency = on and 0 or 1
+					view.Position = UDim2.new(0, 180, 0, 10)
+				end
+				PaintSubs()
+			end)
+		end
+		if not group.selected then group.selected = next(group.buttons) end
+		P.subs[#P.subs + 1] = group
+	end
+
+	local function ClearClone()
+		if P then
+			P.main:Destroy()
+			P = nil
+		end
+	end
+
+	local function BuildClone()
+		local source = UI.Main
+		local copy = source:Clone()
+		if not copy then return end
+		local map = {}
+		Pair(map, source, copy)
+
+		P = {
+			main = copy, theme = {}, text = {}, image = {}, switch = {}, panel = {}, corner = {}, bars = {}, font = {},
+			nav = {}, sections = {}, subs = {}, active = State.ActiveMain ~= "" and State.ActiveMain or "Home", bgId = State.CustomBackgroundId or ""
+		}
+
+		for element, data in pairs(UI.ThemeElements) do
+			local target = map[element]
+			if target then P.theme[#P.theme + 1] = { target, data[1], data[2] } end
+		end
+		for element, role in pairs(UI.TextThemeElements) do
+			local target = map[element]
+			if target then P.text[#P.text + 1] = { target, role } end
+		end
+		for image in pairs(Lib.ImageTheme) do
+			local target = map[image]
+			if target then P.image[#P.image + 1] = target end
+		end
+		for element in pairs(UI.PanelElements) do
+			local target = map[element]
+			if target then P.panel[#P.panel + 1] = target end
+		end
+		for _, sw in ipairs(UI.Switches) do
+			local target = map[sw.Bg]
+			if target then P.switch[#P.switch + 1] = { target, sw.GetState() } end
+		end
+		for _, bars in pairs(UI.Graphs) do
+			for _, bar in ipairs(bars) do
+				local target = map[bar]
+				if target then P.bars[#P.bars + 1] = target end
+			end
+		end
+		if map[UI.MainCorner] then P.corner[1] = map[UI.MainCorner] end
+		for corner in pairs(Lib.BoundCorners) do
+			local target = map[corner]
+			if target then P.corner[#P.corner + 1] = target end
+		end
+		for original, target in pairs(map) do
+			if Lib.TextClasses[original.ClassName] then
+				local role = Lib.FontRole(original)
+				if role ~= 0 then P.font[#P.font + 1] = { target, role } end
+			end
+		end
+
+		P.headerIcon, P.headerLogo, P.bgImage = map[UI.HeaderIcon], map[UI.HeaderLogo], map[UI.CustomBgImage]
+		local container = map[UI.BackgroundContainer]
+		if container then
+			P.gradLayer = container:FindFirstChild("GradientLayer")
+			P.gradient = P.gradLayer and P.gradLayer:FindFirstChildOfClass("UIGradient")
+			P.fxLayer = container:FindFirstChild("EffectsLayer")
+		end
+
+		for _, child in ipairs(copy:GetChildren()) do
+			if child.Name == "ResizeHandle" or child.Name == "HalloweenDecor" then child:Destroy() end
+		end
+
+		local decorCorner = Lib.Create("UICorner", { CornerRadius = UDim.new(0, State.CornerRadius) })
+		P.corner[#P.corner + 1] = decorCorner
+		P.decor = Lib.Create("CanvasGroup", {
+			Name = "StudioDecor", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Visible = false, ZIndex = 4, Parent = copy, decorCorner
+		})
+		Lib.Create("ImageLabel", {
+			Size = UDim2.fromOffset(110, 110), BackgroundTransparency = 1, Image = Lib.HalloweenWeb, ImageTransparency = 0.15,
+			ScaleType = Enum.ScaleType.Fit, Parent = P.decor
+		})
+		Lib.Create("ImageLabel", {
+			Size = UDim2.fromOffset(110, 110), AnchorPoint = Vector2.new(1, 1), Position = UDim2.fromScale(1, 1), Rotation = 180,
+			BackgroundTransparency = 1, Image = Lib.HalloweenWeb, ImageTransparency = 0.15, ScaleType = Enum.ScaleType.Fit, Parent = P.decor
+		})
+
+		local nav = map[UI.TopNavContainer]
+		P.navBox = nav
+		for _, id in ipairs(TABS) do
+			local section = map[UI[id .. "Section"]]
+			P.sections[id] = section
+			local button = nav and nav:FindFirstChild("NavTab_" .. id)
+			if button then
+				P.nav[#P.nav + 1] = { id = id, icon = button:FindFirstChildOfClass("ImageLabel"), line = button:FindFirstChildOfClass("Frame") }
+				button.MouseButton1Click:Connect(function()
+					Lib.PlayClick()
+					studio.Show(id)
+				end)
+			end
+			if section then WireSubs(section) end
+		end
+
+		copy.Name = "UIStudioCopy"
+		copy.AnchorPoint = Vector2.zero
+		copy.Position = UDim2.fromOffset(0, 0)
+		copy.Size = UDim2.fromOffset(State.OriginalSize.X.Offset, State.OriginalSize.Y.Offset)
+		copy.Visible = true
+		copy.ZIndex = 1
+		local scale = copy:FindFirstChild("SeptusScale")
+		if not scale then
+			scale = Instance.new("UIScale")
+			scale.Parent = copy
+		end
+		P.scale = scale
+		copy.Parent = host
+	end
+
+	local function RefreshAll()
+		for _, fn in ipairs(refreshers) do fn() end
+	end
+
+	local W = math.clamp(math.floor(UI.Screen.AbsoluteSize.X / (Lib.MenuBaseScale or 1)) - 40, 700, 980)
+	local H = math.clamp(math.floor(UI.Screen.AbsoluteSize.Y / (Lib.MenuBaseScale or 1)) - 40, 460, 620)
+	local PANEL_W = 300
+
+	FromLive()
+	LoadPresets()
+
+	win = Lib.CreateWindow({
+		Name = "SeptusUIStudio", Title = "UI Studio", Width = W, Height = H,
+		OnVisibility = function(visible)
+			if visible then
+				studio.Sync()
+			else
+				task.delay(0.35, function()
+					if not win.IsVisible() then ClearClone() end
+				end)
+			end
+		end
+	})
+	studio.Win = win
+
+	local body = win.Body
+
+	canvas = Lib.Create("Frame", {
+		Size = UDim2.new(1, -PANEL_W, 1, 0), Position = UDim2.fromOffset(PANEL_W, 0), BackgroundColor3 = Color3.new(1, 1, 1),
+		BorderSizePixel = 0, ClipsDescendants = true, Parent = body,
+		Lib.Create("UIGradient", { Rotation = 35, Color = ColorSequence.new(Color3.fromRGB(78, 84, 112), Color3.fromRGB(22, 23, 32)) })
+	})
+	for _, blob in ipairs({
+		{ 0.12, 0.2, 260, Color3.fromRGB(90, 120, 255) },
+		{ 0.9, 0.85, 320, Color3.fromRGB(255, 90, 150) },
+		{ 0.7, 0.1, 180, Color3.fromRGB(70, 220, 190) }
+	}) do
+		Lib.Create("Frame", {
+			Size = UDim2.fromOffset(blob[3], blob[3]), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(blob[1], blob[2]),
+			BackgroundColor3 = blob[4], BackgroundTransparency = 0.5, BorderSizePixel = 0, Parent = canvas, Round(blob[3])
+		})
+	end
+	host = Lib.Create("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundTransparency = 1, Parent = canvas
+	})
+	Lib.Create("TextLabel", {
+		Size = UDim2.new(1, -24, 0, 16), Position = UDim2.new(0, 12, 1, -22), BackgroundTransparency = 1,
+		Text = "A live copy of your interface. Nothing changes in the real UI until you press Apply.",
+		TextColor3 = Color3.fromRGB(190, 195, 210), TextSize = 11, Font = Enum.Font.GothamMedium,
+		TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 5, Parent = canvas
+	})
+	canvas:GetPropertyChangedSignal("AbsoluteSize"):Connect(Fit)
+
+	local panel = Lib.Create("Frame", {
+		Size = UDim2.new(0, PANEL_W, 1, 0), BackgroundColor3 = Lib.Theme.Card, BorderSizePixel = 0, ZIndex = 2, Parent = body
+	})
+	Lib.RegisterThemeElement(panel, "BackgroundColor3", 1)
+
+	local function Button(parent, text, x, y, w, h, primary)
+		local button = Lib.Create("TextButton", {
+			Size = UDim2.fromOffset(w, h), Position = UDim2.fromOffset(x, y), BackgroundColor3 = primary and Color3.new(1, 1, 1) or Lib.Theme.Item,
+			Text = text, TextColor3 = primary and Color3.new(0, 0, 0) or Lib.Palette.Primary, TextSize = 12, Font = Enum.Font.GothamBold,
+			AutoButtonColor = false, ZIndex = 3, Parent = parent, Round(7)
+		})
+		if not primary then
+			Lib.RegisterThemeElement(button, "BackgroundColor3", 0.7)
+			Lib.RegisterThemeText(button, "Primary")
+		end
+		return button
+	end
+
+	local top = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 104), BackgroundTransparency = 1, ZIndex = 3, Parent = panel })
+	local applyBtn = Button(top, "Apply to UI", 12, 12, 170, 34, true)
+	local resetBtn = Button(top, "Reset", 190, 12, 98, 34, false)
+	local nameBox = Lib.Create("TextBox", {
+		Size = UDim2.fromOffset(190, 34), Position = UDim2.fromOffset(12, 54), BackgroundColor3 = Lib.Theme.Item, Text = "",
+		PlaceholderText = "Preset name...", PlaceholderColor3 = Lib.Palette.Secondary, TextColor3 = Lib.Palette.Primary, TextSize = 12,
+		Font = Enum.Font.GothamMedium, ClearTextOnFocus = false, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 3, Parent = top,
+		Round(7), Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
+	})
+	Lib.RegisterThemeElement(nameBox, "BackgroundColor3", 0.7)
+	Lib.RegisterThemeText(nameBox, "Primary")
+	local saveBtn = Button(top, "Save", 210, 54, 78, 34, false)
+
+	local scroll = Lib.Create("ScrollingFrame", {
+		Size = UDim2.new(1, 0, 1, -104), Position = UDim2.fromOffset(0, 104), BackgroundTransparency = 1, ScrollBarThickness = 2,
+		ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), BorderSizePixel = 0, ZIndex = 3, Parent = panel
+	})
+	local layout = Lib.Create("UIListLayout", { Padding = UDim.new(0, 14), SortOrder = Enum.SortOrder.LayoutOrder, Parent = scroll })
+	Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 14), Parent = scroll })
+	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+		scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
+	end)
+
+	local order = 0
+	local function Group(title)
+		order = order + 1
+		return Lib.CreateFeatureGroup(scroll, title, order)
+	end
+
+	local function Caption(parent, text, x, y, w, h, size, bold, role, align)
+		local label = Lib.Create("TextLabel", {
+			Size = UDim2.new(0, w, 0, h), Position = UDim2.fromOffset(x, y), BackgroundTransparency = 1, Text = text,
+			TextColor3 = Lib.Palette[role], TextSize = size, Font = bold and Enum.Font.GothamBold or Enum.Font.GothamMedium,
+			TextXAlignment = align or Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = parent
+		})
+		Lib.RegisterThemeText(label, role)
+		return label
+	end
+
+	local function Divider(parent)
+		Lib.Create("Frame", {
+			Size = UDim2.new(1, -28, 0, 1), Position = UDim2.new(0, 14, 1, -1), BackgroundColor3 = Color3.new(1, 1, 1),
+			BackgroundTransparency = 0.9, BorderSizePixel = 0, Parent = parent
+		})
+	end
+
+	local function AddSlider(group, title, min, max, store, key, suffix, kind, last)
+		local row = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 54), BackgroundTransparency = 1, Parent = group })
+		Caption(row, title, 14, 6, 170, 20, 13, true, "Primary")
+		local value = Caption(row, "", 190, 6, 76, 20, 12, false, "Secondary", Enum.TextXAlignment.Right)
+		local track = Lib.Create("Frame", {
+			Size = UDim2.new(1, -28, 0, 6), Position = UDim2.fromOffset(14, 36), BackgroundColor3 = Lib.Theme.Item, BorderSizePixel = 0, Parent = row, Round(3)
+		})
+		Lib.RegisterThemeElement(track, "BackgroundColor3", 0.7)
+		local fill = Lib.Create("Frame", { Size = UDim2.new(0, 0, 1, 0), BackgroundColor3 = Lib.Palette.SwitchOn, BorderSizePixel = 0, Parent = track, Round(3) })
+		fills[#fills + 1] = fill
+		local knob = Lib.Create("Frame", {
+			Size = UDim2.fromOffset(14, 14), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0, 0.5),
+			BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = 2, Parent = track, Round(7)
+		})
+		local hit = Lib.Create("TextButton", {
+			Size = UDim2.new(1, 0, 0, 24), Position = UDim2.new(0, 0, 0.5, -12), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 3, Parent = track
+		})
+		local function Show()
+			local v = store()[key]
+			local t = (v - min) / (max - min)
+			fill.Size = UDim2.new(t, 0, 1, 0)
+			knob.Position = UDim2.new(t, 0, 0.5, 0)
+			value.Text = v .. (suffix or "")
+		end
+		Lib.BindDrag(hit, function(position)
+			local t = math.clamp((position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+			local v = math.round(min + t * (max - min))
+			if v == store()[key] then return end
+			store()[key] = v
+			Show()
+			Queue(kind)
+		end)
+		refreshers[#refreshers + 1] = Show
+		if not last then Divider(row) end
+		Show()
+	end
+
+	local function AddToggle(group, title, desc, store, key, kind, last)
+		local row = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 50), BackgroundTransparency = 1, Parent = group })
+		Caption(row, title, 14, 7, 190, 20, 13, true, "Primary")
+		Caption(row, desc, 14, 26, 200, 16, 11, false, "Secondary")
+		local bg = Lib.Create("TextButton", {
+			Size = UDim2.fromOffset(40, 22), Position = UDim2.new(1, -54, 0.5, -11), Text = "", AutoButtonColor = false, Parent = row, Round(11)
+		})
+		local knob = Lib.Create("Frame", {
+			Size = UDim2.fromOffset(16, 16), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = bg, Round(8)
+		})
+		local function Show(animate)
+			local on = store()[key] == true
+			local color = on and Lib.Palette.SwitchOn or Lib.Palette.SwitchOff
+			local position = on and UDim2.new(1, -19, 0.5, -8) or UDim2.new(0, 3, 0.5, -8)
+			if animate then
+				Lib.Tween(bg, 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundColor3 = color })
+				Lib.Tween(knob, 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { Position = position })
+			else
+				bg.BackgroundColor3 = color
+				knob.Position = position
+			end
+		end
+		Lib.RegisterSwitch(bg, function() return store()[key] == true end, Show)
+		bg.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			store()[key] = not store()[key]
+			Show(true)
+			Paint(kind)
+		end)
+		refreshers[#refreshers + 1] = function() Show(false) end
+		if not last then Divider(row) end
+		Show(false)
+	end
+
+	local function AddChips(group, entries, isSelected, pick, columns)
+		local rows = math.ceil(#entries / columns)
+		local holder = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, rows * 36 + 14), BackgroundTransparency = 1, Parent = group })
+		Lib.Create("UIGridLayout", {
+			CellSize = UDim2.new(1 / columns, -8, 0, 28), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder, Parent = holder
+		})
+		Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 6), Parent = holder })
+		local chips = {}
+		local function Show()
+			for i, chip in ipairs(chips) do
+				chip.Stroke.Transparency = isSelected(entries[i][2]) and 0 or 1
+			end
+		end
+		for i, entry in ipairs(entries) do
+			local chip = Lib.Create("TextButton", {
+				BackgroundColor3 = Lib.Theme.Item, Text = entry[1], TextColor3 = Lib.Palette.Primary, TextSize = 11,
+				Font = entry[3] or Enum.Font.GothamMedium, AutoButtonColor = false, LayoutOrder = i, Parent = holder, Round(7)
+			})
+			Lib.RegisterThemeElement(chip, "BackgroundColor3", 0.7)
+			Lib.RegisterThemeText(chip, "Primary")
+			if entry[3] then
+				Lib.PinFont(chip)
+				chip.Font = entry[3]
+			end
+			local stroke = Lib.Create("UIStroke", {
+				Color = Lib.Palette.Primary, Thickness = 1.5, Transparency = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = chip
+			})
+			strokes[#strokes + 1] = stroke
+			chips[i] = { Stroke = stroke }
+			chip.MouseButton1Click:Connect(function()
+				Lib.PlayClick()
+				pick(entry[2])
+				RefreshAll()
+			end)
+		end
+		refreshers[#refreshers + 1] = Show
+		Show()
+	end
+
+	table.insert(Lib.ThemeHooks, function()
+		for _, stroke in ipairs(strokes) do stroke.Color = Lib.Palette.Primary end
+		for _, fill in ipairs(fills) do fill.BackgroundColor3 = Lib.Palette.SwitchOn end
+	end)
+
+	local GALLERY = {
+		{ "Midnight", "0B0D14", "12151F", "F2F4FA", "5B8CFF", "1A1E2B", "8C93A8", "262B3B", 12, 0, 0, { "Midnight", 45, 40, false, false, true, false, false, 50 } },
+		{ "Aurora", "08120F", "0E1D18", "EAFBF4", "2EE6A6", "15291F", "7FA595", "1E3329", 14, 0, 0, { "Aurora", 60, 55, true, false, true, false, true, 50 } },
+		{ "Sakura", "FBF1F4", "FFFFFF", "3A2A31", "E8618C", "F4DDE5", "8E6F7A", "DDC3CC", 16, 0, 0, { "Rose", 30, 25, false, true, false, false, false, 40 } },
+		{ "Cyber Neon", "07040F", "0F0A1E", "F5EEFF", "FF2BD6", "1A1230", "9A86C8", "281C45", 6, 0, 0, { "Violet", 120, 60, true, false, true, true, false, 60 } },
+		{ "Mono Light", "F2F2F4", "FFFFFF", "141414", "141414", "E8EAEE", "555555", "CDCDD2", 10, 0, 0 },
+		{ "Ocean", "06121C", "0A1B2A", "E6F6FF", "22B8F0", "11283B", "6FA0BC", "183349", 14, 0, 0, { "Ocean", 90, 50, false, false, false, false, true, 50 } },
+		{ "Ember", "120A08", "1C100C", "FFF1EA", "FF6B3D", "2A1812", "B08A7C", "3A2219", 10, 0, 0, { "Sunset", 135, 45, false, false, false, false, true, 45 } },
+		{ "Forest", "08110A", "0F1B12", "EDF7EE", "56D364", "172A1B", "7FA086", "20362A", 12, 0, 0, { "Emerald", 30, 35, false, false, false, false, true, 40 } },
+		{ "Glass", "0E1118", "161B26", "F5F7FB", "7AA2FF", "202638", "98A2B8", "2A3247", 18, 35, 30, { "Aurora", 45, 45, false, false, true, false, false, 40 } },
+		{ "Blood Moon", "0C0506", "150A0C", "FFECEE", "E11D34", "220F13", "A87F84", "331820", 8, 0, 0, { "Rose", 20, 30, false, false, false, true, false, 50 } }
+	}
+
+	local galleryGroup = Group("Gallery")
+	local galleryHolder = Lib.Create("Frame", {
+		Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = galleryGroup,
+		Lib.Create("UIGridLayout", { CellSize = UDim2.new(0.5, -8, 0, 54), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+		Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
+	})
+	for index, e in ipairs(GALLERY) do
+		local fx = e[12] or {}
+		local data = {
+			Name = e[1],
+			Colors = { Background = e[2], Surface = e[3], Text = e[4], Accent = e[5], Item = e[6], Muted = e[7], SwitchOff = e[8] },
+			CornerRadius = e[9], WindowTransparency = e[10], PanelTransparency = e[11],
+			Fx = {
+				Gradient = fx[1] ~= nil, Style = fx[1] or "Aurora", Angle = fx[2] or 45, Strength = fx[3] or 35, Spin = fx[4] == true,
+				Snow = fx[5] == true, Twinkle = fx[6] == true, Shooting = fx[7] == true, Particles = fx[8] == true, Intensity = fx[9] or 50, A = "FFFFFF", B = "000000"
+			}
+		}
+		local background, surface, accent = Color3.fromHex(e[2]), Color3.fromHex(e[3]), Color3.fromHex(e[5])
+		local card = Lib.Create("TextButton", {
+			BackgroundColor3 = Color3.new(1, 1, 1), Text = "", AutoButtonColor = false, LayoutOrder = index, Parent = galleryHolder,
+			Round(8),
+			Lib.Create("UIGradient", {
+				Rotation = 20,
+				Color = ColorSequence.new({
+					ColorSequenceKeypoint.new(0, background), ColorSequenceKeypoint.new(0.5, background),
+					ColorSequenceKeypoint.new(0.501, surface), ColorSequenceKeypoint.new(0.78, surface),
+					ColorSequenceKeypoint.new(0.781, accent), ColorSequenceKeypoint.new(1, accent)
+				})
+			}),
+			Lib.Create("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1, Transparency = 0.85, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
+		})
+		Lib.Create("TextLabel", {
+			Size = UDim2.new(1, -16, 0, 18), Position = UDim2.new(0, 10, 1, -24), BackgroundTransparency = 1, Text = e[1],
+			TextColor3 = Lib.Luma(background) > 0.6 and Color3.fromRGB(20, 20, 20) or Color3.new(1, 1, 1), TextSize = 12,
+			Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = card
+		})
+		card.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			D = Unpack(data)
+			D.Name = e[1]
+			nameBox.Text = e[1]
+			RefreshAll()
+			Paint("all")
+			Paint("font")
+		end)
+	end
+
+	local presetGroup = Group("Saved UI Presets")
+	local presetList = Lib.Create("Frame", {
+		Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = presetGroup,
+		Lib.Create("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
+		Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 8) })
+	})
+
+	local importRow = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 52), BackgroundTransparency = 1, Parent = presetGroup })
+	local importBox = Lib.Create("TextBox", {
+		Size = UDim2.new(1, -96, 0, 32), Position = UDim2.fromOffset(10, 10), BackgroundColor3 = Lib.Theme.Item, Text = "",
+		PlaceholderText = "Paste a preset code...", PlaceholderColor3 = Lib.Palette.Secondary, TextColor3 = Lib.Palette.Primary, TextSize = 11,
+		Font = Enum.Font.GothamMedium, ClearTextOnFocus = false, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd,
+		Parent = importRow, Round(7), Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
+	})
+	Lib.RegisterThemeElement(importBox, "BackgroundColor3", 0.7)
+	Lib.RegisterThemeText(importBox, "Primary")
+	local importBtn = Button(importRow, "Import", 0, 10, 74, 32, true)
+	importBtn.AnchorPoint = Vector2.new(1, 0)
+	importBtn.Position = UDim2.new(1, -10, 0, 10)
+
+	local function RebuildPresets()
+		for _, child in ipairs(presetList:GetChildren()) do
+			if child:IsA("GuiObject") then child:Destroy() end
+		end
+		if #presets == 0 then
+			local note = Lib.Create("TextLabel", {
+				Size = UDim2.new(1, 0, 0, 28), BackgroundTransparency = 1, Text = "No saved presets yet", TextColor3 = Lib.Palette.Secondary,
+				TextSize = 11, Font = Enum.Font.GothamMedium, Parent = presetList
+			})
+			Lib.RegisterThemeText(note, "Secondary")
+			return
+		end
+		for i, entry in ipairs(presets) do
+			local item = Lib.Create("Frame", {
+				Size = UDim2.new(1, 0, 0, 38), BackgroundColor3 = Lib.Theme.Item, LayoutOrder = i, Parent = presetList, Round(7)
+			})
+			Lib.RegisterThemeElement(item, "BackgroundColor3", 0.7)
+			Caption(item, tostring(entry.Name), 12, 0, 100, 38, 12, true, "Primary")
+			local copy = Button(item, "Copy", 116, 6, 46, 26, false)
+			local load = Button(item, "Load", 166, 6, 46, 26, true)
+			copy.MouseButton1Click:Connect(function()
+				Lib.PlayClick()
+				local code = Lib.ShareEncode("UI", entry.Data)
+				if not Lib.CopyText(code) then importBox.Text = code end
+				Lib.Notify({ Title = "UI Studio", Text = "Preset code copied" })
+			end)
+			local delete = Lib.Create("TextButton", {
+				Size = UDim2.fromOffset(26, 26), Position = UDim2.fromOffset(218, 6), BackgroundColor3 = Color3.fromRGB(220, 50, 50),
+				Text = "\u{00D7}", TextColor3 = Color3.new(1, 1, 1), TextSize = 14, Font = Enum.Font.GothamBold, AutoButtonColor = false, Parent = item, Round(7)
+			})
+			load.MouseButton1Click:Connect(function()
+				Lib.PlayClick()
+				D = Unpack(entry.Data)
+				D.Name = entry.Name
+				nameBox.Text = entry.Name
+				RefreshAll()
+				Paint("all")
+				Paint("font")
+			end)
+			delete.MouseButton1Click:Connect(function()
+				Lib.PlayClick()
+				table.remove(presets, i)
+				SavePresets()
+				RebuildPresets()
+			end)
+		end
+	end
+
+	local themeGroup = Group("Theme")
+	local swatchHolder = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 60), BackgroundTransparency = 1, Parent = themeGroup })
+	local swatchGrid = Lib.Create("UIGridLayout", {
+		CellSize = UDim2.fromOffset(36, 36), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder, Parent = swatchHolder
+	})
+	Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 12), PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 8), Parent = swatchHolder })
+	swatchGrid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+		swatchHolder.Size = UDim2.new(1, 0, 0, swatchGrid.AbsoluteContentSize.Y + 24)
+	end)
+	local swatches = {}
+
+	local function ShowSwatches()
+		for index, stroke in pairs(swatches) do
+			stroke.Transparency = (not D.Colors and D.ThemeIndex == index) and 0 or 1
+		end
+	end
+
+	local function BuildSwatches()
+		for _, child in ipairs(swatchHolder:GetChildren()) do
+			if child:IsA("GuiButton") then child:Destroy() end
+		end
+		table.clear(swatches)
+		local presetsCount = #Lib.ThemePresets
+		local list = {}
+		for i = 1, presetsCount do list[#list + 1] = { i, Lib.ThemePresets[i], i } end
+		list[#list + 1] = { 0, Lib.HalloweenTheme, presetsCount + 1 }
+		for k, theme in ipairs(State.CustomThemes) do list[#list + 1] = { presetsCount + k, theme, presetsCount + 1 + k } end
+		for _, entry in ipairs(list) do
+			local index, spec, slot = entry[1], entry[2], entry[3]
+			local isTable = typeof(spec) == "table"
+			local swatch = Lib.Create("TextButton", {
+				BackgroundColor3 = isTable and Color3.new(1, 1, 1) or spec, Text = "", AutoButtonColor = false, LayoutOrder = slot, Parent = swatchHolder, Round(8)
+			})
+			if isTable then
+				Lib.Create("UIGradient", {
+					Rotation = 45,
+					Color = ColorSequence.new({
+						ColorSequenceKeypoint.new(0, spec.Background), ColorSequenceKeypoint.new(0.4, spec.Background),
+						ColorSequenceKeypoint.new(0.401, spec.Surface), ColorSequenceKeypoint.new(0.7, spec.Surface),
+						ColorSequenceKeypoint.new(0.701, spec.Accent), ColorSequenceKeypoint.new(1, spec.Accent)
+					}),
+					Parent = swatch
+				})
+			end
+			local stroke = Lib.Create("UIStroke", {
+				Color = Color3.new(1, 1, 1), Thickness = 2, Transparency = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = swatch
+			})
+			swatches[index] = stroke
+			swatch.MouseButton1Click:Connect(function()
+				Lib.PlayClick()
+				D.ThemeIndex, D.Colors, D.Name = index, nil, nil
+				RefreshAll()
+				Paint("theme")
+			end)
+		end
+		ShowSwatches()
+	end
+	refreshers[#refreshers + 1] = ShowSwatches
+
+	local colorGroup = Group("Custom Colors")
+	local rows, pickerKey = {}, nil
+	local pk = { H = 0, S = 0, V = 0 }
+	local sv, svKnob, hue, hueKnob
+
+	local function PickerVisuals()
+		sv.BackgroundColor3 = Color3.fromHSV(pk.H, 1, 1)
+		svKnob.Position = UDim2.fromScale(pk.S, 1 - pk.V)
+		hueKnob.Position = UDim2.new(pk.H, 0, 0.5, 0)
+	end
+
+	local function LoadPicker(color)
+		local h, s, v = color:ToHSV()
+		if s > 0 and v > 0 then pk.H = h end
+		pk.S, pk.V = s, v
+		PickerVisuals()
+	end
+
+	local function SetColor(key, color, fromPicker)
+		if not D.Colors then D.Colors = ColorsOf(Spec()) end
+		D.Colors[key] = color
+		rows[key].swatch.BackgroundColor3 = color
+		rows[key].hex.Text = "#" .. color:ToHex()
+		if not fromPicker and pickerKey == key then LoadPicker(color) end
+		ShowSwatches()
+		Queue("theme")
+	end
+
+	local pickerFrame = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 158), BackgroundTransparency = 1, Visible = false, LayoutOrder = 99, Parent = colorGroup })
+	sv = Lib.Create("Frame", {
+		Size = UDim2.new(1, -28, 0, 110), Position = UDim2.fromOffset(14, 10), BackgroundColor3 = Color3.new(1, 0, 0), Parent = pickerFrame, Round(6)
+	})
+	Lib.Create("Frame", {
+		Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = sv, Round(6),
+		Lib.Create("UIGradient", { Transparency = NumberSequence.new(0, 1) })
+	})
+	Lib.Create("Frame", {
+		Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BorderSizePixel = 0, Parent = sv, Round(6),
+		Lib.Create("UIGradient", { Rotation = 90, Transparency = NumberSequence.new(1, 0) })
+	})
+	svKnob = Lib.Create("Frame", {
+		Size = UDim2.fromOffset(14, 14), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, ZIndex = 3, Parent = sv,
+		Round(7), Lib.Create("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
+	})
+	local svHit = Lib.Create("TextButton", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 4, Parent = sv })
+	local hueSteps = {}
+	for i = 0, 6 do hueSteps[#hueSteps + 1] = ColorSequenceKeypoint.new(i / 6, Color3.fromHSV(i / 6, 1, 1)) end
+	hue = Lib.Create("Frame", {
+		Size = UDim2.new(1, -28, 0, 12), Position = UDim2.fromOffset(14, 134), BackgroundColor3 = Color3.new(1, 1, 1), Parent = pickerFrame,
+		Round(6), Lib.Create("UIGradient", { Color = ColorSequence.new(hueSteps) })
+	})
+	hueKnob = Lib.Create("Frame", {
+		Size = UDim2.fromOffset(14, 14), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = 3, Parent = hue,
+		Round(7), Lib.Create("UIStroke", { Color = Color3.new(0, 0, 0), Thickness = 1, Transparency = 0.6 })
+	})
+	local hueHit = Lib.Create("TextButton", {
+		Size = UDim2.new(1, 0, 0, 24), Position = UDim2.new(0, 0, 0.5, -12), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 4, Parent = hue
+	})
+	Lib.BindDrag(svHit, function(position)
+		if not pickerKey then return end
+		pk.S = math.clamp((position.X - sv.AbsolutePosition.X) / sv.AbsoluteSize.X, 0, 1)
+		pk.V = 1 - math.clamp((position.Y - sv.AbsolutePosition.Y) / sv.AbsoluteSize.Y, 0, 1)
+		PickerVisuals()
+		SetColor(pickerKey, Color3.fromHSV(pk.H, pk.S, pk.V), true)
+	end)
+	Lib.BindDrag(hueHit, function(position)
+		if not pickerKey then return end
+		pk.H = math.clamp((position.X - hue.AbsolutePosition.X) / hue.AbsoluteSize.X, 0, 1)
+		PickerVisuals()
+		SetColor(pickerKey, Color3.fromHSV(pk.H, pk.S, pk.V), true)
+	end)
+
+	for index, key in ipairs(KEYS) do
+		local row = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 38), BackgroundTransparency = 1, LayoutOrder = index, Parent = colorGroup })
+		Caption(row, KEY_NAMES[key], 14, 0, 130, 38, 12, true, "Primary")
+		local swatch = Lib.Create("TextButton", {
+			Size = UDim2.fromOffset(26, 26), Position = UDim2.new(1, -122, 0.5, -13), Text = "", AutoButtonColor = false, Parent = row, Round(7),
+			Lib.Create("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1, Transparency = 0.85 })
+		})
+		local hex = Lib.Create("TextBox", {
+			Size = UDim2.fromOffset(80, 26), Position = UDim2.new(1, -90, 0.5, -13), BackgroundColor3 = Lib.Theme.Item, Text = "",
+			TextColor3 = Lib.Palette.Primary, TextSize = 11, Font = Enum.Font.GothamMedium, ClearTextOnFocus = false, Parent = row, Round(7)
+		})
+		Lib.RegisterThemeElement(hex, "BackgroundColor3", 0.7)
+		Lib.RegisterThemeText(hex, "Primary")
+		rows[key] = { swatch = swatch, hex = hex }
+		swatch.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			pickerKey = key
+			pickerFrame.Visible = true
+			LoadPicker((D.Colors or ColorsOf(Spec()))[key])
+		end)
+		hex.FocusLost:Connect(function()
+			local ok, color = pcall(Color3.fromHex, hex.Text)
+			if ok then
+				SetColor(key, color)
+			else
+				hex.Text = "#" .. (D.Colors or ColorsOf(Spec()))[key]:ToHex()
+			end
+		end)
+	end
+	refreshers[#refreshers + 1] = function()
+		local colors = D.Colors or ColorsOf(Spec())
+		for _, key in ipairs(KEYS) do
+			rows[key].swatch.BackgroundColor3 = colors[key]
+			rows[key].hex.Text = "#" .. colors[key]:ToHex()
+		end
+		if pickerKey then LoadPicker(colors[pickerKey]) end
+	end
+
+	local windowGroup = Group("Window")
+	local function Self() return D end
+	local function Fx() return D.Fx end
+	AddSlider(windowGroup, "Corner Radius", 0, 28, Self, "CornerRadius", "", "window")
+	AddSlider(windowGroup, "Window Transparency", 0, 80, Self, "WindowTransparency", "%", "window")
+	AddSlider(windowGroup, "Panel Transparency", 0, 70, Self, "PanelTransparency", "%", "window")
+	AddToggle(windowGroup, "Hide Logo", "Hides the header icon", Self, "HideLogo", "window")
+	AddToggle(windowGroup, "Hide Name", "Hides the header title", Self, "HideName", "window", true)
+
+	local fontGroup = Group("Font")
+	local fontEntries = {}
+	for i, font in ipairs(FONTS) do fontEntries[i] = { font[1], i, font[2] } end
+	AddChips(fontGroup, fontEntries, function(value) return D.FontIndex == value end, function(value)
+		D.FontIndex, D.FontId = value, nil
+		Paint("font")
+	end, 3)
+
+	local bgGroup = Group("Background")
+	local bgRow = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 52), BackgroundTransparency = 1, Parent = bgGroup })
+	local bgBox = Lib.Create("TextBox", {
+		Size = UDim2.new(1, -28, 0, 34), Position = UDim2.fromOffset(14, 9), BackgroundColor3 = Lib.Theme.Item, Text = D.CustomBg,
+		PlaceholderText = "Asset ID or image URL...", PlaceholderColor3 = Lib.Palette.Secondary, TextColor3 = Lib.Palette.Primary, TextSize = 12,
+		Font = Enum.Font.GothamMedium, ClearTextOnFocus = false, TextXAlignment = Enum.TextXAlignment.Left, Parent = bgRow,
+		Round(7), Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
+	})
+	Lib.RegisterThemeElement(bgBox, "BackgroundColor3", 0.7)
+	Lib.RegisterThemeText(bgBox, "Primary")
+	bgBox.FocusLost:Connect(function()
+		D.CustomBg = bgBox.Text:match("^%s*(.-)%s*$")
+		Paint("bg")
+	end)
+	refreshers[#refreshers + 1] = function() bgBox.Text = D.CustomBg end
+	AddSlider(bgGroup, "Background Opacity", 10, 100, Self, "BgOpacity", "%", "bg")
+	AddSlider(bgGroup, "Background Zoom", 100, 160, Self, "BgZoom", "%", "bg", true)
+
+	local fxGroup = Group("Gradient & Effects")
+	AddToggle(fxGroup, "Background Gradient", "Soft color gradient", Fx, "Gradient", "bg")
+	local styleEntries = {}
+	for i, entry in ipairs(GRADIENTS) do styleEntries[i] = { entry[1], entry[1] } end
+	styleEntries[#styleEntries + 1] = { "Custom", "Custom" }
+	AddChips(fxGroup, styleEntries, function(value) return D.Fx.Style == value end, function(value)
+		D.Fx.Style = value
+		Paint("bg")
+	end, 3)
+	AddSlider(fxGroup, "Gradient Strength", 5, 100, Fx, "Strength", "%", "bg")
+	AddSlider(fxGroup, "Gradient Angle", 0, 360, Fx, "Angle", "\u{00B0}", "bg")
+	AddToggle(fxGroup, "Animated Gradient", "Applied to the real UI", Fx, "Spin", "bg")
+	AddToggle(fxGroup, "Snowfall", "Calm falling snowflakes", Fx, "Snow", "bg")
+	AddToggle(fxGroup, "Twinkling Stars", "Softly fading stars", Fx, "Twinkle", "bg")
+	AddToggle(fxGroup, "Shooting Stars", "A rare falling star", Fx, "Shooting", "bg")
+	AddToggle(fxGroup, "Floating Particles", "Slow drifting dust", Fx, "Particles", "bg")
+	AddSlider(fxGroup, "Effect Intensity", 20, 100, Fx, "Intensity", "%", "bg", true)
+
+	local layoutGroup = Group("Layout")
+	AddSlider(layoutGroup, "Window Width", 560, 1500, Self, "Width", " px", "layout")
+	AddSlider(layoutGroup, "Window Height", 380, 950, Self, "Height", " px", "layout")
+	local navHead = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, Parent = layoutGroup })
+	Caption(navHead, "Navigation Position", 14, 8, 220, 18, 12, true, "Primary")
+	AddChips(layoutGroup, { { "Left", "Left" }, { "Center", "Center" }, { "Right", "Right" } }, function(value) return D.Nav == value end, function(value)
+		D.Nav = value
+		Paint("layout")
+	end, 3)
+
+	importBtn.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		local kind, data = Lib.ShareDecode(importBox.Text)
+		if not kind then
+			Lib.Notify({ Title = "UI Studio", Text = data })
+			return
+		end
+		if kind ~= "UI" then
+			Lib.Notify({ Title = "UI Studio", Text = "This is a settings code, import it in Config > Share" })
+			return
+		end
+		if type(data.CustomBg) == "string" and data.CustomBg:find("://", 1, true) then data.CustomBg = nil end
+		D = Unpack(data)
+		D.Name = type(data.Name) == "string" and data.Name:sub(1, 24) or nil
+		importBox.Text = ""
+		RefreshAll()
+		Paint("all")
+		Paint("font")
+		Lib.Notify({ Title = "UI Studio", Text = "Preset imported, press Apply or Save" })
+	end)
+
+	saveBtn.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		local name = nameBox.Text:match("^%s*(.-)%s*$")
+		if name == "" then name = "Preset " .. (#presets + 1) end
+		name = name:sub(1, 24)
+		D.Name = name
+		local entry = { Name = name, Data = Pack(D) }
+		local replaced = false
+		for i, existing in ipairs(presets) do
+			if existing.Name == name then
+				presets[i] = entry
+				replaced = true
+				break
+			end
+		end
+		if not replaced then presets[#presets + 1] = entry end
+		SavePresets()
+		RebuildPresets()
+		Lib.Notify({ Title = "UI Studio", Text = "Saved preset: " .. name })
+	end)
+
+	applyBtn.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		Lib.ApplyAppearance(ToDump())
+		Lib.ApplyLayout(D.Width, D.Height, D.Nav)
+		Lib.Notify({ Title = "UI Studio", Text = "Applied to the interface" })
+		task.delay(0.5, function()
+			if win.IsVisible() then studio.Sync() end
+		end)
+	end)
+
+	resetBtn.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		studio.Sync()
+	end)
+
+	function studio.Sync()
+		ClearClone()
+		FromLive()
+		BuildSwatches()
+		RebuildPresets()
+		BuildClone()
+		RefreshAll()
+		Paint("all")
+		Fit()
+		if P then studio.Show(P.active) end
+	end
+
+	BuildSwatches()
+	RebuildPresets()
+	Lib.UIStudio = studio
+	win.Show()
+end
+
+function Lib.BuildStudioCard(parent, layoutOrder)
 	local card = Lib.Create("Frame", {
-		Name = "UIPreviewCard",
-		Size = UDim2.new(1, 0, 0, STAGE_H + 70),
-		BackgroundColor3 = Color3.fromRGB(15, 15, 15),
-		LayoutOrder = layoutOrder,
-		ClipsDescendants = true,
-		Parent = parent,
-		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
+		Name = "UIStudioCard", Size = UDim2.new(1, 0, 0, 88), BackgroundColor3 = Color3.fromRGB(15, 15, 15),
+		LayoutOrder = layoutOrder, Parent = parent, Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
 	})
 	Lib.RegisterThemeElement(card, "BackgroundColor3", 0.5)
 
 	local icon = Lib.Create("ImageLabel", {
-		Size = UDim2.fromOffset(18, 18), Position = UDim2.fromOffset(14, 12), BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(18, 18), Position = UDim2.fromOffset(14, 14), BackgroundTransparency = 1,
 		Image = "rbxassetid://92865789131206", ScaleType = Enum.ScaleType.Fit, Parent = card
 	})
 	Lib.RegisterThemeImage(icon)
 
 	local title = Lib.Create("TextLabel", {
-		Size = UDim2.new(1, -50, 0, 18), Position = UDim2.fromOffset(40, 12), BackgroundTransparency = 1, Text = "Live Preview",
+		Size = UDim2.new(1, -200, 0, 18), Position = UDim2.fromOffset(40, 14), BackgroundTransparency = 1, Text = "UI Studio",
 		TextColor3 = Lib.Palette.Primary, TextSize = 14, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = card
 	})
 	Lib.RegisterThemeText(title, "Primary")
 
 	local desc = Lib.Create("TextLabel", {
-		Size = UDim2.new(1, -50, 0, 16), Position = UDim2.fromOffset(40, 30), BackgroundTransparency = 1,
-		Text = "Shows how your Appearance settings look. Tabs can be switched, no functions are enabled here.",
-		TextColor3 = Lib.Palette.Secondary, TextSize = 11, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left,
-		TextTruncate = Enum.TextTruncate.AtEnd, Parent = card
+		Size = UDim2.new(1, -200, 0, 30), Position = UDim2.fromOffset(40, 36), BackgroundTransparency = 1,
+		Text = "A separate window with a full copy of the UI. Customize everything, save it as a preset and apply it.",
+		TextColor3 = Lib.Palette.Secondary, TextSize = 11, Font = Enum.Font.GothamMedium, TextWrapped = true,
+		TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, Parent = card
 	})
 	Lib.RegisterThemeText(desc, "Secondary")
 
-	local values = {}
-	for i, name in ipairs({ "Theme", "Corner Radius", "Window Opacity", "Panel Opacity", "Background" }) do
-		local y = 60 + (i - 1) * 50
-		local caption = Lib.Create("TextLabel", {
-			Size = UDim2.new(1, -444, 0, 14), Position = UDim2.fromOffset(430, y), BackgroundTransparency = 1, Text = string.upper(name),
-			TextColor3 = Lib.Palette.Secondary, TextSize = 10, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = card
+	local open = Lib.Create("TextButton", {
+		Size = UDim2.fromOffset(140, 36), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0),
+		BackgroundColor3 = Color3.new(1, 1, 1), Text = "Open UI Studio", TextColor3 = Color3.new(0, 0, 0), TextSize = 12,
+		Font = Enum.Font.GothamBold, AutoButtonColor = false, Parent = card, Lib.Create("UICorner", { CornerRadius = UDim.new(0, 7) })
+	})
+	open.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		Lib.OpenUIStudio()
+	end)
+	return card
+end
+
+
+Lib.FeatureToggles = {
+	"Bunny Hop", "Box ESP", "Name ESP", "Health ESP", "Distance ESP", "Tool ESP", "Tracer ESP", "Off-Screen Arrows", "Head Dot", "View Direction Line", "Skeleton ESP", "Chams", "History ESP", "Gradient ESP", "Hat", "Face Mask", "Halo", "Orbit", "Custom Crosshair", "Custom Mouse", "Boost FPS", "FullBright", "Remove Texture", "Part Deleted",
+	"No Fog", "Time Changer", "Ambient Color", "Atmosphere Tint", "Color Grade", "Bloom", "Custom Skybox", "Terrain Recolor", "World Recolor",
+	"Fly", "Anti Fling", "Anti Sit", "Anti Void", "Anti Stun", "Anti Ragdoll", "RTX Realistic", "Cyberpunk Neon", "Silent Hill Fog",
+	"Stalk Active", "Complete Suspension", "Usual Lag", "Anti-AFK", "Noclip", "Invisibility", "Auto Reconnect", "Teleport Tool",
+	"Cframe Aim", "Mouse Aim", "Silent Aim", "Trigger Bot", "Zero Recoil", "Zero Spread"
+}
+
+State.NavAlign = "Center"
+Lib.Stats = { FPS = 0, Ping = 0, Players = 0 }
+Lib.StatsTick = {}
+
+function Lib.NavPosition(y, align)
+	align = align or State.NavAlign
+	if align == "Left" then
+		return UDim2.new(0, math.min(372, State.OriginalSize.X.Offset - 270), 0, y)
+	elseif align == "Right" then
+		return UDim2.new(1, -258, 0, y)
+	end
+	return UDim2.new(0.5, 0, 0, y)
+end
+
+function Lib.ApplyLayout(width, height, align)
+	local scale = Lib.MenuBaseScale or 1
+	local view = UI.Screen.AbsoluteSize
+	width = math.clamp(math.floor(tonumber(width) or State.OriginalSize.X.Offset), 560, math.max(560, math.min(1500, view.X / scale - 20)))
+	height = math.clamp(math.floor(tonumber(height) or State.OriginalSize.Y.Offset), 380, math.max(380, math.min(950, view.Y / scale - 20)))
+	State.NavAlign = (align == "Left" or align == "Right") and align or "Center"
+	State.OriginalSize = UDim2.fromOffset(width, height)
+	UI.Main.Size, UI.Main.Position = Lib.MainLayout()
+	UI.TopNavContainer.Position = Lib.NavPosition(State.Minimized and -44 or 11)
+end
+
+local function BuildScrollView(view, top)
+	local scroll = Lib.Create("ScrollingFrame", {
+		Size = UDim2.new(1, 0, 1, -top), Position = UDim2.fromOffset(0, top), BackgroundTransparency = 1, ScrollBarThickness = 2,
+		ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), BorderSizePixel = 0, Parent = view
+	})
+	local layout = Lib.Create("UIListLayout", { Padding = UDim.new(0, 16), SortOrder = Enum.SortOrder.LayoutOrder, Parent = scroll })
+	Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 5), PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 15), Parent = scroll })
+	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+		scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
+	end)
+	return scroll
+end
+
+function Lib.BuildBindManager(view)
+	local UIS = Services.UserInputService
+	local Http = Services.HttpService
+	local FILE, LEGACY = "SeptusHub_Binds.json", "SeptusHub_Keybinds.json"
+	local binds, rows, held, entries, actionById = {}, {}, {}, {}, {}
+	local capturing, notifyOn = nil, true
+
+	local function Resolve(kind, name)
+		local ok, value = pcall(function()
+			return (kind == "Mouse" and Enum.UserInputType or Enum.KeyCode)[name]
+		end)
+		return ok and value or nil
+	end
+
+	local function InputName(input)
+		if input == Enum.UserInputType.MouseButton2 then return "RMB" end
+		if input == Enum.UserInputType.MouseButton3 then return "MMB" end
+		return (input.Name:gsub("^Left(%u)", "L%1"):gsub("^Right(%u)", "R%1"))
+	end
+
+	local function Save()
+		if not writefile then return end
+		local out = { Notify = notifyOn, Binds = {} }
+		for id, bind in pairs(binds) do
+			out.Binds[id] = { Input = bind.Input.Name, Kind = bind.Kind, Mode = bind.Mode }
+		end
+		pcall(writefile, FILE, Http:JSONEncode(out))
+	end
+
+	if isfile and readfile then
+		pcall(function()
+			if isfile(FILE) then
+				local data = Http:JSONDecode(readfile(FILE))
+				if type(data.Notify) == "boolean" then notifyOn = data.Notify end
+				for id, entry in pairs(data.Binds or {}) do
+					local input = Resolve(entry.Kind, entry.Input)
+					if input then binds[id] = { Input = input, Kind = entry.Kind, Mode = entry.Mode == "Hold" and "Hold" or "Toggle" } end
+				end
+			elseif isfile(LEGACY) then
+				for id, name in pairs(Http:JSONDecode(readfile(LEGACY))) do
+					local key = Resolve("Key", name)
+					if key then binds[id] = { Input = key, Kind = "Key", Mode = "Toggle" } end
+				end
+			end
+		end)
+	end
+
+	function Lib.GetBindName(id)
+		local bind = binds[id]
+		return bind and InputName(bind.Input) or nil
+	end
+
+	for _, action in ipairs(Lib.BindActions or {}) do
+		actionById[action.id] = action
+		if not Lib.ToggleControls[action.id] then
+			entries[#entries + 1] = { id = action.id, title = action.title, desc = action.desc }
+		end
+	end
+	local names = {}
+	for _, title in ipairs(Lib.FeatureToggles) do
+		if Lib.ToggleControls[title] then names[#names + 1] = title end
+	end
+	table.sort(names)
+	local actionCount = #entries
+	for _, title in ipairs(names) do
+		entries[#entries + 1] = { id = title, title = title, desc = "Toggle feature", toggle = true }
+	end
+
+	local function Chip(parent, text, size, position)
+		local chip = Lib.Create("TextButton", {
+			Size = size, Position = position, BackgroundColor3 = Color3.fromRGB(22, 22, 22), Text = text, TextColor3 = Color3.fromRGB(240, 240, 240),
+			TextSize = 12, Font = Enum.Font.GothamBold, AutoButtonColor = false, Parent = parent, Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
 		})
-		Lib.RegisterThemeText(caption, "Secondary")
-		local value = Lib.Create("TextLabel", {
-			Size = UDim2.new(1, -444, 0, 20), Position = UDim2.fromOffset(430, y + 16), BackgroundTransparency = 1, Text = "",
-			TextColor3 = Lib.Palette.Primary, TextSize = 14, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left,
-			TextTruncate = Enum.TextTruncate.AtEnd, Parent = card
+		Lib.RegisterThemeElement(chip, "BackgroundColor3", 0.7)
+		Lib.RegisterThemeText(chip, "Primary")
+		return chip
+	end
+
+	local function Refresh(id)
+		local row = rows[id]
+		if not row then return end
+		local bind = binds[id]
+		row.key.Text = bind and InputName(bind.Input) or "None"
+		if row.mode then
+			row.mode.Visible = bind ~= nil
+			row.mode.Text = bind and bind.Mode or "Toggle"
+		end
+	end
+
+	local function Report(id, state)
+		if notifyOn then Lib.Notify({ Title = id, Text = state and "Enabled" or "Disabled" }) end
+		if Lib.HudRefresh then Lib.HudRefresh() end
+	end
+
+	local function Fire(id, bind, down)
+		local control = Lib.ToggleControls[id]
+		if control then
+			if bind.Mode == "Hold" then
+				if control.Get() ~= down then
+					control.Set(down)
+					Report(id, down)
+				end
+			elseif down then
+				control.Set(not control.Get())
+				Report(id, control.Get())
+			end
+		elseif down and actionById[id] then
+			actionById[id].run()
+		end
+	end
+
+	local search = Lib.MakeSearchBox(view, "Search binds...", UDim2.fromOffset(5, 0), UDim2.new(1, -15, 0, 30), 0.15, function(text)
+		local query = Lib.Lower(text)
+		for _, entry in ipairs(entries) do
+			local row = rows[entry.id]
+			row.frame.Visible = query == "" or Lib.Lower(entry.title):find(query, 1, true) ~= nil or Lib.Lower(Lib.Ru(entry.title)):find(query, 1, true) ~= nil
+		end
+	end)
+
+	local scroll = BuildScrollView(view, 40)
+
+	local settingsGroup = Lib.CreateFeatureGroup(scroll, "Bind Settings", 1)
+	Lib.CreateSettingToggleItem(settingsGroup, "Bind Notifications", "Show a notification when a bind turns a feature on or off", notifyOn, function(value)
+		notifyOn = value
+		Save()
+	end, true)
+
+	local actionGroup = actionCount > 0 and Lib.CreateFeatureGroup(scroll, "Actions", 2) or nil
+	local featureGroup = Lib.CreateFeatureGroup(scroll, "Features", 3)
+
+	for index, entry in ipairs(entries) do
+		local group = index <= actionCount and actionGroup or featureGroup
+		local isLast = index == actionCount or index == #entries
+		local frame = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 50), BackgroundTransparency = 1, LayoutOrder = index, Parent = group })
+		local title = Lib.Create("TextLabel", {
+			Size = UDim2.new(1, -190, 0, 20), Position = UDim2.fromOffset(14, 7), BackgroundTransparency = 1, Text = entry.title,
+			TextColor3 = Color3.fromRGB(240, 240, 240), TextSize = 13, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left,
+			TextTruncate = Enum.TextTruncate.AtEnd, Parent = frame
 		})
-		Lib.RegisterThemeText(value, "Primary")
-		values[name] = value
+		Lib.RegisterThemeText(title, "Primary")
+		local desc = Lib.Create("TextLabel", {
+			Size = UDim2.new(1, -190, 0, 16), Position = UDim2.fromOffset(14, 26), BackgroundTransparency = 1, Text = entry.desc,
+			TextColor3 = Color3.fromRGB(130, 130, 130), TextSize = 11, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left,
+			TextTruncate = Enum.TextTruncate.AtEnd, Parent = frame
+		})
+		Lib.RegisterThemeText(desc, "Secondary")
+		if not isLast then
+			Lib.Create("Frame", {
+				Size = UDim2.new(1, -28, 0, 1), Position = UDim2.new(0, 14, 1, -1), BackgroundColor3 = Color3.fromRGB(25, 25, 25),
+				BorderSizePixel = 0, Parent = frame
+			})
+		end
+		local key = Chip(frame, "None", UDim2.fromOffset(92, 28), UDim2.new(1, -106, 0.5, -14))
+		local mode
+		if entry.toggle then
+			mode = Chip(frame, "Toggle", UDim2.fromOffset(70, 28), UDim2.new(1, -184, 0.5, -14))
+			mode.MouseButton1Click:Connect(function()
+				local bind = binds[entry.id]
+				if not bind then return end
+				Lib.PlayClick()
+				bind.Mode = bind.Mode == "Hold" and "Toggle" or "Hold"
+				Refresh(entry.id)
+				Save()
+			end)
+		end
+		rows[entry.id] = { frame = frame, key = key, mode = mode }
+		key.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			local previous = capturing
+			capturing = nil
+			if previous then Refresh(previous) end
+			if previous == entry.id then return end
+			capturing = entry.id
+			key.Text = "Press key..."
+		end)
+		Refresh(entry.id)
+	end
+
+	Lib.C(UIS.InputBegan, function(input, processed)
+		local kind = input.UserInputType
+		local key
+		if kind == Enum.UserInputType.Keyboard then
+			key = input.KeyCode
+		elseif kind == Enum.UserInputType.MouseButton2 or kind == Enum.UserInputType.MouseButton3 then
+			key = kind
+		end
+		if not key or key == Enum.KeyCode.Unknown then return end
+		if capturing then
+			local id = capturing
+			capturing = nil
+			if key == Enum.KeyCode.Escape then
+				Refresh(id)
+				return
+			end
+			if key == Enum.KeyCode.Backspace or key == Enum.KeyCode.Delete then
+				binds[id] = nil
+			else
+				for otherId, other in pairs(binds) do
+					if other.Input == key and otherId ~= id then
+						binds[otherId] = nil
+						Refresh(otherId)
+					end
+				end
+				local previous = binds[id]
+				binds[id] = {
+					Input = key, Kind = key.EnumType == Enum.KeyCode and "Key" or "Mouse", Mode = previous and previous.Mode or "Toggle"
+				}
+			end
+			Refresh(id)
+			Save()
+			if Lib.HudRefresh then Lib.HudRefresh() end
+			return
+		end
+		if processed or State.Unloaded then return end
+		for id, bind in pairs(binds) do
+			if bind.Input == key then
+				if bind.Mode == "Hold" then held[id] = key end
+				Fire(id, bind, true)
+			end
+		end
+	end)
+
+	Lib.C(UIS.InputEnded, function(input)
+		if next(held) == nil then return end
+		local key = input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode or input.UserInputType
+		for id, heldKey in pairs(held) do
+			if heldKey == key then
+				held[id] = nil
+				local bind = binds[id]
+				if bind then Fire(id, bind, false) end
+			end
+		end
+	end)
+
+	return search
+end
+
+function Lib.BuildHUD(view)
+	local cfg = { Enabled = false, FPS = true, Ping = true, Players = false, Time = false, Features = true, Binds = true, Position = "Bottom Left", Scale = 100, Opacity = 85 }
+
+	local hud = Lib.Create("Frame", {
+		Name = "SeptusHUD", AutomaticSize = Enum.AutomaticSize.XY, Size = UDim2.fromOffset(0, 0), BackgroundColor3 = Lib.Theme.Card,
+		BackgroundTransparency = 0.15, BorderSizePixel = 0, Visible = false, ZIndex = 5, Parent = UI.Screen,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) }),
+		Lib.Create("UIListLayout", { Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder }),
+		Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
+	})
+	local scaleObject = Lib.Create("UIScale", { Parent = hud })
+	table.insert(Lib.ThemeHooks, function() hud.BackgroundColor3 = Lib.Theme.Card end)
+
+	local labels = {}
+	local function MakeLabel(name, order, role, size, font)
+		local label = Lib.Create("TextLabel", {
+			Name = name, AutomaticSize = Enum.AutomaticSize.XY, Size = UDim2.fromOffset(0, 16), BackgroundTransparency = 1, Text = "",
+			TextColor3 = Lib.Palette[role], TextSize = size, Font = font, TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = order, ZIndex = 5, Parent = hud
+		})
+		Lib.RegisterThemeText(label, role)
+		labels[name] = label
+		return label
+	end
+	MakeLabel("FPS", 1, "Primary", 13, Enum.Font.GothamBold)
+	MakeLabel("Ping", 2, "Primary", 13, Enum.Font.GothamBold)
+	MakeLabel("Players", 3, "Primary", 13, Enum.Font.GothamBold)
+	MakeLabel("Time", 4, "Primary", 13, Enum.Font.GothamBold)
+	MakeLabel("Features", 5, "Secondary", 12, Enum.Font.GothamMedium)
+
+	local function Place()
+		local top = cfg.Position:find("Top", 1, true) ~= nil
+		local right = cfg.Position:find("Right", 1, true) ~= nil
+		hud.AnchorPoint = Vector2.new(right and 1 or 0, top and 0 or 1)
+		hud.Position = UDim2.new(right and 1 or 0, right and -12 or 12, top and 0 or 1, top and 64 or -12)
+		scaleObject.Scale = cfg.Scale / 100
+		hud.BackgroundTransparency = 1 - cfg.Opacity / 100
 	end
 
 	local function Refresh()
-		local spec = Lib.ResolveTheme(State.SelectedThemeIndex)
-		values.Theme.Text = type(spec) == "table" and spec.Name or (State.SelectedThemeIndex == 1 and "Default" or ("Preset " .. State.SelectedThemeIndex))
-		values["Corner Radius"].Text = State.CornerRadius .. " px"
-		values["Window Opacity"].Text = (100 - State.WindowTransparency) .. "%"
-		values["Panel Opacity"].Text = (100 - State.PanelTransparency) .. "%"
-		local parts = {}
-		if State.CustomBackgroundId ~= "" then parts[#parts + 1] = "Image" end
-		if Lib.BgFxView then
-			local fx = Lib.BgFxView()
-			if fx.Gradient then parts[#parts + 1] = "Gradient" end
-			if fx.Snow or fx.Twinkle or fx.Shooting or fx.Particles then parts[#parts + 1] = "Effects" end
+		local show = cfg.Enabled and not State.Unloaded
+		hud.Visible = show
+		if not show then return end
+		local stats = Lib.Stats
+		labels.FPS.Visible = cfg.FPS
+		labels.FPS.Text = Lib.Tr("FPS") .. "  " .. stats.FPS
+		labels.Ping.Visible = cfg.Ping
+		labels.Ping.Text = Lib.Tr("Ping") .. "  " .. stats.Ping .. " " .. Lib.Tr("ms")
+		labels.Players.Visible = cfg.Players
+		labels.Players.Text = Lib.Tr("Players") .. "  " .. stats.Players
+		labels.Time.Visible = cfg.Time
+		labels.Time.Text = os.date("%H:%M:%S")
+		local lines = {}
+		if cfg.Features then
+			for _, title in ipairs(Lib.FeatureToggles) do
+				local control = Lib.ToggleControls[title]
+				if control and control.Get() then
+					local bind = cfg.Binds and Lib.GetBindName and Lib.GetBindName(title)
+					lines[#lines + 1] = Lib.Tr(title) .. (bind and ("  [" .. bind .. "]") or "")
+				end
+			end
 		end
-		values.Background.Text = #parts > 0 and table.concat(parts, " + ") or "Solid"
+		labels.Features.Visible = #lines > 0
+		labels.Features.Text = table.concat(lines, "\n")
 	end
 
-	local preview = Lib.BuildUIPreview(card, STAGE_W / 800, 0, { Visible = isVisible, OnUpdate = Refresh })
-	preview.Stage.Position = UDim2.fromOffset(14, 56)
-	return card, preview
+	Lib.HudRefresh = Refresh
+	Lib.StatsTick[#Lib.StatsTick + 1] = Refresh
+
+	local scroll = BuildScrollView(view, 0)
+	local mainGroup = Lib.CreateFeatureGroup(scroll, "HUD", 1)
+	Lib.SearchGroups[mainGroup] = true
+	Lib.CreateSettingToggleItem(mainGroup, "Enable HUD", "Shows a compact overlay with live information on your screen", cfg.Enabled, function(value)
+		cfg.Enabled = value
+		Refresh()
+	end)
+	Lib.CreateSettingChoiceItem(mainGroup, "HUD Position", { "Top Left", "Top Right", "Bottom Left", "Bottom Right" }, cfg.Position, function(value)
+		cfg.Position = value
+		Place()
+	end)
+	Lib.CreateSettingSliderItem(mainGroup, "HUD Scale", "Size of the overlay", 70, 150, cfg.Scale, function(value)
+		cfg.Scale = value
+		Place()
+	end, false, "%")
+	Lib.CreateSettingSliderItem(mainGroup, "HUD Opacity", "How solid the overlay background is", 20, 100, cfg.Opacity, function(value)
+		cfg.Opacity = value
+		Place()
+	end, true, "%")
+
+	local infoGroup = Lib.CreateFeatureGroup(scroll, "HUD Information", 2)
+	Lib.SearchGroups[infoGroup] = true
+	local function InfoToggle(title, desc, key, last)
+		Lib.CreateSettingToggleItem(infoGroup, title, desc, cfg[key], function(value)
+			cfg[key] = value
+			Refresh()
+		end, last)
+	end
+	InfoToggle("HUD FPS", "Frames per second", "FPS")
+	InfoToggle("HUD Ping", "Network latency to the server", "Ping")
+	InfoToggle("HUD Players", "Players in the current server", "Players")
+	InfoToggle("HUD Clock", "Your local time", "Time")
+	InfoToggle("HUD Active Features", "Lists every feature that is currently enabled", "Features")
+	InfoToggle("HUD Show Binds", "Shows the bound key next to each active feature", "Binds", true)
+
+	Lib.ConfigExtras.HUD = {
+		Dump = function()
+			local out = {}
+			for key, value in pairs(cfg) do out[key] = value end
+			return out
+		end,
+		Apply = function(data)
+			pcall(function()
+				local toggles = { Enabled = "Enable HUD", FPS = "HUD FPS", Ping = "HUD Ping", Players = "HUD Players", Time = "HUD Clock", Features = "HUD Active Features", Binds = "HUD Show Binds" }
+				for key, title in pairs(toggles) do
+					if type(data[key]) == "boolean" then Lib.ToggleControls[title].Set(data[key]) end
+				end
+				if type(data.Position) == "string" then Lib.ChoiceControls["HUD Position"].Set(data.Position) end
+				if type(data.Scale) == "number" then Lib.SliderControls["HUD Scale"](data.Scale) end
+				if type(data.Opacity) == "number" then Lib.SliderControls["HUD Opacity"](data.Opacity) end
+			end)
+		end
+	}
+
+	Place()
 end
+
+function Lib.BuildShareGroup(scroll, order, getDump, applyDump)
+	local group = Lib.CreateFeatureGroup(scroll, "Share", order)
+
+	local function Deliver(code, label)
+		local copied = Lib.CopyText(code)
+		Lib.Notify({ Title = "Share", Text = copied and (label .. " code copied") or "Clipboard unavailable, copy the code from the field" })
+	end
+
+	local row = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 58), BackgroundTransparency = 1, Parent = group })
+	local box = Lib.Create("TextBox", {
+		Size = UDim2.new(1, -118, 0, 34), Position = UDim2.fromOffset(12, 12), BackgroundColor3 = Color3.fromRGB(22, 22, 22), Text = "",
+		PlaceholderText = "Paste a share code...", PlaceholderColor3 = Color3.fromRGB(110, 110, 110), TextColor3 = Color3.fromRGB(240, 240, 240),
+		TextSize = 12, Font = Enum.Font.GothamMedium, ClearTextOnFocus = false, TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd, Parent = row,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
+		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
+	})
+	Lib.RegisterThemeElement(box, "BackgroundColor3", 0.7)
+	Lib.RegisterThemeText(box, "Primary")
+	local import = Lib.Create("TextButton", {
+		Size = UDim2.fromOffset(94, 34), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 12), BackgroundColor3 = Color3.new(1, 1, 1),
+		Text = "Import", TextColor3 = Color3.new(0, 0, 0), TextSize = 12, Font = Enum.Font.GothamBold, AutoButtonColor = false, Parent = row,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
+	})
+	import.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		local kind, data = Lib.ShareDecode(box.Text)
+		if not kind then
+			Lib.Notify({ Title = "Share", Text = data })
+			return
+		end
+		if kind ~= "CFG" then
+			Lib.Notify({ Title = "Share", Text = "This is a UI Studio preset code, import it in UI Studio" })
+			return
+		end
+		for _, key in ipairs({ "CustomBg", "FontId" }) do
+			if type(data[key]) == "string" and data[key]:find("://", 1, true) then data[key] = nil end
+		end
+		data.PlaceId, data.PlaceName = nil, nil
+		applyDump(data)
+		box.Text = ""
+		Lib.Notify({ Title = "Share", Text = "Settings imported" })
+	end)
+
+	Lib.CreateSettingButtonItem(group, "Export Current Settings", "Creates a code with your current settings that you can send to anyone", function()
+		local code = Lib.ShareEncode("CFG", getDump())
+		box.Text = code
+		Deliver(code, "Settings")
+	end, true)
+end
+
+function Lib.BuildLanguageGroup(parent, order)
+	local group = Lib.CreateFeatureGroup(parent, "Language", order)
+	Lib.SearchGroups[group] = true
+	Lib.CreateSettingChoiceItem(group, "Interface Language", { "English", "Русский" }, State.Language, function(value)
+		if value ~= State.Language then Lib.SetLanguage(value) end
+	end, true)
+end
+
+Lib.ConfigExtras.Layout = {
+	Dump = function()
+		return { Width = State.OriginalSize.X.Offset, Height = State.OriginalSize.Y.Offset, Nav = State.NavAlign }
+	end,
+	Apply = function(data)
+		pcall(Lib.ApplyLayout, data.Width, data.Height, data.Nav)
+	end
+}
+
 
 do
 	local SettingsSection = Lib.Create("Frame", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Visible = false, Parent = UI.ContentArea })
@@ -15399,11 +19293,27 @@ do
 
 	local SettingsSideBar = Lib.Create("Frame", { Size = UDim2.new(0, 180, 1, 0), BackgroundTransparency = 1, Parent = SettingsSection, SetTitle, SetSub })
 
-	local MakeSettingsTab
-	Lib.SwitchSettingsTab, MakeSettingsTab = Lib.CreateTabSystem(SettingsSection, SettingsSideBar, "CurrentSettingsTab")
+	local SettingsTabs = Lib.Create("ScrollingFrame", {
+		Size = UDim2.new(1, 0, 1, -76), Position = UDim2.fromOffset(0, 34), BackgroundTransparency = 1, BorderSizePixel = 0,
+		ScrollBarThickness = 2, ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), ScrollingDirection = Enum.ScrollingDirection.Y,
+		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = SettingsSideBar
+	})
+
+	local MakeSettingsTab, SettingsViews
+	Lib.SwitchSettingsTab, MakeSettingsTab, SettingsViews = Lib.CreateTabSystem(SettingsSection, SettingsTabs, "CurrentSettingsTab")
 
 	local View_Appearance = MakeSettingsTab("Appearance", 50, 92865789131206)
 	local View_Config = MakeSettingsTab("Config", 90, 92450542426061)
+
+	for _, spec in ipairs({ { "Binds", 130, 74917927400316, Lib.BuildBindManager }, { "HUD", 170, 128407802503574, Lib.BuildHUD } }) do
+		local ok, err = pcall(spec[4], MakeSettingsTab(spec[1], spec[2], spec[3]))
+		if not ok then warn("[SeptusHub] " .. spec[1] .. ": " .. tostring(err)) end
+	end
+
+	Lib.BuildGlobalSearch(SettingsSection, SettingsSideBar, SettingsTabs, SettingsViews, "CurrentSettingsTab")
+
+	local home = UI.HomeSearch
+	Lib.BuildGlobalSearch(UI.HomeSection, home[1], home[2], home[3], "CurrentTab")
 
 	local AppearanceScroll = Lib.Create("ScrollingFrame", {
 		Size = UDim2.new(1, 0, 1, 0), Position = UDim2.new(0, 0, 0, 0),
@@ -16085,6 +19995,21 @@ do
 			UpdateSelection()
 		end
 
+		function Lib.AddCustomTheme(theme)
+			for i, existing in ipairs(State.CustomThemes) do
+				if existing.Name == theme.Name then
+					State.CustomThemes[i] = theme
+					SaveCustomThemes()
+					Rebuild()
+					return #Lib.ThemePresets + i
+				end
+			end
+			table.insert(State.CustomThemes, theme)
+			SaveCustomThemes()
+			Rebuild()
+			return #Lib.ThemePresets + #State.CustomThemes
+		end
+
 		local function DeleteCustom(theme)
 			local position = table.find(State.CustomThemes, theme)
 			if not position then return end
@@ -16561,6 +20486,7 @@ do
 	CreateFontPicker(AppearanceScroll, 2)
 
 	local WindowStyleGroup = Lib.CreateFeatureGroup(AppearanceScroll, "Window Customization", 3)
+	Lib.SearchGroups[WindowStyleGroup] = true
 	Lib.CreateSettingSliderItem(WindowStyleGroup, "Corner Radius", "Adjust the roundness of the main window corners", 0, 28, State.CornerRadius, function(val)
 		Lib.SetCornerRadius(val)
 	end)
@@ -16581,6 +20507,17 @@ do
 		State.HideName = val
 		Lib.ApplyHeader()
 	end)
+	Lib.CreateSettingChoiceItem(WindowStyleGroup, "SH Button Style", { "Classic", "Dynamic Island" }, State.SHStyle, function(value)
+		State.SHStyle = value
+		if Lib.SetSHStyle then Lib.SetSHStyle(value) end
+	end)
+	Lib.ConfigExtras.SHStyle = {
+		Dump = function() return { Value = State.SHStyle } end,
+		Apply = function(data)
+			local control = Lib.ChoiceControls["SH Button Style"]
+			if control and data.Value then control.Set(data.Value) end
+		end
+	}
 	Lib.CreateSettingChoiceItem(WindowStyleGroup, "Menu Animation", { "Standard", "Slide Up", "Unfold" }, State.MenuAnim, function(value)
 		State.MenuAnim = value
 	end, true)
@@ -16593,12 +20530,43 @@ do
 	}
 
 	local NotificationSettingsGroup = Lib.CreateFeatureGroup(AppearanceScroll, "Notification System", 4)
+	Lib.SearchGroups[NotificationSettingsGroup] = true
 	Lib.CreateSettingToggleItem(NotificationSettingsGroup, "System Notifications", "Enable or disable custom GUI notifications popup", State.NotificationsEnabled, function(val)
 		State.NotificationsEnabled = val
 	end)
 	Lib.CreateSettingToggleItem(NotificationSettingsGroup, "Player Activity Notifications", "Show alerts when players join or leave the server", State.PlayerNotifsEnabled, function(val)
 		State.PlayerNotifsEnabled = val
+	end)
+	Lib.CreateSettingChoiceItem(NotificationSettingsGroup, "Notification Animation", { "Slide", "Pop", "Drop", "Fade" }, State.NotifAnim, function(value)
+		local previous = State.NotifAnim
+		State.NotifAnim = value
+		if value ~= previous then
+			Lib.Notify({ Title = "Notifications", Text = "Animation: " .. value })
+		end
+	end)
+	Lib.ConfigExtras.NotifAnim = {
+		Dump = function() return { Value = State.NotifAnim } end,
+		Apply = function(data)
+			local control = Lib.ChoiceControls["Notification Animation"]
+			if control and data.Value then control.Set(data.Value) end
+		end
+	}
+	Lib.CreateSettingChoiceItem(NotificationSettingsGroup, "Notification Sound", { "Off", "Ping", "Blip", "Pop" }, State.NotifSound, function(value)
+		local previous = State.NotifSound
+		State.NotifSound = value
+		if value ~= previous and not Lib.QuietConfig then Lib.PlayNotifSound() end
 	end, true)
+	Lib.ConfigExtras.NotifSound = {
+		Dump = function() return { Value = State.NotifSound } end,
+		Apply = function(data)
+			local control = Lib.ChoiceControls["Notification Sound"]
+			if control and data.Value then
+				Lib.QuietConfig = true
+				pcall(control.Set, data.Value)
+				Lib.QuietConfig = nil
+			end
+		end
+	}
 
 	local CustomBgGroup = Lib.CreateFeatureGroup(AppearanceScroll, "Custom & Animated Background", 5)
 	local BgCard = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 52), BackgroundTransparency = 1, Parent = CustomBgGroup })
@@ -17380,9 +21348,8 @@ do
 end
 	Lib.BuildMusic(Lib.CreateFeatureGroup(AppearanceScroll, "Music", 8))
 
-	Lib.BuildPreviewCard(AppearanceScroll, 0, function()
-		return View_Appearance.Visible and UI.Main.Visible and not State.Minimized
-	end)
+	Lib.BuildStudioCard(AppearanceScroll, 0)
+	pcall(Lib.BuildLanguageGroup, AppearanceScroll, 9)
 
 	task.spawn(function()
 		while not State.Unloaded do
@@ -17516,9 +21483,36 @@ end
 		Size = UDim2.new(1, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundTransparency = 1,
+		LayoutOrder = 2,
 		Parent = SavedConfigsGroup,
 		Lib.Create("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder })
 	})
+
+	PlaceCfg.Query = ""
+	PlaceCfg.Empty = Lib.Create("TextLabel", {
+		Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1, Text = "", TextColor3 = Color3.fromRGB(120, 120, 120),
+		TextSize = 12, Font = Enum.Font.GothamMedium, Visible = false, LayoutOrder = 1000000, Parent = SavedListContainer
+	})
+	Lib.RegisterThemeText(PlaceCfg.Empty, "Secondary")
+
+	function PlaceCfg.Filter()
+		local query, shown, total = PlaceCfg.Query, 0, 0
+		for _, child in ipairs(SavedListContainer:GetChildren()) do
+			if child:IsA("Frame") then
+				total += 1
+				local match = query == "" or Lib.Lower(child.Name):find(query, 1, true) ~= nil
+				child.Visible = match
+				if match then shown += 1 end
+			end
+		end
+		PlaceCfg.Empty.Text = total == 0 and "No saved configs found." or "No configs found"
+		PlaceCfg.Empty.Visible = shown == 0
+	end
+
+	Lib.MakeSearchBox(Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 44), BackgroundTransparency = 1, LayoutOrder = 1, Parent = SavedConfigsGroup }), "Search configs...", UDim2.fromOffset(12, 7), UDim2.new(1, -24, 0, 32), 0.12, function(text)
+		PlaceCfg.Query = Lib.Lower(text)
+		PlaceCfg.Filter()
+	end)
 
 	local CONFIG_FOLDER = "SeptusHub_Configs"
 	local AUTO_FILE = "SeptusHub_AutoLoad.txt"
@@ -17534,6 +21528,19 @@ end
 			makefolder(CONFIG_FOLDER)
 		end
 	end)
+
+	local PLACE_AUTO_FILE = "SeptusHub_PlaceAuto.json"
+	local placeAuto = {}
+	pcall(function()
+		if isfile and isfile(PLACE_AUTO_FILE) then
+			local data = Services.HttpService:JSONDecode(readfile(PLACE_AUTO_FILE))
+			if type(data) == "table" then placeAuto = data end
+		end
+	end)
+
+	local function SavePlaceAuto()
+		if writefile then pcall(writefile, PLACE_AUTO_FILE, Services.HttpService:JSONEncode(placeAuto)) end
+	end
 
 	local ConfigFields = {
 		{ "CornerRadius", "CornerRadius", "Corner Radius" },
@@ -17607,21 +21614,42 @@ end
 		end
 	end
 
+	Lib.ApplyAppearance = ApplyStateDump
+	pcall(Lib.BuildShareGroup, ConfigScroll, 3, GetStateDump, ApplyStateDump)
+
+	local function PlaceInfo(path)
+		local info = PlaceCfg.Cache[path]
+		if info then return info end
+		info = { pn = "" }
+		local ok, raw = pcall(readfile, path)
+		if ok and type(raw) == "string" then
+			local pid = raw:match('"PlaceId":%s*(%d+)')
+			if pid then
+				info.pid = tonumber(pid)
+				pcall(function()
+					local name = Services.HttpService:JSONDecode(raw).PlaceName
+					if type(name) == "string" then info.pn = name end
+				end)
+			end
+		end
+		PlaceCfg.Cache[path] = info
+		return info
+	end
+
 	local function RefreshConfigsList()
 		for _, c in ipairs(SavedListContainer:GetChildren()) do
 			if c:IsA("Frame") then c:Destroy() end
 		end
 
-		if not listfiles then return end
+		if not listfiles then return PlaceCfg.Filter() end
 		local files = {}
 		pcall(function() files = listfiles(CONFIG_FOLDER) end)
 
-		local count = 0
 		for _, f in ipairs(files) do
 			if f:match("%.json$") then
-				count = count + 1
 				local cName = f:match("([^/\\]+)%.json$") or f
 				local item = Lib.Create("Frame", {
+					Name = cName,
 					Size = UDim2.new(1, 0, 0, 52),
 					BackgroundColor3 = Color3.fromRGB(22, 22, 22),
 					Parent = SavedListContainer,
@@ -17642,41 +21670,32 @@ end
 				})
 				Lib.RegisterThemeText(nameLabel, "Primary")
 
-				local placeLabel = Lib.Create("TextLabel", {
+				local info = PlaceInfo(f)
+				local isPlace = info.pid ~= nil
+				local isAuto
+				if isPlace then
+					isAuto = placeAuto[tostring(info.pid)] == cName
+				else
+					isAuto = autoName == cName
+				end
+				local placeText = "All places"
+				local placeColor = Color3.fromRGB(130, 130, 130)
+				if isPlace then
+					placeText = string.format("Place: %s (%d)%s", info.pn ~= "" and info.pn or "Unknown", info.pid, isAuto and "  \u{00B7}  auto-load" or "")
+					placeColor = info.pid == game.PlaceId and Color3.fromRGB(46, 213, 115) or Color3.fromRGB(235, 170, 60)
+				end
+				Lib.Create("TextLabel", {
 					Size = UDim2.new(1, -255, 0, 14),
 					Position = UDim2.new(0, 14, 0, 30),
 					BackgroundTransparency = 1,
-					Text = "Place: ...",
-					TextColor3 = Color3.fromRGB(130, 130, 130),
+					Text = placeText,
+					TextColor3 = placeColor,
 					TextSize = 10,
 					Font = Enum.Font.GothamMedium,
 					TextXAlignment = Enum.TextXAlignment.Left,
 					TextTruncate = Enum.TextTruncate.AtEnd,
 					Parent = item
 				})
-				local function ShowPlace(info)
-					if not placeLabel.Parent then return end
-					if info.pid then
-						placeLabel.Text = string.format("Place: %s (%d)", info.pn ~= "" and info.pn or "Unknown", info.pid)
-						placeLabel.TextColor3 = info.pid == game.PlaceId and Color3.fromRGB(46, 213, 115) or Color3.fromRGB(235, 170, 60)
-					else
-						placeLabel.Text = "All places"
-					end
-				end
-				if PlaceCfg.Cache[f] then
-					ShowPlace(PlaceCfg.Cache[f])
-				else
-					task.spawn(function()
-						local info = { pn = "" }
-						pcall(function()
-							local data = Services.HttpService:JSONDecode(readfile(f))
-							info.pid = tonumber(data.PlaceId)
-							info.pn = type(data.PlaceName) == "string" and data.PlaceName or ""
-						end)
-						PlaceCfg.Cache[f] = info
-						ShowPlace(info)
-					end)
-				end
 
 				local loadBtn = Lib.Create("TextButton", {
 					Size = UDim2.fromOffset(65, 28),
@@ -17690,7 +21709,6 @@ end
 					Lib.Create("UICorner", { CornerRadius = UDim.new(0, 4) })
 				})
 
-				local isAuto = autoName == cName
 				local autoLabel = Lib.Create("TextLabel", {
 					Size = UDim2.fromOffset(60, 28),
 					Position = UDim2.new(1, -241, 0.5, -14),
@@ -17719,6 +21737,14 @@ end
 
 				autoBox.MouseButton1Click:Connect(function()
 					Lib.PlayClick()
+					if isPlace then
+						local key = tostring(info.pid)
+						placeAuto[key] = (not isAuto) and cName or nil
+						SavePlaceAuto()
+						RefreshConfigsList()
+						Lib.Notify({ Title = "Config", Text = isAuto and "Auto-load disabled for this place" or ("Auto-load for " .. (info.pn ~= "" and info.pn or key) .. ": " .. cName) })
+						return
+					end
 					autoName = (not isAuto) and cName or nil
 					if writefile then pcall(writefile, AUTO_FILE, autoName or "") end
 					RefreshConfigsList()
@@ -17755,6 +21781,10 @@ end
 					Lib.PlayClick()
 					pcall(function()
 						if delfile then delfile(f) end
+						if isPlace and placeAuto[tostring(info.pid)] == cName then
+							placeAuto[tostring(info.pid)] = nil
+							SavePlaceAuto()
+						end
 						if autoName == cName then
 							autoName = nil
 							pcall(writefile, AUTO_FILE, "")
@@ -17766,18 +21796,7 @@ end
 			end
 		end
 
-		if count == 0 then
-			local empty = Lib.Create("TextLabel", {
-				Size = UDim2.new(1, 0, 0, 36),
-				BackgroundTransparency = 1,
-				Text = "No saved configs found.",
-				TextColor3 = Color3.fromRGB(120, 120, 120),
-				TextSize = 12,
-				Font = Enum.Font.GothamMedium,
-				Parent = SavedListContainer
-			})
-			Lib.RegisterThemeText(empty, "Secondary")
-		end
+		PlaceCfg.Filter()
 	end
 
 	saveCfgBtn.MouseButton1Click:Connect(function()
@@ -17790,40 +21809,41 @@ end
 			local json = Services.HttpService:JSONEncode(dump)
 			pcall(writefile, CONFIG_FOLDER .. "/" .. name .. ".json", json)
 			table.clear(PlaceCfg.Cache)
+			local placeKey = tostring(PlaceCfg.Id)
+			local firstForPlace = PlaceCfg.Only and not placeAuto[placeKey]
+			if firstForPlace then
+				placeAuto[placeKey] = name
+				SavePlaceAuto()
+			end
 			RefreshConfigsList()
-			Lib.Notify({ Title = "Config", Text = PlaceCfg.Only and ("Saved config for this place: " .. name) or ("Saved config: " .. name) })
+			Lib.Notify({ Title = "Config", Text = PlaceCfg.Only and ("Saved config for this place" .. (firstForPlace and ", auto-load enabled: " or ": ") .. name) or ("Saved config: " .. name) })
 		end
 	end)
 
 	RefreshConfigsList()
 
-	if autoName then
+	local placeTarget = placeAuto[tostring(game.PlaceId)]
+	local startName = placeTarget or autoName
+	if startName then
 		task.defer(function()
 			pcall(function()
 				if not game:IsLoaded() then game.Loaded:Wait() end
-				local path = CONFIG_FOLDER .. "/" .. autoName .. ".json"
+				local path = CONFIG_FOLDER .. "/" .. startName .. ".json"
 				if isfile(path) then
 					local dump = Services.HttpService:JSONDecode(readfile(path))
 					local pid = type(dump) == "table" and tonumber(dump.PlaceId)
 					if pid and pid ~= game.PlaceId then
-						Lib.Notify({ Title = "Config", Text = "Auto-load skipped: " .. autoName .. " is for " .. tostring(dump.PlaceName or pid) })
+						Lib.Notify({ Title = "Config", Text = "Auto-load skipped: " .. startName .. " is for " .. tostring(dump.PlaceName or pid) })
 						return
 					end
 					ApplyStateDump(dump)
-					Lib.Notify({ Title = "Config", Text = "Auto-loaded config: " .. autoName })
+					Lib.Notify({ Title = "Config", Text = (placeTarget and "Auto-loaded config for this place: " or "Auto-loaded config: ") .. startName })
 				end
 			end)
 		end)
 	end
 end
 
-Lib.FeatureToggles = {
-	"Bunny Hop", "Box ESP", "Name ESP", "Health ESP", "Distance ESP", "Tool ESP", "Tracer ESP", "Off-Screen Arrows", "Head Dot", "View Direction Line", "Skeleton ESP", "Chams", "History ESP", "Gradient ESP", "Hat", "Face Mask", "Halo", "Orbit", "Custom Crosshair", "Custom Mouse", "Boost FPS", "FullBright", "Remove Texture", "Part Deleted",
-	"No Fog", "Time Changer", "Ambient Color", "Atmosphere Tint", "Color Grade", "Bloom", "Custom Skybox", "Terrain Recolor", "World Recolor",
-	"Fly", "Anti Fling", "Anti Sit", "Anti Void", "Anti Stun", "Anti Ragdoll", "RTX Realistic", "Cyberpunk Neon", "Silent Hill Fog",
-	"Stalk Active", "Complete Suspension", "Usual Lag", "Anti-AFK", "Noclip", "Invisibility", "Auto Reconnect", "Teleport Tool",
-	"Cframe Aim", "Mouse Aim", "Silent Aim", "Trigger Bot", "Zero Recoil", "Zero Spread"
-}
 
 function Lib.Unload()
 	if State.Unloaded then return end
@@ -18349,6 +22369,7 @@ local function StartLoadingSequence(Blur)
 	Lib.SwitchSettingsTab("Appearance")
 	Lib.SwitchMainTab("Home")
 	Lib.ApplyTheme(State.ThemeColor)
+	if State.Language == "Русский" then Lib.SetLanguage(State.Language, true) end
 
 	Lib.Tween(SplashModal, 0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { GroupTransparency = 0 })
 	Lib.Tween(LogoImg, 0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out, { ImageTransparency = 0, Size = UDim2.fromOffset(125, 125) })
@@ -18561,6 +22582,8 @@ do
 			PushGraph("FPS", fps, fps .. " FPS", UI.Graphs.FPS, 120)
 			PushGraph("Ping", ping, ping .. " ms", UI.Graphs.Ping, 300)
 			PushGraph("Players", plrs, plrs .. " Players", UI.Graphs.Players, 100)
+			Lib.Stats.FPS, Lib.Stats.Ping, Lib.Stats.Players = fps, ping, plrs
+			for i = 1, #Lib.StatsTick do pcall(Lib.StatsTick[i]) end
 
 			frames, lastT = 0, curT
 		end
@@ -18568,10 +22591,59 @@ do
 end
 
 do
-	local SHButton = Lib.Create("TextButton", {
+	local UIS = Services.UserInputService
+	local TweenService = Services.Tween
+	local touchOnly = UIS.TouchEnabled and not UIS.MouseEnabled
+	local REST, FULL, PRESS = Vector2.new(100, 32), Vector2.new(256, 44), 0.93
+	local WHITE, MUTED = Color3.fromRGB(245, 245, 245), "#8E8E93"
+	local DOT_ON, DOT_OFF = Color3.fromRGB(52, 199, 89), Color3.fromRGB(88, 88, 92)
+	local STROKE_ON, STROKE_OFF = Color3.fromRGB(86, 86, 92), Color3.fromRGB(40, 40, 44)
+	local BACK, QUINT, QUAD, OUT = Enum.EasingStyle.Back, Enum.EasingStyle.Quint, Enum.EasingStyle.Quad, Enum.EasingDirection.Out
+
+	local function Scaled(v, k)
+		return UDim2.fromOffset(v.X * k, v.Y * k)
+	end
+
+	local function Fade(group, value, time, delay)
+		TweenService:Create(group, TweenInfo.new(time, QUAD, OUT, 0, false, delay), { GroupTransparency = value }):Play()
+	end
+
+	local function Attach(button, onPress, onRelease)
+		local dragging, moved, origin, start = false, false, nil, nil
+		button.InputBegan:Connect(function(input)
+			local kind = input.UserInputType
+			if kind == Enum.UserInputType.MouseButton1 or kind == Enum.UserInputType.Touch then
+				dragging, moved = true, false
+				origin, start = input.Position, button.Position
+				onPress()
+			end
+		end)
+		Lib.C(UIS.InputChanged, function(input)
+			if not dragging then return end
+			local kind = input.UserInputType
+			if kind == Enum.UserInputType.MouseMovement or kind == Enum.UserInputType.Touch then
+				local delta = input.Position - origin
+				if delta.Magnitude > 4 then moved = true end
+				if moved then
+					button.Position = UDim2.new(start.X.Scale, start.X.Offset + delta.X, start.Y.Scale, start.Y.Offset + delta.Y)
+				end
+			end
+		end)
+		Lib.C(UIS.InputEnded, function(input)
+			local kind = input.UserInputType
+			if dragging and (kind == Enum.UserInputType.MouseButton1 or kind == Enum.UserInputType.Touch) then
+				dragging = false
+				onRelease(moved)
+			end
+		end)
+		return function() return dragging end
+	end
+
+	local classic = Lib.Create("TextButton", {
 		Name = "SH_FloatingToggle",
+		AnchorPoint = Vector2.new(0.5, 0.5),
 		Size = UDim2.fromOffset(46, 46),
-		Position = UDim2.new(0, 20, 0.5, -23),
+		Position = UDim2.new(0, 43, 0.5, 0),
 		BackgroundColor3 = Color3.fromRGB(18, 18, 18),
 		Text = "SH",
 		TextColor3 = Color3.fromRGB(245, 245, 245),
@@ -18588,61 +22660,209 @@ do
 			ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 		})
 	})
-	Lib.RegisterThemeElement(SHButton, "BackgroundColor3", 0.5)
-	Lib.RegisterThemeText(SHButton, "Primary")
-	UI.SHToggleButton = SHButton
+	Lib.RegisterThemeElement(classic, "BackgroundColor3", 0.5)
+	Lib.RegisterThemeText(classic, "Primary")
 
-	local dragging = false
-	local dragStart = nil
-	local startPos = nil
-	local hasMoved = false
-
-	SHButton.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			dragging = true
-			hasMoved = false
-			dragStart = input.Position
-			startPos = SHButton.Position
-
-			Lib.Tween(SHButton, 0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, {
-				Size = UDim2.fromOffset(40, 40)
-			})
+	Attach(classic, function()
+		Lib.Tween(classic, 0.1, QUAD, OUT, { Size = UDim2.fromOffset(40, 40) })
+	end, function(moved)
+		Lib.Tween(classic, 0.18, BACK, OUT, { Size = UDim2.fromOffset(46, 46) })
+		if not moved then
+			Lib.PlayClick()
+			Lib.ToggleMenu()
 		end
 	end)
 
-	Lib.C(Services.UserInputService.InputChanged, function(input)
-		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-			local delta = input.Position - dragStart
-			if delta.Magnitude > 4 then
-				hasMoved = true
-			end
-			SHButton.Position = UDim2.new(
-				startPos.X.Scale,
-				startPos.X.Offset + delta.X,
-				startPos.Y.Scale,
-				startPos.Y.Offset + delta.Y
-			)
-		end
-	end)
+	local island = Lib.Create("TextButton", {
+		Name = "SH_DynamicIsland",
+		AnchorPoint = Vector2.new(0.5, 0),
+		Size = Scaled(REST, 1),
+		Position = UDim2.new(0.5, 0, 0, 10),
+		BackgroundColor3 = Color3.new(0, 0, 0),
+		Text = "",
+		AutoButtonColor = false,
+		Visible = false,
+		ZIndex = 120,
+		Parent = UI.Screen,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0.5, 0) })
+	})
+	local stroke = Lib.Create("UIStroke", {
+		Color = STROKE_OFF,
+		Thickness = 1,
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		Parent = island
+	})
 
-	local function OnRelease()
-		if dragging then
-			dragging = false
+	local idle = Lib.Create("CanvasGroup", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 121, Parent = island })
+	Lib.Create("TextLabel", {
+		Size = UDim2.fromOffset(32, 20),
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, 16, 0.5, 0),
+		BackgroundTransparency = 1,
+		Text = "SH",
+		TextColor3 = WHITE,
+		TextSize = 14,
+		Font = Enum.Font.GothamBold,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		ZIndex = 122,
+		Parent = idle
+	})
+	local dot = Lib.Create("Frame", {
+		Size = UDim2.fromOffset(8, 8),
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -16, 0.5, 0),
+		BackgroundColor3 = DOT_OFF,
+		ZIndex = 122,
+		Parent = idle,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0.5, 0) })
+	})
 
-			Lib.Tween(SHButton, 0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out, {
-				Size = UDim2.fromOffset(46, 46)
+	local info = Lib.Create("CanvasGroup", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, GroupTransparency = 1, ZIndex = 121, Parent = island })
+	local cells = {}
+	for i, key in ipairs({ "FPS", "Ping", "Players" }) do
+		cells[key] = Lib.Create("TextLabel", {
+			Size = UDim2.fromScale(1 / 3, 1),
+			Position = UDim2.fromScale((i - 1) / 3, 0),
+			BackgroundTransparency = 1,
+			RichText = true,
+			Text = "",
+			TextColor3 = WHITE,
+			TextSize = 13,
+			Font = Enum.Font.GothamBold,
+			ZIndex = 122,
+			Parent = info
+		})
+		if i > 1 then
+			Lib.Create("Frame", {
+				Size = UDim2.fromOffset(1, 16),
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.new((i - 1) / 3, 0, 0.5, 0),
+				BackgroundColor3 = Color3.fromRGB(60, 60, 66),
+				BorderSizePixel = 0,
+				ZIndex = 122,
+				Parent = info
 			})
-
-			if not hasMoved then
-				Lib.PlayClick()
-				Lib.ToggleMenu()
-			end
 		end
 	end
 
-	SHButton.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			OnRelease()
+	local function UpdateInfo()
+		local stats = Lib.Stats
+		cells.FPS.Text = string.format('<font color="%s">%s</font> %d', MUTED, Lib.Tr("FPS"), stats.FPS or 0)
+		cells.Ping.Text = string.format('<font color="%s">%s</font> %d%s', MUTED, Lib.Tr("Ping"), stats.Ping or 0, Lib.Tr("ms"))
+		cells.Players.Text = string.format('<font color="%s">%s</font> %d', MUTED, Lib.Tr("Players"), stats.Players or 0)
+	end
+
+	local over, peeking, expanded, pressed, peekToken = false, false, false, false, 0
+
+	local function Rest()
+		return Scaled(expanded and FULL or REST, pressed and PRESS or 1)
+	end
+
+	local function Sync()
+		local want = over or peeking
+		if want == expanded then return end
+		expanded = want
+		if want then UpdateInfo() end
+		Lib.Tween(island, want and 0.45 or 0.32, want and BACK or QUINT, OUT, { Size = Rest() })
+		Fade(idle, want and 1 or 0, want and 0.12 or 0.2, want and 0 or 0.1)
+		Fade(info, want and 0 or 1, want and 0.22 or 0.1, want and 0.1 or 0)
+		Lib.Tween(stroke, 0.25, QUAD, OUT, { Color = want and STROKE_ON or STROKE_OFF })
+	end
+
+	local function SyncDot(pulse)
+		local open = UI.Main.Visible and not State.MenuHiding
+		Lib.Tween(dot, 0.25, QUAD, OUT, { BackgroundColor3 = open and DOT_ON or DOT_OFF })
+		if pulse then
+			dot.Size = UDim2.fromOffset(13, 13)
+			Lib.Tween(dot, 0.4, BACK, OUT, { Size = UDim2.fromOffset(8, 8) })
 		end
+	end
+
+	local function Peek()
+		peekToken = peekToken + 1
+		local token = peekToken
+		peeking = true
+		Sync()
+		task.delay(1.8, function()
+			if token == peekToken then
+				peeking = false
+				Sync()
+			end
+		end)
+	end
+
+	local isDragging = Attach(island, function()
+		pressed = true
+		Lib.Tween(island, 0.12, QUAD, OUT, { Size = Rest() })
+	end, function(moved)
+		pressed = false
+		Lib.Tween(island, 0.4, BACK, OUT, { Size = Rest() })
+		if moved then
+			Sync()
+			return
+		end
+		Lib.PlayClick()
+		Lib.ToggleMenu()
+		SyncDot(true)
+		if touchOnly then Peek() end
 	end)
+
+	if not touchOnly then
+		island.MouseEnter:Connect(function()
+			over = true
+			Sync()
+		end)
+		island.MouseLeave:Connect(function()
+			over = false
+			if not isDragging() then Sync() end
+		end)
+	end
+
+	Lib.C(UI.Main:GetPropertyChangedSignal("Visible"), function()
+		SyncDot(false)
+	end)
+
+	Lib.StatsTick[#Lib.StatsTick + 1] = function()
+		if expanded then UpdateInfo() end
+	end
+
+	local saved = {}
+	UI.SHToggleButton = classic
+
+	function Lib.SetSHStyle(style, instant)
+		local target = style == "Dynamic Island" and island or classic
+		State.SHStyle = target == island and "Dynamic Island" or "Classic"
+		local old = UI.SHToggleButton
+		if old == target then return end
+		saved[old] = old.Position
+		if saved[target] then target.Position = saved[target] end
+		local visible = old.Visible
+		old.Visible = false
+		target.Visible = visible
+		UI.SHToggleButton = target
+		if target == island then
+			over, peeking, expanded, pressed = false, false, false, false
+			peekToken = peekToken + 1
+			info.GroupTransparency = 1
+			idle.GroupTransparency = 0
+			stroke.Color = STROKE_OFF
+			island.Size = Scaled(REST, 1)
+			SyncDot(false)
+			if visible and not instant then
+				island.Size = Scaled(REST, 0.4)
+				idle.GroupTransparency = 1
+				Lib.Tween(island, 0.5, BACK, OUT, { Size = Scaled(REST, 1) })
+				Fade(idle, 0, 0.3, 0.1)
+			end
+		elseif visible and not instant then
+			classic.Size = UDim2.fromOffset(14, 14)
+			classic.TextTransparency = 1
+			Lib.Tween(classic, 0.45, BACK, OUT, { Size = UDim2.fromOffset(46, 46) })
+			Lib.Tween(classic, 0.3, QUAD, OUT, { TextTransparency = 0 })
+		end
+	end
+
+	if State.SHStyle ~= "Classic" then
+		Lib.SetSHStyle(State.SHStyle, true)
+	end
 end
