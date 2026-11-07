@@ -218,8 +218,8 @@ Lib.Conns = {}
 Lib.Version = {
 	Current = "3.7",
 	Display = "V3.7",
-	Url = "https://raw.githubusercontent.com/CherryCalCor/SeptusHub/refs/heads/main/version.json",
-	Repo = "https://github.com/CherryCalCor/SeptusHub",
+	Url = "https://raw.githubusercontent.com/CherryCalCor/Septus-HubRedesign/refs/heads/main/version.json",
+	Repo = "https://github.com/CherryCalCor/Septus-HubRedesign",
 	Status = "idle",
 	Listeners = {}
 }
