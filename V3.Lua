@@ -218,8 +218,8 @@ Lib.Conns = {}
 Lib.Version = {
 	Current = "3.7",
 	Display = "V3.7",
-	Url = "https://raw.githubusercontent.com/CherryCalCor/Septus-HubRedesign/refs/heads/main/version.json",
-	Repo = "https://github.com/CherryCalCor/Septus-HubRedesign",
+	Url = "https://raw.githubusercontent.com/CherryCalCor/SeptusHub/refs/heads/main/version.json",
+	Repo = "https://github.com/CherryCalCor/SeptusHub",
 	Status = "idle",
 	Listeners = {}
 }
@@ -934,7 +934,21 @@ do
 		["Join"] = "Зайти",
 		["Jump Power"] = "Сила прыжка",
 		["Jumps automatically on every landing while moving"] = "Автоматически прыгает при каждом приземлении во время движения",
-		["LATEST"] = "НОВОЕ",
+		["LATEST"] = "ПОСЛЕДНЯЯ",
+		["NEW"] = "НОВОЕ",
+		["FIX"] = "ФИКС",
+		["Copy ID"] = "Копия ID",
+		["Joining..."] = "Вход...",
+		["Contacts"] = "Контакты",
+		["Hover a card for contacts"] = "Наведите на карточку для контактов",
+		["Tap a card for contacts"] = "Нажмите на карточку для контактов",
+		["<b>Helped:</b> ESP and Combat feature developer."] = "<b>Помог:</b> разработчик функций ESP и Combat.",
+		["<b>Creation Type:</b> By himself."] = "<b>Тип создания:</b> сам.",
+		["<b>Creation Type:</b> Ai, Claude-Opus 5.5"] = "<b>Тип создания:</b> ИИ, Claude-Opus 5.5",
+		["Redesigned Settings > Appearance: inner tabs Theme, Window, Background, Notifications, Language and Interface with slide transitions, a Theme grid with color strips and Add Custom Theme, and a Navigation Style carousel with animated mini-schemes."] = "Обновлён дизайн «Настройки > Внешний вид»: внутренние вкладки Тема, Окно, Фон, Уведомления, Язык и Интерфейс со слайд-переходами, сетка тем с цветовыми полосками и кнопкой «Добавить свою тему», карусель стиля навигации с анимированными мини-схемами.",
+		["Redesigned the Server List in Features > Server: cards with players, ping and an occupancy bar, Join and Copy ID buttons, and servers load as you scroll."] = "Обновлён дизайн списка серверов в «Функции > Server»: карточки с игроками, пингом и полосой заполненности, кнопки «Зайти» и «Копия ID», серверы подгружаются при прокрутке.",
+		["Redesigned Home > Developers and Home > Info in the style of Account and Overview: outlined cards, hover animations and copyable contacts."] = "Обновлён дизайн «Главная > Разработчики» и «Главная > Инфо» в стиле Account и Overview: карточки с обводкой, анимации при наведении и копируемые контакты.",
+		["Redesigned Home > Update Log: releases are grouped into collapsible cards with NEW and FIX badges, older versions are collapsed."] = "Обновлён дизайн «Главная > Обновления»: версии сгруппированы в сворачиваемые карточки с бейджами NEW и FIX, старые версии свёрнуты.",
 		["Live"] = "Онлайн",
 		["Live target, ammo, wallbang and aim state"] = "Текущая цель, патроны, wallbang и состояние прицела",
 		["Load"] = "Загрузить",
@@ -1177,7 +1191,7 @@ do
 		["Adding the update status to the Update Log and the welcome screen with a manual Check for Updates button."] = "Добавлен статус обновления в «Обновления» и на приветственный экран, а также кнопка ручной проверки.",
 		["Fixed the Update Log not being translated into Russian."] = "Исправлен перевод раздела «Обновления» на русский.",
 		["Adding the Activity chart to Home > Account: a year of hub usage by day, by week or cumulative, hover a square to see the date, duration and time of use."] = "Добавлен график активности в «Главная > Аккаунт»: год использования хаба по дням, неделям или накопительно, при наведении на квадрат видны дата, длительность и время использования.",
-		["Adding Navigation Style to Appearance > Window Customization with live previews: Classic, Floating Dock, Floating Pill, Segmented and Icon Rail."] = "Добавлен стиль навигации в «Внешний вид > Настройка окна» с живыми превью: Классика, Плавающий док, Плавающая капсула, Сегменты и Боковая панель.",
+		["Adding Navigation Style to Appearance > Window with live previews: Classic, Floating Dock, Floating Pill, Segmented and Icon Rail."] = "Добавлен стиль навигации в «Внешний вид > Окно» с живыми превью: Классика, Плавающий док, Плавающая капсула, Сегменты и Боковая панель.",
 		["Activity"] = "Активность",
 		["Your activity over the last year"] = "Ваша активность за последний год",
 		["Daily"] = "По дням",
@@ -2502,6 +2516,8 @@ do
 	local Rules = {
 		{ "^(%d+) scanned  \u{00B7}  (%d+) found$", "Просмотрено %1  \u{00B7}  найдено %2" },
 		{ "^(%d+) servers scanned$", "Просмотрено серверов: %1" },
+		{ "^Changes: (%d+)  \u{00B7}  New: (%d+)  \u{00B7}  Fixes: (%d+)$", "Изменений: %1  \u{00B7}  Новое: %2  \u{00B7}  Фиксы: %3" },
+		{ "^ID (%S+)  \u{00B7}  (%d+)%% full$", "ID %1  \u{00B7}  занято %2%%" },
 		{ "^avg (%d+)$", "ср. %1" },
 		{ "^Recorded ([%d%.]+)s %((%d+) frames, (%d+) events%)$", "Записано %1 с (%2 кадров, %3 событий)" },
 		{ "^Trimmed to ([%d%.]+)s$", "Обрезано до %1 с" },
@@ -5929,6 +5945,12 @@ do
 	end
 end
 
+function Lib.HoverStroke(card, stroke)
+	stroke = stroke or card:FindFirstChildOfClass("UIStroke")
+	card.MouseEnter:Connect(function() Lib.Tween(stroke, 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { Transparency = 0.6 }) end)
+	card.MouseLeave:Connect(function() Lib.Tween(stroke, 0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { Transparency = 0.88 }) end)
+end
+
 function Lib.BuildUpdateLog(view)
 	local releases = {
 		{
@@ -5945,7 +5967,7 @@ function Lib.BuildUpdateLog(view)
 				"Adding Notification Position to Appearance > Notification System: choose any corner or the center of the screen.",
 				"Adding the Mini Player to Music: a compact player in the bottom-right corner while the menu is minimized, with track info, play/pause, previous/next, seeking and a track list.",
 				"Adding the Activity chart to Home > Account: a year of hub usage by day, by week or cumulative, hover a square to see the date, duration and time of use.",
-				"Adding Navigation Style to Appearance > Window Customization with live previews: Classic, Floating Dock, Floating Pill, Segmented and Icon Rail.",
+				"Adding Navigation Style to Appearance > Window with live previews: Classic, Floating Dock, Floating Pill, Segmented and Icon Rail.",
 				"Adding playlists to Music: create, rename and delete playlists, each one keeps its own tracks.",
 				"Adding Crossfade to Music: the end of a track smoothly blends into the next one.",
 				"Adding Spectrum by Ranges to Music: the bars react to PlaybackLoudness ranges in the title bar and in the Mini Player.",
@@ -5986,7 +6008,11 @@ function Lib.BuildUpdateLog(view)
 				"Adding Click-to-Teleport on the mini-map: click or tap a point and you land on the ground there; the map shows players, waypoints and recent teleports.",
 				"Adding waypoint editing: rename a waypoint or move it to your current position.",
 				"Adding Teleport History: every jump of the session with time and coordinates, a Go button for each entry, Back to the previous position and a keybind.",
-				"Reworked notification sounds: Blip is now a soft drop, new Tick and Tap sounds, each sound has its own tone and softness."
+				"Reworked notification sounds: Blip is now a soft drop, new Tick and Tap sounds, each sound has its own tone and softness.",
+				"Redesigned Settings > Appearance: inner tabs Theme, Window, Background, Notifications, Language and Interface with slide transitions, a Theme grid with color strips and Add Custom Theme, and a Navigation Style carousel with animated mini-schemes.",
+				"Redesigned the Server List in Features > Server: cards with players, ping and an occupancy bar, Join and Copy ID buttons, and servers load as you scroll.",
+				"Redesigned Home > Developers and Home > Info in the style of Account and Overview: outlined cards, hover animations and copyable contacts.",
+				"Redesigned Home > Update Log: releases are grouped into collapsible cards with NEW and FIX badges, older versions are collapsed."
 			}
 		},
 		{
@@ -6092,16 +6118,18 @@ function Lib.BuildUpdateLog(view)
 		Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 2,
 		ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(),
 		Parent = view,
-		Lib.Create("UIListLayout", { Padding = UDim.new(0, 24), SortOrder = Enum.SortOrder.LayoutOrder }),
+		Lib.Create("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
 		Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 12), PaddingBottom = UDim.new(0, 14) })
 	})
 
 	local Version = Lib.Version
 	local card = Lib.Create("Frame", {
-		Size = UDim2.new(1, 0, 0, 64), BackgroundColor3 = Color3.fromRGB(22, 22, 22), LayoutOrder = 0, Parent = scroll,
-		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 9) })
+		Size = UDim2.new(1, 0, 0, 64), BackgroundColor3 = Color3.fromRGB(15, 15, 15), LayoutOrder = 0, Parent = scroll,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 12) }),
+		Lib.Create("UIStroke", { Color = Color3.fromRGB(128, 128, 128), Transparency = 0.88, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
 	})
-	Lib.RegisterThemeElement(card, "BackgroundColor3", 0.7, true)
+	Lib.RegisterThemeElement(card, "BackgroundColor3", 0.5)
+	Lib.HoverStroke(card)
 
 	local dot = Lib.Create("Frame", {
 		Size = UDim2.fromOffset(8, 8), Position = UDim2.new(0, 18, 0.5, -4), BackgroundColor3 = Color3.fromRGB(150, 150, 150), BorderSizePixel = 0, Parent = card,
@@ -6187,60 +6215,133 @@ function Lib.BuildUpdateLog(view)
 		end
 	end)
 
-	for index, release in ipairs(releases) do
-		local block = Lib.Create("Frame", {
-			Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = index, Parent = scroll,
-			Lib.Create("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder })
-		})
+	local TONES = { NEW = Color3.fromRGB(46, 213, 115), FIX = Color3.fromRGB(230, 162, 60) }
+	local HEAD = 62
+	local Quad, Quint, Out = Enum.EasingStyle.Quad, Enum.EasingStyle.Quint, Enum.EasingDirection.Out
 
-		local header = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 24), BackgroundTransparency = 1, LayoutOrder = 0, Parent = block })
+	local function Kind(note)
+		return (note:find("^Fix") or note:find("^Correct")) and "FIX" or "NEW"
+	end
+
+	local function BuildNotes(body, list)
+		for i = 1, #list do
+			local kind = Kind(list[i])
+			local tone = TONES[kind]
+			local row = Lib.Create("Frame", {
+				Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = i, Parent = body
+			})
+			Lib.Create("TextLabel", {
+				Size = UDim2.fromOffset(42, 16), Position = UDim2.fromOffset(0, 1), BackgroundColor3 = tone, BackgroundTransparency = 0.84,
+				Text = kind, TextColor3 = tone, TextSize = 9, Font = Enum.Font.GothamBold, Parent = row,
+				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 5) })
+			})
+			Lib.RegisterThemeText(Lib.Create("TextLabel", {
+				Size = UDim2.new(1, -54, 0, 0), Position = UDim2.fromOffset(54, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1,
+				Text = list[i], TextColor3 = Color3.fromRGB(145, 145, 145), TextSize = 13, Font = Enum.Font.GothamMedium,
+				TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true, Parent = row
+			}), "Secondary")
+		end
+	end
+
+	for index, release in ipairs(releases) do
+		local list, fixes = release.notes, 0
+		for i = 1, #list do
+			if Kind(list[i]) == "FIX" then fixes += 1 end
+		end
+		local open, built, settled, running = release.latest == true, false, false, nil
+
+		local card = Lib.Create("Frame", {
+			Size = UDim2.new(1, 0, 0, HEAD), BackgroundColor3 = Color3.fromRGB(15, 15, 15), ClipsDescendants = true, LayoutOrder = index, Parent = scroll,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 12) }),
+			Lib.Create("UIStroke", { Color = Color3.fromRGB(128, 128, 128), Transparency = 0.88, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
+		})
+		Lib.RegisterThemeElement(card, "BackgroundColor3", 0.5)
+
+		local head = Lib.Create("TextButton", {
+			Size = UDim2.new(1, 0, 0, HEAD), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, Parent = card
+		})
+		Lib.HoverStroke(head, card:FindFirstChildOfClass("UIStroke"))
+
 		local left = Lib.Create("Frame", {
-			Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1, Parent = header,
+			Size = UDim2.new(1, -170, 0, 24), Position = UDim2.fromOffset(16, 10), BackgroundTransparency = 1, Parent = head,
 			Lib.Create("UIListLayout", {
 				FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center,
 				Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder
 			})
 		})
-
-		local title = Lib.Create("TextLabel", {
+		Lib.RegisterThemeText(Lib.Create("TextLabel", {
 			Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1, LayoutOrder = 1,
 			Text = release.title and (release.version .. " " .. release.title) or release.version,
 			TextColor3 = Color3.fromRGB(245, 245, 245), TextSize = 17, Font = Enum.Font.GothamBold, Parent = left
-		})
-		Lib.RegisterThemeText(title, "Primary")
+		}), "Primary")
 
 		if release.latest then
-			local badge = Lib.Create("TextLabel", {
+			Lib.RegisterThemeText(Lib.Create("TextLabel", {
 				Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = Color3.fromRGB(128, 128, 128),
 				BackgroundTransparency = 0.8, LayoutOrder = 2, Text = "LATEST", TextColor3 = Color3.fromRGB(245, 245, 245),
 				TextSize = 10, Font = Enum.Font.GothamBold, Parent = left,
 				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 5) }),
 				Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) })
-			})
-			Lib.RegisterThemeText(badge, "Primary")
+			}), "Primary")
 		end
 
-		local date = Lib.Create("TextLabel", {
-			Size = UDim2.fromOffset(130, 24), Position = UDim2.new(1, -130, 0, 0), BackgroundTransparency = 1, Text = release.date,
-			TextColor3 = Color3.fromRGB(145, 145, 145), TextSize = 12, Font = Enum.Font.GothamMedium,
-			TextXAlignment = Enum.TextXAlignment.Right, Parent = header
-		})
-		Lib.RegisterThemeText(date, "Secondary")
+		Lib.RegisterThemeText(Lib.Create("TextLabel", {
+			Size = UDim2.new(1, -170, 0, 14), Position = UDim2.fromOffset(16, 38), BackgroundTransparency = 1,
+			Text = string.format("Changes: %d  \u{00B7}  New: %d  \u{00B7}  Fixes: %d", #list, #list - fixes, fixes),
+			TextColor3 = Color3.fromRGB(140, 140, 140), TextSize = 11, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, Parent = head
+		}), "Secondary")
 
-		local notes = Lib.Create("Frame", {
-			Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 1, Parent = block,
-			Lib.Create("UIListLayout", { Padding = UDim.new(0, 7), SortOrder = Enum.SortOrder.LayoutOrder }),
-			Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 2) })
+		Lib.RegisterThemeText(Lib.Create("TextLabel", {
+			Size = UDim2.fromOffset(110, 16), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -44, 0, 14), BackgroundTransparency = 1,
+			Text = release.date, TextColor3 = Color3.fromRGB(145, 145, 145), TextSize = 12, Font = Enum.Font.GothamMedium,
+			TextXAlignment = Enum.TextXAlignment.Right, Parent = head
+		}), "Secondary")
+
+		local arrow = Lib.Create("TextLabel", {
+			Size = UDim2.fromOffset(24, 24), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0), BackgroundTransparency = 1,
+			Text = "\u{25BC}", TextColor3 = Color3.fromRGB(150, 150, 150), TextSize = 12, Font = Enum.Font.GothamMedium,
+			Rotation = open and 180 or 0, Parent = head
+		})
+		Lib.RegisterThemeText(arrow, "Secondary")
+
+		local body = Lib.Create("Frame", {
+			Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Position = UDim2.fromOffset(0, HEAD), BackgroundTransparency = 1, Parent = card,
+			Lib.Create("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+			Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 16), PaddingTop = UDim.new(0, 2), PaddingBottom = UDim.new(0, 16) })
 		})
 
-		for noteIndex, note in ipairs(release.notes) do
-			local label = Lib.Create("TextLabel", {
-				Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = noteIndex,
-				Text = "\u{2022}  " .. note, TextColor3 = Color3.fromRGB(145, 145, 145), TextSize = 13, Font = Enum.Font.GothamMedium,
-				TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true, Parent = notes
-			})
-			Lib.RegisterThemeText(label, "Secondary")
+		local function Fit(time)
+			if running then running:Cancel() end
+			local goal = UDim2.new(1, 0, 0, open and (HEAD + body.AbsoluteSize.Y) or HEAD)
+			if time == 0 then
+				card.Size = goal
+				return
+			end
+			running = Services.Tween:Create(card, TweenInfo.new(time, Quint, Out), { Size = goal })
+			running:Play()
 		end
+
+		if open then
+			built = true
+			BuildNotes(body, list)
+		end
+
+		body:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+			if not open then return end
+			Fit(settled and 0.18 or 0)
+			settled = true
+		end)
+
+		head.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			open = not open
+			if open and not built then
+				built, settled = true, true
+				BuildNotes(body, list)
+			end
+			Lib.Tween(arrow, 0.22, Quad, Out, { Rotation = open and 180 or 0 })
+			Fit(0.3)
+		end)
 	end
 end
 
@@ -6467,12 +6568,167 @@ function Lib.ShowCompat(report)
 	modal.Open()
 end
 
+function Lib.BuildDevelopers(view)
+	local UIS = Services.UserInputService
+	local touch = UIS.TouchEnabled and not UIS.MouseEnabled
+	local COLLAPSED, CELL = 70, 46
+	local EXPANDED = COLLAPSED + CELL + 8 + 34 + 16
+	local Quint, Out = Enum.EasingStyle.Quint, Enum.EasingDirection.Out
+	local FIELDS = { "Discord", "Telegram", "Roblox" }
+
+	local Devs = {
+		{ "CherryCalcor", "Main Developer | UI Designer | The ideologist", {
+			Discord = "@cherrycalcor", Telegram = "-", Roblox = "CherryCalcor", Note = "Lead Developer.", Creation = "By himself."
+		} },
+		{ "HiveMango", "Deputy Chief Developer | UI Designer | Functions Developer" },
+		{ "Adevihia", "Junior Developer | Functions Developer" },
+		{ "Kirzzzza", "Function Developer", {
+			Discord = "@den02110", Telegram = "-", Roblox = "@Kirzzzza", Note = "<b>Helped:</b> ESP and Combat feature developer.", Creation = "Ai, Claude-Opus 5.5"
+		} },
+		{ "GrenkiWaves", "Tester" }
+	}
+
+	local scroll = Lib.Create("ScrollingFrame", {
+		Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 2,
+		ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = view,
+		Lib.Create("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
+		Lib.Create("UIPadding", { PaddingRight = UDim.new(0, 12), PaddingBottom = UDim.new(0, 14) })
+	})
+
+	local top = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 28), BackgroundTransparency = 1, LayoutOrder = 0, Parent = scroll })
+	Lib.RegisterThemeText(Lib.Create("TextLabel", {
+		Size = UDim2.new(0.6, 0, 1, 0), Position = UDim2.fromOffset(2, 0), BackgroundTransparency = 1, Text = "Developers", TextColor3 = Color3.fromRGB(255, 255, 255),
+		TextSize = 20, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = top
+	}), "Primary")
+	Lib.RegisterThemeText(Lib.Create("TextLabel", {
+		Size = UDim2.new(0.4, 0, 1, 0), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -4, 0, 0), BackgroundTransparency = 1,
+		Text = touch and "Tap a card for contacts" or "Hover a card for contacts", TextColor3 = Color3.fromRGB(140, 140, 140), TextSize = 12,
+		Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Right, Parent = top
+	}), "Secondary")
+
+	for i, dev in ipairs(Devs) do
+		local info = dev[3]
+		local card = Lib.Create("Frame", {
+			Size = UDim2.new(1, 0, 0, COLLAPSED), BackgroundColor3 = Color3.fromRGB(15, 15, 15), ClipsDescendants = true, LayoutOrder = i, Parent = scroll,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 12) }),
+			Lib.Create("UIStroke", { Color = Color3.fromRGB(128, 128, 128), Transparency = 0.88, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
+		})
+		Lib.RegisterThemeElement(card, "BackgroundColor3", 0.5)
+		Lib.HoverStroke(card)
+
+		local head = Lib.Create("TextButton", {
+			Size = UDim2.new(1, 0, 0, COLLAPSED), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, Parent = card
+		})
+
+		Lib.RegisterThemeText(Lib.Create("TextLabel", {
+			Size = UDim2.fromOffset(42, 42), Position = UDim2.fromOffset(16, 14), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 0.92,
+			Text = dev[1]:sub(1, 1):upper(), TextColor3 = Color3.fromRGB(255, 255, 255), TextSize = 16, Font = Enum.Font.GothamBold, Parent = head,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 11) })
+		}), "Primary")
+		Lib.RegisterThemeText(Lib.Create("TextLabel", {
+			Size = UDim2.new(1, -170, 0, 20), Position = UDim2.fromOffset(70, 14), BackgroundTransparency = 1, Text = dev[1], TextColor3 = Color3.fromRGB(245, 245, 245),
+			TextSize = 15, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = head
+		}), "Primary")
+		Lib.RegisterThemeText(Lib.Create("TextLabel", {
+			Size = UDim2.new(1, -170, 0, 16), Position = UDim2.fromOffset(70, 36), BackgroundTransparency = 1, Text = dev[2], TextColor3 = Color3.fromRGB(140, 140, 140),
+			TextSize = 12, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = head
+		}), "Secondary")
+
+		if info then
+			Lib.RegisterThemeText(Lib.Create("TextLabel", {
+				Size = UDim2.fromOffset(0, 22), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -16, 0.5, 0),
+				BackgroundColor3 = Color3.fromRGB(128, 128, 128), BackgroundTransparency = 0.85, Text = "Contacts", TextColor3 = Color3.fromRGB(220, 220, 220),
+				TextSize = 11, Font = Enum.Font.GothamMedium, Parent = head,
+				Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) }),
+				Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 11), PaddingRight = UDim.new(0, 11) })
+			}), "Primary")
+
+			local grid = Lib.Create("Frame", {
+				Size = UDim2.new(1, -32, 0, CELL), Position = UDim2.fromOffset(16, COLLAPSED), BackgroundTransparency = 1, Parent = card,
+				Lib.Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder })
+			})
+
+			local open, hovering = false, false
+			local function Set(state)
+				if open == state then return end
+				open = state
+				Lib.Tween(card, 0.32, Quint, Out, { Size = UDim2.new(1, 0, 0, state and EXPANDED or COLLAPSED) })
+			end
+			local function Enter()
+				hovering = true
+				Set(true)
+			end
+			local function Leave()
+				hovering = false
+				task.delay(0.08, function()
+					if not hovering then Set(false) end
+				end)
+			end
+
+			for k, field in ipairs(FIELDS) do
+				local value = info[field]
+				local copyable = value ~= "-"
+				local cell = Lib.Create("TextButton", {
+					Size = UDim2.new(1 / 3, -6, 1, 0), LayoutOrder = k, BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 0.94,
+					Text = "", AutoButtonColor = false, Parent = grid,
+					Lib.Create("UICorner", { CornerRadius = UDim.new(0, 9) })
+				})
+				Lib.RegisterThemeText(Lib.Create("TextLabel", {
+					Size = UDim2.new(1, -20, 0, 12), Position = UDim2.fromOffset(10, 8), BackgroundTransparency = 1, Text = field, TextColor3 = Color3.fromRGB(130, 130, 130),
+					TextSize = 10, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, Parent = cell
+				}), "Secondary")
+				local label = Lib.Create("TextLabel", {
+					Size = UDim2.new(1, -20, 0, 16), Position = UDim2.fromOffset(10, 23), BackgroundTransparency = 1, Text = copyable and value or "\u{2014}",
+					TextColor3 = Color3.fromRGB(235, 235, 235), TextSize = 12, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left,
+					TextTruncate = Enum.TextTruncate.AtEnd, Parent = cell
+				})
+				Lib.RegisterThemeText(label, "Primary")
+				cell.MouseEnter:Connect(function()
+					if not touch then Enter() end
+					if copyable then Lib.Tween(cell, 0.15, Enum.EasingStyle.Quad, Out, { BackgroundTransparency = 0.88 }) end
+				end)
+				cell.MouseLeave:Connect(function()
+					if not touch then Leave() end
+					Lib.Tween(cell, 0.15, Enum.EasingStyle.Quad, Out, { BackgroundTransparency = 0.94 })
+				end)
+				cell.MouseButton1Click:Connect(function()
+					if not copyable then return end
+					Lib.PlayClick()
+					local copy = setclipboard or toclipboard or set_clipboard
+					if copy then pcall(copy, value) end
+					label.Text = "Copied!"
+					task.delay(1.2, function()
+						if label.Parent then label.Text = value end
+					end)
+				end)
+			end
+
+			Lib.RegisterThemeText(Lib.Create("TextLabel", {
+				Size = UDim2.new(1, -32, 0, 16), Position = UDim2.fromOffset(16, COLLAPSED + CELL + 8), BackgroundTransparency = 1, Text = info.Note, RichText = true,
+				TextColor3 = Color3.fromRGB(150, 150, 150), TextSize = 12, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, Parent = card
+			}), "Secondary")
+			Lib.RegisterThemeText(Lib.Create("TextLabel", {
+				Size = UDim2.new(1, -32, 0, 16), Position = UDim2.fromOffset(16, COLLAPSED + CELL + 26), BackgroundTransparency = 1,
+				Text = "<b>Creation Type:</b> " .. info.Creation, RichText = true,
+				TextColor3 = Color3.fromRGB(150, 150, 150), TextSize = 12, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, Parent = card
+			}), "Secondary")
+
+			if touch then
+				head.MouseButton1Click:Connect(function() Set(not open) end)
+			else
+				card.MouseEnter:Connect(Enter)
+				card.MouseLeave:Connect(Leave)
+			end
+		end
+	end
+end
+
 function Lib.BuildInfo(view)
 	local scroll = Lib.Create("ScrollingFrame", {
 		Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 2,
 		ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(),
 		Parent = view,
-		Lib.Create("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+		Lib.Create("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
 		Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 12), PaddingBottom = UDim.new(0, 14) })
 	})
 
@@ -6483,30 +6739,48 @@ function Lib.BuildInfo(view)
 	end
 
 	local header = Lib.Create("Frame", {
-		Size = UDim2.new(1, 0, 0, 78), BackgroundColor3 = Color3.fromRGB(15, 15, 15), LayoutOrder = Next(), Parent = scroll,
-		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
+		Size = UDim2.new(1, 0, 0, 70), BackgroundColor3 = Color3.fromRGB(15, 15, 15), LayoutOrder = Next(), Parent = scroll,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 12) }),
+		Lib.Create("UIStroke", { Color = Color3.fromRGB(128, 128, 128), Transparency = 0.88, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
 	})
 	Lib.RegisterThemeElement(header, "BackgroundColor3", 0.5)
+	Lib.HoverStroke(header)
 
-	local title = Lib.Create("TextLabel", {
-		Size = UDim2.new(1, -140, 0, 20), Position = UDim2.fromOffset(14, 12), BackgroundTransparency = 1, Text = "Executor Functions",
+	Lib.RegisterThemeText(Lib.Create("TextLabel", {
+		Size = UDim2.fromOffset(42, 42), Position = UDim2.fromOffset(14, 14), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 0.92,
+		Text = "fx", TextColor3 = Color3.fromRGB(255, 255, 255), TextSize = 15, Font = Enum.Font.GothamBold, Parent = header,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 11) })
+	}), "Primary")
+
+	Lib.RegisterThemeText(Lib.Create("TextLabel", {
+		Size = UDim2.new(1, -220, 0, 20), Position = UDim2.fromOffset(68, 12), BackgroundTransparency = 1, Text = "Executor Functions",
 		TextColor3 = Color3.fromRGB(255, 255, 255), TextSize = 15, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = header
-	})
-	Lib.RegisterThemeText(title, "Primary")
+	}), "Primary")
 
-	local sub = Lib.Create("TextLabel", {
-		Size = UDim2.new(1, -140, 0, 36), Position = UDim2.fromOffset(14, 34), BackgroundTransparency = 1,
+	Lib.RegisterThemeText(Lib.Create("TextLabel", {
+		Size = UDim2.new(1, -220, 0, 28), Position = UDim2.fromOffset(68, 33), BackgroundTransparency = 1,
 		Text = "Every UNC / sUNC function used by this hub. Run the test to check your executor.",
-		TextColor3 = Color3.fromRGB(130, 130, 130), TextSize = 11, Font = Enum.Font.GothamMedium, TextWrapped = true,
+		TextColor3 = Color3.fromRGB(140, 140, 140), TextSize = 11, Font = Enum.Font.GothamMedium, TextWrapped = true,
 		TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, Parent = header
-	})
-	Lib.RegisterThemeText(sub, "Secondary")
+	}), "Secondary")
 
 	local run = Lib.Create("TextButton", {
-		Size = UDim2.fromOffset(110, 34), Position = UDim2.new(1, -124, 0.5, -17), BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-		Text = "Run Test", TextColor3 = Color3.fromRGB(0, 0, 0), TextSize = 12, Font = Enum.Font.GothamBold, AutoButtonColor = false, Parent = header,
-		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
+		Size = UDim2.fromOffset(0, 32), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0),
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 0.92, Text = "Run Test", TextColor3 = Color3.fromRGB(235, 235, 235),
+		TextSize = 12, Font = Enum.Font.GothamMedium, AutoButtonColor = false, Parent = header,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) }),
+		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 16) }),
+		Lib.Create("UIScale", { Scale = 1 })
 	})
+	Lib.RegisterThemeText(run, "Primary")
+	local runScale = run:FindFirstChildOfClass("UIScale")
+	run.MouseEnter:Connect(function() Lib.Tween(run, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundTransparency = 0.82 }) end)
+	run.MouseLeave:Connect(function()
+		Lib.Tween(run, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundTransparency = 0.92 })
+		Lib.Tween(runScale, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { Scale = 1 })
+	end)
+	run.MouseButton1Down:Connect(function() Lib.Tween(runScale, 0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { Scale = 0.94 }) end)
+	run.MouseButton1Up:Connect(function() Lib.Tween(runScale, 0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out, { Scale = 1 }) end)
 
 	local chips = {}
 	local STATUS = {
@@ -6516,22 +6790,28 @@ function Lib.BuildInfo(view)
 	}
 
 	for _, group in ipairs(Lib.CompatCatalog) do
-		local groupTitle = Lib.Create("TextLabel", {
-			Size = UDim2.new(1, 0, 0, 22), BackgroundTransparency = 1, LayoutOrder = Next(), Text = group[1],
-			TextColor3 = Color3.fromRGB(220, 220, 220), TextSize = 13, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = scroll
-		})
-		Lib.RegisterThemeText(groupTitle, "Primary")
+		local groupRow = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 24), BackgroundTransparency = 1, LayoutOrder = Next(), Parent = scroll })
+		Lib.RegisterThemeText(Lib.Create("TextLabel", {
+			Size = UDim2.new(1, -40, 1, 0), Position = UDim2.fromOffset(2, 0), BackgroundTransparency = 1, Text = group[1],
+			TextColor3 = Color3.fromRGB(220, 220, 220), TextSize = 13, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = groupRow
+		}), "Primary")
+		Lib.RegisterThemeText(Lib.Create("TextLabel", {
+			Size = UDim2.fromOffset(36, 24), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -2, 0, 0), BackgroundTransparency = 1, Text = tostring(#group[2]),
+			TextColor3 = Color3.fromRGB(130, 130, 130), TextSize = 11, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Right, Parent = groupRow
+		}), "Secondary")
 
 		for _, entry in ipairs(group[2]) do
 			local row = Lib.Create("Frame", {
 				Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = Color3.fromRGB(15, 15, 15), LayoutOrder = Next(), Parent = scroll,
-				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) }),
-				Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
+				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 12) }),
+				Lib.Create("UIStroke", { Color = Color3.fromRGB(128, 128, 128), Transparency = 0.88, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+				Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 12), PaddingBottom = UDim.new(0, 12), PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 14) })
 			})
 			Lib.RegisterThemeElement(row, "BackgroundColor3", 0.5)
+			Lib.HoverStroke(row)
 
 			local text = Lib.Create("Frame", {
-				Size = UDim2.new(1, -84, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = row,
+				Size = UDim2.new(1, -90, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = row,
 				Lib.Create("UIListLayout", { Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder })
 			})
 
@@ -6550,10 +6830,10 @@ function Lib.BuildInfo(view)
 			Lib.RegisterThemeText(desc, "Secondary")
 
 			chips[entry] = Lib.Create("TextLabel", {
-				Size = UDim2.fromOffset(70, 22), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0),
+				Size = UDim2.fromOffset(74, 22), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0),
 				BackgroundColor3 = Color3.fromRGB(128, 128, 128), BackgroundTransparency = 0.85, Text = entry.optional and "Optional" or "Required",
 				TextColor3 = Color3.fromRGB(150, 150, 150), TextSize = 10, Font = Enum.Font.GothamBold, Parent = row,
-				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
+				Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) })
 			})
 		end
 	end
@@ -6709,7 +6989,7 @@ do
 	local View_Overview = MakeTab("Overview", 50)
 	local View_Account = MakeTab("Account", 90)
 	local View_Achievements = MakeTab("Achievements", 130)
-	local View_Developers = MakeTab("Developers", 170)
+	Lib.BuildDevelopers(MakeTab("Developers", 170))
 	Lib.BuildUpdateLog(MakeTab("Update Log", 210))
 	Lib.BuildInfo(MakeTab("Info", 250))
 	Lib.BuildDiscordButton(SideBar)
@@ -7217,79 +7497,6 @@ do
 	UI.AchUpdateCallback = RefreshAchievementUI
 	RefreshAchievementUI()
 	UpdateDecorButtonState()
-
-	local devScroll = Lib.Create("ScrollingFrame", {
-		Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 2,
-		ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = View_Developers,
-		Lib.Create("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
-		Lib.Create("UIPadding", { PaddingRight = UDim.new(0, 12), PaddingBottom = UDim.new(0, 10) })
-	})
-
-	local Devs = {
-		{ "CherryCalcor", "Main Developer | UI Designer | The ideologist", {
-			Discord = "@cherrycalcor", Telegram = "-", Roblox = "CherryCalcor", Note = "Lead Developer.", Creation = "By himself."
-		} },
-		{ "HiveMango", "Deputy Chief Developer | UI Designer | Functions Developer" },
-		{ "Adevihia", "Junior Developer | Functions Developer" },
-		{ "Kirzzzza", "Function Developer", {
-			Discord = "@den02110", Telegram = "-", Roblox = "@Kirzzzza", Note = "<b>Helped:</b> ESP and Combat feature developer.", Creation = "Ai, Claude-Opus 5.5"
-		} },
-		{ "GrenkiWaves", "Tester" }
-	}
-
-	local COLLAPSED, LINE = 65, 15
-	local UIS = Services.UserInputService
-
-	for i, v in ipairs(Devs) do
-		local info = v[3]
-		local devCard = Lib.Create("Frame", {
-			Size = UDim2.new(1, 0, 0, COLLAPSED), BackgroundColor3 = Color3.fromRGB(15, 15, 15), ClipsDescendants = true, LayoutOrder = i, Parent = devScroll,
-			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
-		})
-		Lib.RegisterThemeElement(devCard, "BackgroundColor3", 0.5)
-
-		Lib.RegisterThemeText(Lib.Create("TextLabel", {
-			Size = UDim2.new(1, -30, 0, 22), Position = UDim2.fromOffset(15, 12), BackgroundTransparency = 1, Text = v[1], TextColor3 = Color3.fromRGB(255, 255, 255),
-			TextSize = 15, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = devCard
-		}), "Primary")
-
-		Lib.RegisterThemeText(Lib.Create("TextLabel", {
-			Size = UDim2.new(1, -30, 0, 18), Position = UDim2.fromOffset(15, 34), BackgroundTransparency = 1, Text = v[2], TextColor3 = Color3.fromRGB(150, 150, 150),
-			TextSize = 12, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, Parent = devCard
-		}), "Secondary")
-
-		if info then
-			local text = string.format(
-				"<b>Social Media:</b>\nDiscord: %s\nTelegram: %s\nRoblox: %s\n\n%s\n<b>Creation Type:</b> %s",
-				info.Discord, info.Telegram, info.Roblox, info.Note, info.Creation
-			)
-			local height = (select(2, text:gsub("\n", "")) + 1) * LINE
-			local expanded = COLLAPSED + height + 8
-
-			Lib.RegisterThemeText(Lib.Create("TextLabel", {
-				Size = UDim2.new(1, -30, 0, height), Position = UDim2.fromOffset(15, COLLAPSED - 2), BackgroundTransparency = 1, Text = text, RichText = true,
-				TextColor3 = Color3.fromRGB(150, 150, 150), TextSize = 12, LineHeight = LINE / 12, Font = Enum.Font.GothamMedium,
-				TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, Parent = devCard
-			}), "Secondary")
-
-			local hit = Lib.Create("TextButton", {
-				Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 5, Parent = devCard
-			})
-
-			local open = false
-			local function Set(state)
-				if open == state then return end
-				open = state
-				Lib.Tween(devCard, 0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.Out, { Size = UDim2.new(1, 0, 0, state and expanded or COLLAPSED) })
-			end
-
-			hit.MouseEnter:Connect(function() Set(true) end)
-			hit.MouseLeave:Connect(function() Set(false) end)
-			hit.MouseButton1Click:Connect(function()
-				if UIS.TouchEnabled and not UIS.MouseEnabled then Set(not open) end
-			end)
-		end
-	end
 end
 
 do
@@ -21653,7 +21860,7 @@ do
 	local ServerListArrow = Lib.Create("TextLabel", { Size = UDim2.fromOffset(30, 30), Position = UDim2.new(1, -40, 0.5, -15), BackgroundTransparency = 1, Text = "▼", TextColor3 = Color3.fromRGB(150, 150, 150), TextSize = 12, Font = Enum.Font.GothamMedium, Parent = ServerListHeader })
 	Lib.RegisterThemeText(ServerListArrow, "Secondary")
 
-	local ServerListBody = Lib.Create("Frame", { Size = UDim2.new(1, -24, 0, 240), Position = UDim2.new(0, 12, 0, 50), BackgroundTransparency = 1, Parent = ServerListCard })
+	local ServerListBody = Lib.Create("Frame", { Size = UDim2.new(1, -24, 0, 284), Position = UDim2.new(0, 12, 0, 50), BackgroundTransparency = 1, Parent = ServerListCard })
 	local ServerListScroll = Lib.Create("ScrollingFrame", { Size = UDim2.new(1, 0, 1, -10), BackgroundTransparency = 1, ScrollBarThickness = 2, ScrollBarImageColor3 = Color3.fromRGB(80, 80, 80), BorderSizePixel = 0, Parent = ServerListBody })
 	local ServerListInnerLayout = Lib.Create("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder, Parent = ServerListScroll })
 	ServerListInnerLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
@@ -21664,28 +21871,120 @@ do
 	Lib.RegisterThemeText(ServerStatusLabel, "Secondary")
 	Lib.Create("TextLabel", { Name = "Reason", Size = UDim2.new(1, -30, 0, 34), Position = UDim2.new(0, 15, 0.5, 18), BackgroundTransparency = 1, Text = "", TextColor3 = Color3.fromRGB(110, 110, 110), TextSize = 11, Font = Enum.Font.Gotham, TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top, Parent = ServerStatusLabel })
 
-	local function CreateServerEntry(serverData, order)
-		local Item = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 48), BackgroundColor3 = Color3.fromRGB(22, 22, 22), LayoutOrder = order, Parent = ServerListScroll, Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }) })
-		Lib.RegisterThemeElement(Item, "BackgroundColor3", 0.7)
+	Lib.ServerView = { Pending = {}, Shown = 0 }
 
-		local percent = math.floor((serverData.playing / math.max(serverData.maxPlayers, 1)) * 100)
-		local shortJob = tostring(serverData.id):sub(1, 8) .. "..."
-
-		local sPlrs = Lib.Create("TextLabel", { Size = UDim2.new(0, 160, 0, 18), Position = UDim2.new(0, 12, 0, 6), BackgroundTransparency = 1, Text = "👥 " .. tostring(serverData.playing) .. " / " .. tostring(serverData.maxPlayers) .. " Players", TextColor3 = Color3.fromRGB(240, 240, 240), TextSize = 12, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = Item })
-		Lib.RegisterThemeText(sPlrs, "Primary")
-
-		local sInfo = Lib.Create("TextLabel", { Size = UDim2.new(0, 160, 0, 16), Position = UDim2.new(0, 12, 0, 24), BackgroundTransparency = 1, Text = "ID: " .. shortJob .. " • " .. tostring(percent) .. "% Full", TextColor3 = Color3.fromRGB(130, 130, 130), TextSize = 11, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, Parent = Item })
-		Lib.RegisterThemeText(sInfo, "Secondary")
-
-		local JoinBtn = Lib.Create("TextButton", { Size = UDim2.fromOffset(70, 28), Position = UDim2.new(1, -78, 0.5, -14), BackgroundColor3 = Color3.fromRGB(255, 255, 255), Text = "Join", TextColor3 = Color3.fromRGB(0, 0, 0), TextSize = 12, Font = Enum.Font.GothamBold, Parent = Item, Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }) })
-		JoinBtn.MouseEnter:Connect(function() Lib.Tween(JoinBtn, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundColor3 = Color3.fromRGB(210, 210, 210) }) end)
-		JoinBtn.MouseLeave:Connect(function() Lib.Tween(JoinBtn, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundColor3 = Color3.fromRGB(255, 255, 255) }) end)
-		JoinBtn.MouseButton1Click:Connect(function()
+	function Lib.ServerButton(parent, text, position, solid, callback)
+		local button = Lib.Create("TextButton", {
+			Size = UDim2.fromOffset(96, 26), Position = position, AutoButtonColor = false, Text = text, TextSize = 11, Font = Enum.Font.GothamBold, Parent = parent,
+			BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = solid and 0 or 0.92,
+			TextColor3 = solid and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(235, 235, 235),
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) }),
+			Lib.Create("UIScale", { Scale = 1 })
+		})
+		if not solid then Lib.RegisterThemeText(button, "Primary") end
+		local scale = button:FindFirstChildOfClass("UIScale")
+		local rest, hover = solid and 0 or 0.92, solid and 0.12 or 0.82
+		button.MouseEnter:Connect(function() Lib.Tween(button, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundTransparency = hover }) end)
+		button.MouseLeave:Connect(function()
+			Lib.Tween(button, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundTransparency = rest })
+			Lib.Tween(scale, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { Scale = 1 })
+		end)
+		button.MouseButton1Down:Connect(function() Lib.Tween(scale, 0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { Scale = 0.94 }) end)
+		button.MouseButton1Up:Connect(function() Lib.Tween(scale, 0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out, { Scale = 1 }) end)
+		button.MouseButton1Click:Connect(function()
 			Lib.PlayClick()
-			JoinBtn.Text = "..."
+			callback(button)
+		end)
+		return button
+	end
+
+	local function CreateServerEntry(serverData, order)
+		local maxPlayers = math.max(serverData.maxPlayers, 1)
+		local fraction = math.clamp(serverData.playing / maxPlayers, 0, 1)
+		local percent = math.floor(fraction * 100)
+		local ping = tonumber(serverData.ping)
+		local id = tostring(serverData.id)
+
+		local item = Lib.Create("Frame", {
+			Size = UDim2.new(1, 0, 0, 74), BackgroundColor3 = Color3.fromRGB(22, 22, 22), LayoutOrder = order, Parent = ServerListScroll,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 10) }),
+			Lib.Create("UIStroke", { Color = Color3.fromRGB(128, 128, 128), Transparency = 0.88, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
+		})
+		Lib.RegisterThemeElement(item, "BackgroundColor3", 0.7)
+		Lib.HoverStroke(item)
+
+		local row = Lib.Create("Frame", {
+			Size = UDim2.new(1, -130, 0, 20), Position = UDim2.fromOffset(14, 9), BackgroundTransparency = 1, Parent = item,
+			Lib.Create("UIListLayout", {
+				FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center,
+				Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder
+			})
+		})
+		Lib.RegisterThemeText(Lib.Create("TextLabel", {
+			Size = UDim2.fromOffset(0, 20), AutomaticSize = Enum.AutomaticSize.X, LayoutOrder = 1, BackgroundTransparency = 1,
+			Text = serverData.playing .. " / " .. serverData.maxPlayers, TextColor3 = Color3.fromRGB(240, 240, 240), TextSize = 14, Font = Enum.Font.GothamBold, Parent = row
+		}), "Primary")
+
+		if ping and ping > 0 then
+			local tone = ping < 90 and Color3.fromRGB(46, 213, 115) or (ping < 160 and Color3.fromRGB(230, 162, 60) or Color3.fromRGB(235, 87, 87))
+			Lib.Create("TextLabel", {
+				Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X, LayoutOrder = 2, BackgroundColor3 = tone, BackgroundTransparency = 0.85,
+				Text = math.floor(ping) .. " ms", TextColor3 = tone, TextSize = 10, Font = Enum.Font.GothamBold, Parent = row,
+				Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) }),
+				Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) })
+			})
+		end
+
+		Lib.RegisterThemeText(Lib.Create("TextLabel", {
+			Size = UDim2.new(1, -130, 0, 14), Position = UDim2.fromOffset(14, 32), BackgroundTransparency = 1,
+			Text = "ID " .. id:sub(1, 8) .. "  \u{00B7}  " .. percent .. "% full", TextColor3 = Color3.fromRGB(130, 130, 130), TextSize = 11,
+			Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, Parent = item
+		}), "Secondary")
+
+		local track = Lib.Create("Frame", {
+			Size = UDim2.new(1, -130, 0, 5), Position = UDim2.fromOffset(14, 55), BackgroundColor3 = Color3.fromRGB(128, 128, 128), BackgroundTransparency = 0.8,
+			BorderSizePixel = 0, Parent = item,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) })
+		})
+		local fill = Lib.Create("Frame", {
+			Size = UDim2.fromScale(0, 1), BackgroundColor3 = percent < 60 and Color3.fromRGB(46, 213, 115) or (percent < 85 and Color3.fromRGB(230, 162, 60) or Color3.fromRGB(235, 87, 87)),
+			BorderSizePixel = 0, Parent = track,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) })
+		})
+		task.delay(math.min(order, 8) * 0.04, function()
+			if fill.Parent then Lib.Tween(fill, 0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out, { Size = UDim2.fromScale(fraction, 1) }) end
+		end)
+
+		Lib.ServerButton(item, "Join", UDim2.new(1, -108, 0, 9), true, function(button)
+			button.Text = "Joining..."
 			pcall(function() Services.Teleport:TeleportToPlaceInstance(game.PlaceId, serverData.id, App.Player) end)
+			task.delay(6, function()
+				if button.Parent then button.Text = "Join" end
+			end)
+		end)
+		Lib.ServerButton(item, "Copy ID", UDim2.new(1, -108, 0, 39), false, function(button)
+			local copy = setclipboard or toclipboard or set_clipboard
+			if copy then pcall(copy, id) end
+			button.Text = "Copied!"
+			task.delay(1.4, function()
+				if button.Parent then button.Text = "Copy ID" end
+			end)
 		end)
 	end
+
+	function Lib.FlushServers(count)
+		local view = Lib.ServerView
+		local stop = math.min(#view.Pending, view.Shown + count)
+		for i = view.Shown + 1, stop do CreateServerEntry(view.Pending[i], i) end
+		view.Shown = stop
+	end
+
+	ServerListScroll:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
+		local view = Lib.ServerView
+		if view.Shown < #view.Pending and ServerListScroll.CanvasPosition.Y + ServerListScroll.AbsoluteWindowSize.Y > ServerListScroll.AbsoluteCanvasSize.Y - 180 then
+			Lib.FlushServers(20)
+		end
+	end)
 
 	Lib.ServerHosts = { "https://games.roproxy.com", "https://games.roblox.com" }
 	Lib.ServerBands = { ["10-20%"] = { 10, 20 }, ["30-40%"] = { 30, 40 }, ["50-60%"] = { 50, 60 }, ["70-80%"] = { 70, 80 } }
@@ -21726,6 +22025,7 @@ do
 		for _, c in ipairs(ServerListScroll:GetChildren()) do
 			if c:IsA("Frame") then c:Destroy() end
 		end
+		Lib.ServerView.Pending, Lib.ServerView.Shown = {}, 0
 		ServerListScroll.CanvasPosition = Vector2.zero
 
 		local reason = ServerStatusLabel:FindFirstChild("Reason")
@@ -21794,7 +22094,9 @@ do
 					if SL.Sort == "Least Players" then return a.playing < b.playing end
 					return a.playing > b.playing
 				end)
-				for i = 1, math.min(#list, wanted) do CreateServerEntry(list[i], i) end
+				for i = #list, wanted + 1, -1 do list[i] = nil end
+				Lib.ServerView.Pending = list
+				Lib.FlushServers(24)
 				ServerStatusLabel.Visible = false
 				ServerListScroll.Visible = true
 			else
@@ -21811,7 +22113,7 @@ do
 		Lib.PlayClick()
 		State.ServerList.IsOpen = not State.ServerList.IsOpen
 		Lib.Tween(ServerListArrow, 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { Rotation = State.ServerList.IsOpen and 180 or 0 })
-		Lib.Tween(ServerListCard, 0.25, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out, { Size = State.ServerList.IsOpen and UDim2.new(1, 0, 0, 300) or UDim2.new(1, 0, 0, 50) })
+		Lib.Tween(ServerListCard, 0.25, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out, { Size = State.ServerList.IsOpen and UDim2.new(1, 0, 0, 344) or UDim2.new(1, 0, 0, 50) })
 
 		if State.ServerList.IsOpen then Lib.LoadServerList() end
 	end)
