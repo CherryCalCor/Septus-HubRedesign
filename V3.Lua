@@ -216,10 +216,10 @@ local Refs = App.Refs
 
 Lib.Conns = {}
 Lib.Version = {
-	Current = "3.7",
-	Display = "V3.7",
-	Url = "https://raw.githubusercontent.com/CherryCalCor/SeptusHub/refs/heads/main/version.json",
-	Repo = "https://github.com/CherryCalCor/SeptusHub",
+	Current = "3.7.1",
+	Display = "V3.7.1",
+	Url = "https://raw.githubusercontent.com/CherryCalCor/Septus-HubRedesign/refs/heads/main/version.json",
+	Repo = "https://github.com/CherryCalCor/Septus-HubRedesign",
 	Status = "idle",
 	Listeners = {}
 }
@@ -440,7 +440,7 @@ function Lib.RegisterThemeElement(element, propType, darkMultiplier, panel)
 	element[prop] = Lib.ThemeColor(factor)
 	UI.ThemeElements[element] = { prop, factor }
 	Lib.ThemeCount = Lib.ThemeCount + 1
-	if (factor == 0.5 or panel) and prop == "BackgroundColor3" and element.BackgroundTransparency == 0 then
+	if (factor == 0.5 or panel) and not Lib.PanelOff and prop == "BackgroundColor3" and element.BackgroundTransparency == 0 then
 		element.BackgroundTransparency = State.PanelTransparency / 100
 		UI.PanelElements[element] = true
 	end
@@ -449,6 +449,25 @@ function Lib.RegisterThemeElement(element, propType, darkMultiplier, panel)
 		UI.PanelElements[element] = nil
 		Lib.ThemeCount = Lib.ThemeCount - 1
 	end)
+end
+
+function Lib.MarkPanel(element)
+	if not UI.PanelElements[element] then
+		element.BackgroundTransparency = State.PanelTransparency / 100
+		UI.PanelElements[element] = true
+		element.Destroying:Connect(function()
+			UI.PanelElements[element] = nil
+		end)
+	end
+	return element
+end
+
+function Lib.Solid(build)
+	local previous = Lib.PanelOff
+	Lib.PanelOff = true
+	local ok, err = pcall(build)
+	Lib.PanelOff = previous
+	if not ok then error(err, 0) end
 end
 
 function Lib.RegisterThemeText(element, role)
@@ -949,6 +968,14 @@ do
 		["Redesigned the Server List in Features > Server: cards with players, ping and an occupancy bar, Join and Copy ID buttons, and servers load as you scroll."] = "Обновлён дизайн списка серверов в «Функции > Server»: карточки с игроками, пингом и полосой заполненности, кнопки «Зайти» и «Копия ID», серверы подгружаются при прокрутке.",
 		["Redesigned Home > Developers and Home > Info in the style of Account and Overview: outlined cards, hover animations and copyable contacts."] = "Обновлён дизайн «Главная > Разработчики» и «Главная > Инфо» в стиле Account и Overview: карточки с обводкой, анимации при наведении и копируемые контакты.",
 		["Redesigned Home > Update Log: releases are grouped into collapsible cards with NEW and FIX badges, older versions are collapsed."] = "Обновлён дизайн «Главная > Обновления»: версии сгруппированы в сворачиваемые карточки с бейджами NEW и FIX, старые версии свёрнуты.",
+		["Fixed the Developer Console and Remote Spy windows changing their transparency with Panel Transparency and their settings text being hard to read."] = "Исправлено: окна Developer Console и Remote Spy больше не меняют прозрачность вместе с Panel Transparency, текст в их настройках снова читается.",
+		["Fixed the cursor flying to the top left corner and becoming unusable when Mouse Aim is enabled."] = "Исправлено: курсор больше не улетает в левый верхний угол при включённом Mouse Aim.",
+		["Adding Panel Transparency support to Navigation Style: Floating Dock, Floating Pill, Segmented and Icon Rail."] = "Добавлена прозрачность панелей для стилей навигации: Floating Dock, Floating Pill, Segmented и Icon Rail.",
+		["Adding Panel Transparency support to theme cards, Add Custom Theme, the All Themes button and the font buttons in Appearance."] = "Добавлена прозрачность панелей для карточек тем, Add Custom Theme, кнопки All Themes и кнопок выбора шрифта в Appearance.",
+		["Adding Panel Transparency support to the sliding tab highlight at the top of Appearance."] = "Добавлена прозрачность панелей для переезжающей подсветки вкладок вверху Appearance.",
+		["Adding Panel Transparency support to the Trim, Reset, Delete, Clear and Open buttons in QoL."] = "Добавлена прозрачность панелей для кнопок Trim, Reset, Delete, Clear и Open в QoL.",
+		["Adding Panel Transparency support to the Copy, Go, Save Here, Back and Clear buttons in Teleport."] = "Добавлена прозрачность панелей для кнопок Copy, Go, Save Here, Back и Clear в Teleport.",
+		["Adding Panel Transparency support to server cards and their Join and Copy ID buttons in Server List."] = "Добавлена прозрачность панелей для карточек серверов и кнопок Join и Copy ID в Server List.",
 		["Live"] = "Онлайн",
 		["Live target, ammo, wallbang and aim state"] = "Текущая цель, патроны, wallbang и состояние прицела",
 		["Load"] = "Загрузить",
@@ -4932,6 +4959,7 @@ do
 		BackgroundColor3 = Color3.fromRGB(22, 22, 22), BorderSizePixel = 0, Visible = false, ZIndex = 1, Parent = UI.TopNavContainer,
 		PlateCorner, PlateStroke
 	})
+	Lib.MarkPanel(Plate)
 
 	local ThumbCorner = Lib.Create("UICorner", { CornerRadius = UDim.new(0, 7) })
 	local ThumbStroke = Lib.Create("UIStroke", { Thickness = 1, Transparency = 0.88, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Color = Color3.new(0, 0, 0), Enabled = false })
@@ -5954,7 +5982,21 @@ end
 function Lib.BuildUpdateLog(view)
 	local releases = {
 		{
-			version = "V3.7", date = "Date TBA", latest = true,
+			version = "V3.7.1", date = "Nov 10", latest = true,
+			notes = {
+				"Fixed the Developer Console and Remote Spy windows changing their transparency with Panel Transparency and their settings text being hard to read.",
+				"Fixed the cursor flying to the top left corner and becoming unusable when Mouse Aim is enabled.",
+				"Adding Panel Transparency support to Navigation Style: Floating Dock, Floating Pill, Segmented and Icon Rail.",
+				"Adding Panel Transparency support to theme cards, Add Custom Theme, the All Themes button and the font buttons in Appearance.",
+				"Fixed the display and checking of updates.",
+				"Adding Panel Transparency support to the sliding tab highlight at the top of Appearance.",
+				"Adding Panel Transparency support to the Trim, Reset, Delete, Clear and Open buttons in QoL.",
+				"Adding Panel Transparency support to the Copy, Go, Save Here, Back and Clear buttons in Teleport.",
+				"Adding Panel Transparency support to server cards and their Join and Copy ID buttons in Server List."
+			}
+		},
+		{
+			version = "V3.7", date = "Date TBA",
 			notes = {
 				"Adding a version check via GitHub: the hub compares your version with the latest release and tells you when an update is available.",
 				"Adding the update status to the Update Log and the welcome screen with a manual Check for Updates button.",
@@ -8329,7 +8371,7 @@ local function MakeRow(entry, animate)
 		TextColor3 = Color3.fromRGB(130, 130, 130), TextSize = 11, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, Parent = row
 	})
 	Lib.RegisterThemeText(sub, "Secondary")
-	local go = Chip(row, "Go", UDim2.fromOffset(46, 28), UDim2.new(1, -130, 0, 9))
+	local go = Lib.MarkPanel(Chip(row, "Go", UDim2.fromOffset(46, 28), UDim2.new(1, -130, 0, 9)))
 	local edit = Chip(row, "✎", UDim2.fromOffset(28, 28), UDim2.new(1, -76, 0, 9))
 	local del = Chip(row, "×", UDim2.fromOffset(28, 28), UDim2.new(1, -42, 0, 9))
 
@@ -8506,7 +8548,7 @@ end
 			TextXAlignment = Enum.TextXAlignment.Left, ClearTextOnFocus = false, Parent = field
 		})
 		Lib.RegisterThemeText(box, "Primary")
-		local save = Chip(input, "Save Here", UDim2.fromOffset(88, 32), UDim2.new(1, -102, 0, 12))
+		local save = Lib.MarkPanel(Chip(input, "Save Here", UDim2.fromOffset(88, 32), UDim2.new(1, -102, 0, 12)))
 		Lib.Create("Frame", {
 			Size = UDim2.new(1, -28, 0, 1), Position = UDim2.new(0, 14, 1, -1), BackgroundColor3 = Color3.fromRGB(25, 25, 25), BorderSizePixel = 0, Parent = input
 		})
@@ -8623,7 +8665,7 @@ do
 			TextColor3 = Color3.fromRGB(130, 130, 130), TextSize = 11, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, Parent = row
 		})
 		Lib.RegisterThemeText(sub, "Secondary")
-		local go = Chip(row, "Go", UDim2.fromOffset(52, 26), UDim2.new(1, -66, 0, 7))
+		local go = Lib.MarkPanel(Chip(row, "Go", UDim2.fromOffset(52, 26), UDim2.new(1, -66, 0, 7)))
 		Lib.Create("Frame", {
 			Size = UDim2.new(1, -28, 0, 1), Position = UDim2.new(0, 14, 1, -1), BackgroundColor3 = Color3.fromRGB(25, 25, 25), BorderSizePixel = 0, Parent = row
 		})
@@ -8712,7 +8754,7 @@ do
 			})
 			Lib.RegisterThemeText(values[index], "Primary")
 		end
-		local copy = Chip(info, "Copy", UDim2.fromOffset(88, 40), UDim2.new(1, -102, 0, 11))
+		local copy = Lib.MarkPanel(Chip(info, "Copy", UDim2.fromOffset(88, 40), UDim2.new(1, -102, 0, 11)))
 		Lib.Create("Frame", {
 			Size = UDim2.new(1, -28, 0, 1), Position = UDim2.new(0, 14, 1, -1), BackgroundColor3 = Color3.fromRGB(25, 25, 25), BorderSizePixel = 0, Parent = info
 		})
@@ -8748,7 +8790,7 @@ do
 			TextXAlignment = Enum.TextXAlignment.Left, ClearTextOnFocus = false, Parent = field
 		})
 		Lib.RegisterThemeText(box, "Primary")
-		local jumpGo = Chip(jump, "Go", UDim2.fromOffset(88, 32), UDim2.new(1, -102, 0, 10))
+		local jumpGo = Lib.MarkPanel(Chip(jump, "Go", UDim2.fromOffset(88, 32), UDim2.new(1, -102, 0, 10)))
 		Lib.Create("Frame", {
 			Size = UDim2.new(1, -28, 0, 1), Position = UDim2.new(0, 14, 1, -1), BackgroundColor3 = Color3.fromRGB(25, 25, 25), BorderSizePixel = 0, Parent = jump
 		})
@@ -9060,8 +9102,8 @@ do
 
 		local historyGroup = Lib.CreateFeatureGroup(scroll, "Teleport History", 6)
 		local bar = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 46), BackgroundTransparency = 1, LayoutOrder = -2, Parent = historyGroup })
-		local back = Chip(bar, "Back", UDim2.fromOffset(72, 30), UDim2.fromOffset(14, 8))
-		local clear = Chip(bar, "Clear", UDim2.fromOffset(72, 30), UDim2.fromOffset(94, 8))
+		local back = Lib.MarkPanel(Chip(bar, "Back", UDim2.fromOffset(72, 30), UDim2.fromOffset(14, 8)))
+		local clear = Lib.MarkPanel(Chip(bar, "Clear", UDim2.fromOffset(72, 30), UDim2.fromOffset(94, 8)))
 		Lib.Create("Frame", {
 			Size = UDim2.new(1, -28, 0, 1), Position = UDim2.new(0, 14, 1, -1), BackgroundColor3 = Color3.fromRGB(25, 25, 25), BorderSizePixel = 0, Parent = bar
 		})
@@ -12558,7 +12600,7 @@ function Lib.BuildCombat(scroll)
 				cam.CFrame = current:Lerp(CFrame.new(current.Position, Predict(part, Cf.Predict, Cf.Ms)), math.clamp(Cf.Speed / 100, 0.001, 1))
 			end
 		end
-		if Ms.On then
+		if Ms.On and UIS.MouseBehavior ~= Enum.MouseBehavior.Default then
 			local part = Best(Ms)
 			if part then
 				local point, onScreen = cam:WorldToViewportPoint(Predict(part, Ms.Predict, Ms.Ms))
@@ -12566,6 +12608,8 @@ function Lib.BuildCombat(scroll)
 					local size = cam.ViewportSize
 					local factor = math.clamp(Ms.Speed / 50, 0.001, 1)
 					local dx, dy = (point.X - size.X / 2) * factor, (point.Y - size.Y / 2) * factor
+					if dx ~= dx or dy ~= dy then return end
+					dx, dy = math.clamp(dx, -120, 120), math.clamp(dy, -120, 120)
 					if mousemoverel then
 						mousemoverel(dx, dy)
 					elseif mousemoveabs then
@@ -18281,7 +18325,7 @@ function Lib.BuildDevConsole()
 
 	function api.Toggle()
 		if not window then
-			Build()
+			Lib.Solid(Build)
 			window.Show()
 			for _, entry in ipairs(entries) do EnsureRow(entry) end
 			return
@@ -19061,7 +19105,7 @@ end))
 	function api.Toggle()
 		InstallHooks()
 		if not window then
-			Build()
+			Lib.Solid(Build)
 			window.Show()
 			return
 		end
@@ -19608,7 +19652,7 @@ function Lib.BuildQoL(scroll)
 
 	local KeybindGroup = Lib.CreateFeatureGroup(scroll, "Custom Keybinds", 1)
 	local PointerRow = MakeRow(KeybindGroup, "Bind Manager", "Keybinds for every feature now live in Settings > Binds", true, 50, -130)
-	local OpenChip = MakeChip(PointerRow, "Open", UDim2.fromOffset(92, 28), UDim2.new(1, -106, 0.5, -14))
+	local OpenChip = Lib.MarkPanel(MakeChip(PointerRow, "Open", UDim2.fromOffset(92, 28), UDim2.new(1, -106, 0.5, -14)))
 	OpenChip.MouseButton1Click:Connect(function()
 		Lib.PlayClick()
 		pcall(function()
@@ -19620,7 +19664,7 @@ function Lib.BuildQoL(scroll)
 	do
 		local group = Lib.CreateFeatureGroup(scroll, "Command Palette", 3)
 		local row = MakeRow(group, "Command Palette", "Press Ctrl + K to search tabs, features and waypoints", true, 50, -130)
-		local chip = MakeChip(row, "Open", UDim2.fromOffset(92, 28), UDim2.new(1, -106, 0.5, -14))
+		local chip = Lib.MarkPanel(MakeChip(row, "Open", UDim2.fromOffset(92, 28), UDim2.new(1, -106, 0.5, -14)))
 		chip.MouseButton1Click:Connect(function()
 			Lib.PlayClick()
 			Lib.OpenPalette()
@@ -20331,7 +20375,7 @@ function Lib.BuildQoL(scroll)
 		})
 
 		local function ActionChip(text, order, callback)
-			local chip = MakeChip(ActionRow, text, UDim2.new(0.25, -5, 0, 28), UDim2.new())
+			local chip = Lib.MarkPanel(MakeChip(ActionRow, text, UDim2.new(0.25, -5, 0, 28), UDim2.new()))
 			chip.LayoutOrder = order
 			chip.MouseButton1Click:Connect(function()
 				Lib.PlayClick()
@@ -21876,21 +21920,36 @@ do
 	function Lib.ServerButton(parent, text, position, solid, callback)
 		local button = Lib.Create("TextButton", {
 			Size = UDim2.fromOffset(96, 26), Position = position, AutoButtonColor = false, Text = text, TextSize = 11, Font = Enum.Font.GothamBold, Parent = parent,
-			BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = solid and 0 or 0.92,
+			BackgroundColor3 = solid and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(22, 22, 22),
 			TextColor3 = solid and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(235, 235, 235),
 			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) }),
 			Lib.Create("UIScale", { Scale = 1 })
 		})
-		if not solid then Lib.RegisterThemeText(button, "Primary") end
+		if not solid then
+			Lib.RegisterThemeElement(button, "BackgroundColor3", 0.7)
+			Lib.RegisterThemeText(button, "Primary")
+		end
+		Lib.MarkPanel(button)
 		local scale = button:FindFirstChildOfClass("UIScale")
-		local rest, hover = solid and 0 or 0.92, solid and 0.12 or 0.82
-		button.MouseEnter:Connect(function() Lib.Tween(button, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundTransparency = hover }) end)
-		button.MouseLeave:Connect(function()
-			Lib.Tween(button, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundTransparency = rest })
-			Lib.Tween(scale, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { Scale = 1 })
+		local Quad, Out = Enum.EasingStyle.Quad, Enum.EasingDirection.Out
+		button.MouseEnter:Connect(function()
+			if solid then
+				local base = State.PanelTransparency / 100
+				Lib.Tween(button, 0.15, Quad, Out, { BackgroundTransparency = base + (1 - base) * 0.12 })
+			else
+				Lib.Tween(button, 0.15, Quad, Out, { BackgroundColor3 = Lib.Lighten(Lib.ThemeColor(0.7), 0.07) })
+			end
 		end)
-		button.MouseButton1Down:Connect(function() Lib.Tween(scale, 0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { Scale = 0.94 }) end)
-		button.MouseButton1Up:Connect(function() Lib.Tween(scale, 0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out, { Scale = 1 }) end)
+		button.MouseLeave:Connect(function()
+			if solid then
+				Lib.Tween(button, 0.15, Quad, Out, { BackgroundTransparency = State.PanelTransparency / 100 })
+			else
+				Lib.Tween(button, 0.15, Quad, Out, { BackgroundColor3 = Lib.ThemeColor(0.7) })
+			end
+			Lib.Tween(scale, 0.15, Quad, Out, { Scale = 1 })
+		end)
+		button.MouseButton1Down:Connect(function() Lib.Tween(scale, 0.08, Quad, Out, { Scale = 0.94 }) end)
+		button.MouseButton1Up:Connect(function() Lib.Tween(scale, 0.2, Enum.EasingStyle.Back, Out, { Scale = 1 }) end)
 		button.MouseButton1Click:Connect(function()
 			Lib.PlayClick()
 			callback(button)
@@ -21911,6 +21970,7 @@ do
 			Lib.Create("UIStroke", { Color = Color3.fromRGB(128, 128, 128), Transparency = 0.88, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
 		})
 		Lib.RegisterThemeElement(item, "BackgroundColor3", 0.7)
+		Lib.MarkPanel(item)
 		Lib.HoverStroke(item)
 
 		local row = Lib.Create("Frame", {
@@ -27506,6 +27566,7 @@ function Lib.BuildAppearanceTabs(view)
 		return State.LightTheme and Lib.Theme.Item or Lib.Lighten(Lib.Theme.Item, 0.08)
 	end
 	thumb.BackgroundColor3 = ThumbColor()
+	Lib.MarkPanel(thumb)
 	table.insert(Lib.ThemeHooks, function()
 		Lib.Tween(thumb, 0.25, Quad, Out, { BackgroundColor3 = ThumbColor() })
 	end)
@@ -28248,6 +28309,7 @@ do
 			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 7) })
 		})
 		Lib.RegisterThemeElement(filterButton, "BackgroundColor3", 0.7)
+		Lib.MarkPanel(filterButton)
 		Lib.RegisterThemeText(filterButton, "Primary")
 
 		local Grid = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1, LayoutOrder = 2, Parent = Section })
@@ -28326,6 +28388,7 @@ do
 				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) }), stroke
 			})
 			Lib.RegisterThemeElement(card, "BackgroundColor3", 0.7)
+			Lib.MarkPanel(card)
 
 			local strips = Lib.Create("Frame", {
 				Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 0, 20), BackgroundTransparency = 1, ClipsDescendants = true, Parent = card,
@@ -28397,6 +28460,7 @@ do
 			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
 		})
 		Lib.RegisterThemeElement(addCard, "BackgroundColor3", 0.7)
+		Lib.MarkPanel(addCard)
 
 		local plusBox = Lib.Create("Frame", {
 			Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 0, 20), BackgroundColor3 = Color3.fromRGB(15, 15, 15), Parent = addCard,
@@ -28584,6 +28648,7 @@ do
 			Lib.PinFont(Item)
 			if data.boldFace then Item.FontFace = data.boldFace else Item.Font = data.bold end
 			Lib.RegisterThemeElement(Item, "BackgroundColor3", 0.7)
+			Lib.MarkPanel(Item)
 			Lib.RegisterThemeText(Item, "Primary")
 
 			local isSelected = key == selectedKey
