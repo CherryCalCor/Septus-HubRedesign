@@ -4,51 +4,17 @@
 
 ## Changelog
 
-### v2.32 Fix Update
-- [ ] Bug fixes with settings
-- [ ] ESP optimization for computer injectors
-- [ ] Adding a new ScriptBlox tab
+version = "V3.7.1"
 
-#### v2.33 
-- [ ] BunnyHop function in misc
-- [ ] Optimization
-- [ ] Fixing music playback in Music Player
-- [ ] Visually modified loading screen
-
-#### v2.4 [Major update]
-- [ ] List of flight animations
-- [ ] Slightly modified Fling/Bring Parts/Stalk Mode menus.
-- [ ] New features for Stalk Mode
-- [ ] Hitbox Expander
-- [ ] Part Deleter in Boost FPS
-- [ ] Modified server list logic
-- [ ] Fov Changer
-- [ ] Server connections via ID
-- [ ] Switching between places by ID
-- [ ] Fix for texture deletion
-- [ ] Minor changes to some objects Name/Server Toggle
-- [ ] Fov Cicrle in ESP (They added it for the lulz.)
-- [ ] Functions are now located in libraries.
-- [ ] Optimization of snow and ESP functions
-- [ ] Cyberpunk Neon shader modification
-- [ ] RTX shader changes
-- [ ] 
-
-##### V3 [Catalyst x RS Project]
-- [ ] Completely redesigned loading screen.
-- [ ] Completely redesigned Appearance system.
-- [ ] Completely redesigned interface.
-- [ ] Completely redesigned Home section.
-- [ ] Full interface optimization.
-- [ ] Fixed all memory leaks.
-- [ ] Completely redesigned Scripts/Emotes sections and their configuration.
-- [ ] Ability to change Animation Packs.
-- [ ] Modified and smoother animations.
-- [ ] Redesigned Config system.
-- [ ] Create and save custom themes.
-- [ ] Added descriptions for every feature.
-- [ ] Removed all unnecessary separate menus and redesigned the remaining ones.
-- [ ] Modified color editor for themes.
+				"Fixed the Developer Console and Remote Spy windows changing their transparency with Panel Transparency and their settings text being hard to read.",
+				"Fixed the cursor flying to the top left corner and becoming unusable when Mouse Aim is enabled.",
+				"Adding Panel Transparency support to Navigation Style: Floating Dock, Floating Pill, Segmented and Icon Rail.",
+				"Adding Panel Transparency support to theme cards, Add Custom Theme, the All Themes button and the font buttons in Appearance.",
+				"Fixed the display and checking of updates.",
+				"Adding Panel Transparency support to the sliding tab highlight at the top of Appearance.",
+				"Adding Panel Transparency support to the Trim, Reset, Delete, Clear and Open buttons in QoL.",
+				"Adding Panel Transparency support to the Copy, Go, Save Here, Back and Clear buttons in Teleport.",
+				"Adding Panel Transparency support to server cards and their Join and Copy ID buttons in Server List."
 
 ## 💬 Telegram
 
