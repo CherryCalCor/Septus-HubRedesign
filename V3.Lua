@@ -108,6 +108,9 @@ local App = {
 		EmotesCategory = "Emotes",
 		EmotesSort = "Most Liked",
 		EmotesQuery = "",
+		MarketplaceSection = "Emotes",
+		AccessoryMinPrice = "", AccessoryMaxPrice = "", AccessoryCreator = "",
+		AccessoryCache = {}, AccessoryGen = 0, AccessorySortLabel = "Most Popular", AccessoriesLoading = false, AccessoriesPage = 1, AccessoriesTotalPages = 1,
 		EmotesGen = 0,
 
 		CurrentEmoteTrack = nil,
@@ -216,10 +219,10 @@ local Refs = App.Refs
 
 Lib.Conns = {}
 Lib.Version = {
-	Current = "3.7.1",
-	Display = "V3.7.1",
-	Url = "https://raw.githubusercontent.com/CherryCalCor/Septus-HubRedesign/refs/heads/main/version.json",
-	Repo = "https://github.com/CherryCalCor/Septus-HubRedesign",
+	Current = "3.8",
+	Display = "V3.8",
+	Url = "https://raw.githubusercontent.com/CherryCalCor/SeptusHub/refs/heads/main/version.json",
+	Repo = "https://github.com/CherryCalCor/SeptusHub",
 	Status = "idle",
 	Listeners = {}
 }
@@ -414,6 +417,30 @@ Lib.HalloweenWeb = "rbxassetid://78965354526256"
 Lib.HalloweenHeader = { Logo = "rbxassetid://131395638826833", Icon = "rbxassetid://71225773476867" }
 Lib.DefaultHeaderIcon = "rbxassetid://74736110237331"
 
+Lib.WinterTheme = {
+	Name = "Winter",
+	Winter = true,
+	Background = Color3.fromRGB(8, 15, 30),
+	Surface = Color3.fromRGB(14, 25, 46),
+	Item = Color3.fromRGB(22, 38, 68),
+	Text = Color3.fromRGB(236, 245, 255),
+	Muted = Color3.fromRGB(140, 170, 207),
+	Accent = Color3.fromRGB(125, 211, 252),
+	SwitchOff = Color3.fromRGB(34, 52, 82)
+}
+
+Lib.GTATheme = {
+	Name = "GTA VI",
+	GTA = true,
+	Background = Color3.fromRGB(22, 8, 40),
+	Surface = Color3.fromRGB(38, 14, 62),
+	Item = Color3.fromRGB(58, 22, 88),
+	Text = Color3.fromRGB(255, 240, 248),
+	Muted = Color3.fromRGB(205, 150, 195),
+	Accent = Color3.fromRGB(255, 72, 150),
+	SwitchOff = Color3.fromRGB(72, 36, 100)
+}
+
 function Lib.ThemeColor(factor)
 	if factor == 0.5 then return Lib.Theme.Card end
 	if factor == 0.7 then return Lib.Theme.Item end
@@ -430,10 +457,58 @@ end
 
 function Lib.ResolveTheme(index)
 	if index == 0 then return Lib.HalloweenTheme end
+	if index == -1 then return Lib.WinterTheme end
+	if index == -2 then return Lib.GTATheme end
 	local presets = Lib.ThemePresets
 	if index <= #presets then return presets[index] end
 	return State.CustomThemes[index - #presets]
 end
+
+Lib.StrokeBase = setmetatable({}, { __mode = "k" })
+
+function Lib.PanelStroke(element, hide)
+	local stroke
+	for _, child in ipairs(element:GetChildren()) do
+		if child:IsA("UIStroke") and child.Name ~= "PanelEdge" then
+			stroke = child
+			break
+		end
+	end
+	if not stroke then return end
+	local base = Lib.StrokeBase[stroke]
+	if hide then
+		if not base then Lib.StrokeBase[stroke] = stroke.Transparency end
+		stroke.Transparency = 1
+	elseif base then
+		stroke.Transparency = base
+		Lib.StrokeBase[stroke] = nil
+	end
+end
+
+Lib.EdgeStrokes = {}
+
+function Lib.EdgeAlpha()
+	return 1 - math.clamp((State.PanelTransparency / 100 - 0.55) / 0.45, 0, 1) * 0.55
+end
+
+function Lib.Edge(element)
+	local stroke = Lib.Create("UIStroke", {
+		Name = "PanelEdge", Color = Lib.Palette.Primary, Thickness = 1, Transparency = Lib.EdgeAlpha(),
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = element
+	})
+	Lib.EdgeStrokes[stroke] = true
+	stroke.Destroying:Connect(function()
+		Lib.EdgeStrokes[stroke] = nil
+	end)
+	return element
+end
+
+table.insert(Lib.ThemeHooks, function()
+	local color = Lib.Palette.Primary
+	for stroke in pairs(Lib.EdgeStrokes) do
+		stroke.Color = color
+	end
+end)
 
 function Lib.RegisterThemeElement(element, propType, darkMultiplier, panel)
 	local prop, factor = propType or "BackgroundColor3", darkMultiplier or 1
@@ -443,6 +518,7 @@ function Lib.RegisterThemeElement(element, propType, darkMultiplier, panel)
 	if (factor == 0.5 or panel) and not Lib.PanelOff and prop == "BackgroundColor3" and element.BackgroundTransparency == 0 then
 		element.BackgroundTransparency = State.PanelTransparency / 100
 		UI.PanelElements[element] = true
+		if State.PanelTransparency >= 100 then Lib.PanelStroke(element, true) end
 	end
 	element.Destroying:Connect(function()
 		UI.ThemeElements[element] = nil
@@ -455,6 +531,7 @@ function Lib.MarkPanel(element)
 	if not UI.PanelElements[element] then
 		element.BackgroundTransparency = State.PanelTransparency / 100
 		UI.PanelElements[element] = true
+		if State.PanelTransparency >= 100 then Lib.PanelStroke(element, true) end
 		element.Destroying:Connect(function()
 			UI.PanelElements[element] = nil
 		end)
@@ -549,8 +626,14 @@ end
 
 function Lib.ApplyPanelTransparency()
 	local value = State.PanelTransparency / 100
+	local hide = value >= 1
 	for element in pairs(UI.PanelElements) do
 		element.BackgroundTransparency = value
+		Lib.PanelStroke(element, hide)
+	end
+	local alpha = Lib.EdgeAlpha()
+	for stroke in pairs(Lib.EdgeStrokes) do
+		stroke.Transparency = alpha
 	end
 end
 
@@ -609,6 +692,14 @@ function Lib.ApplyTheme(spec, instant)
 
 	if Lib.SetHalloweenDecor then
 		Lib.SetHalloweenDecor(typeof(spec) == "table" and spec.Halloween == true)
+	end
+
+	if Lib.SetWinterDecor then
+		Lib.SetWinterDecor(typeof(spec) == "table" and spec.Winter == true)
+	end
+
+	if Lib.SetGTADecor then
+		Lib.SetGTADecor(typeof(spec) == "table" and spec.GTA == true)
 	end
 
 	if UI.Main then
@@ -773,6 +864,16 @@ do
 		["Achievements"] = "Достижения",
 		["Actor Support"] = "Поддержка акторов",
 		["Add"] = "Добавить",
+		["Paste Asset ID, image or video URL..."] = "Вставьте Asset ID, ссылку на картинку или видео...",
+		["Background removed"] = "Фон убран",
+		["Enter an Asset ID or URL first"] = "Сначала введите Asset ID или ссылку",
+		["Video backgrounds need an executor with getcustomasset"] = "Для видеофона нужен executor с поддержкой getcustomasset",
+		["GIF is not supported, use mp4, webm or an image"] = "GIF не поддерживается, используйте mp4, webm или картинку",
+		["Redesigned Appearance > Background: backgrounds are now a tile gallery with None, your saved backgrounds and an Add tile; pressing Add smoothly reveals the field for an Asset ID or link right below the tiles."] = "Обновлён дизайн «Внешний вид > Фон»: фоны теперь галерея плиток с пунктом «Нет», вашими сохранёнными фонами и плиткой «Добавить»; при нажатии на неё снизу плавно появляется поле для Asset ID или ссылки.",
+		["Hover a background tile to see its Asset ID or URL, hover it and press the red cross to remove it. Pressing Use applies the background and saves it as a tile."] = "При наведении на плитку фона показывается его Asset ID или ссылка, а красный крестик удаляет плитку. Кнопка «Use» применяет фон и сохраняет его плиткой.",
+		["Adding video backgrounds: paste a link or a workspace file ending in .mp4 or .webm, or video: followed by a video asset ID. The video loops without sound and follows Background Opacity, Background Zoom and Animated Drift Effect."] = "Добавлены видеофоны: вставьте ссылку или файл из workspace с расширением .mp4 или .webm, либо video: и ID видео. Видео зациклено, без звука и учитывает прозрачность, масштаб фона и эффект дрейфа.",
+		["Image links from outside Roblox are now downloaded and cached, so they work as a background too. GIF files are not supported."] = "Ссылки на картинки вне Roblox теперь скачиваются и кэшируются, поэтому тоже работают как фон. GIF не поддерживается.",
+		["Panel Transparency now goes up to 100%, so panels, cards and their outlines can be made completely invisible."] = "Прозрачность панелей теперь доходит до 100%: панели, карточки и их контуры можно сделать полностью невидимыми.",
 		["Adjust character movement speed"] = "Изменяет скорость передвижения персонажа",
 		["Adjust flight speed velocity"] = "Изменяет скорость полёта",
 		["Adjust forward/backward distance behind target"] = "Расстояние вперёд/назад относительно цели",
@@ -822,6 +923,8 @@ do
 		["Boost FPS & World"] = "Повышение FPS и мир",
 		["Bring Parts"] = "Притягивание деталей",
 		["Browse"] = "Обзор",
+		["Marketplace"] = "Маркетплейс",
+		["Accessories"] = "Аксессуары",
 		["Bunny Hop"] = "Банни-хоп",
 		["Call Tracing"] = "Трассировка вызовов",
 		["Call code copied"] = "Код вызова скопирован",
@@ -1198,6 +1301,34 @@ do
 		["Recent activity"] = "Недавняя активность",
 		["V3.3 Halloween"] = "V3.3 Хэллоуин",
 		["Date TBA"] = "Дата уточняется",
+		["Winter ❄"] = "Зима ❄",
+		["Adding the Winter menu theme: a deep night-blue palette with an icy accent, a twinkling garland along the top edge, snowdrifts in the bottom corners and softly falling snowflakes."] = "Добавлена зимняя тема меню «Зима»: глубокая ночная синяя палитра с ледяным акцентом, мерцающая гирлянда вдоль верхнего края, сугробы в нижних углах и мягко падающий снег.",
+		["The Winter theme is available in Appearance > Theme, in the UI Studio theme list and in saved configs, and its decorations are shown in the live preview and in UI Studio."] = "Тема «Зима» доступна в «Внешний вид > Тема», в списке тем UI Studio и в сохранённых конфигах, а её украшения отображаются в живом предпросмотре и в UI Studio.",
+		["The Winter decorations are drawn with interface elements instead of images, so they need no extra downloads and follow the window corner radius."] = "Зимние украшения нарисованы элементами интерфейса, а не картинками, поэтому не требуют дополнительных загрузок и следуют радиусу углов окна.",
+		["Adding the GTA VI menu theme in honor of the game's release: a neon dusk palette with a pink-orange sunset glow, a setting sun, twinkling stars and a neon edge along the top."] = "Добавлена тема меню GTA VI в честь выхода игры: неоновая закатная палитра с розово-оранжевым свечением, заходящее солнце, мерцающие звёзды и неоновая линия по верхнему краю.",
+		["App Font buttons now have a thin outline, zoom in on hover and show the name of the font in a small tooltip."] = "Кнопки App Font теперь имеют тонкую обводку, приближаются при наведении и показывают название шрифта в маленькой подсказке.",
+		["Theme cards now zoom in on hover and their colour strips become a little brighter."] = "Карточки тем теперь приближаются при наведении, а их цветные полоски становятся немного ярче.",
+		["Near maximum Panel Transparency, the Asset ID / URL field, the source selector, the current track card, saved tracks, the playlist button and name field, Config name and Search configs now get an outline so they stay visible."] = "При почти максимальной прозрачности панелей поле Asset ID / URL, выбор источника, карточка текущего трека, сохранённые треки, кнопка и название плейлиста, Config name и Search configs получают обводку и не теряются.",
+		["The highlight of the sidebar sub-tabs now slides smoothly to the selected tab instead of fading in on each button."] = "Подсветка подвкладок в боковой панели теперь плавно переезжает на выбранную вкладку, а не появляется на каждой кнопке.",
+		["GTA VI 🌴"] = "GTA VI 🌴",
+		["Renamed Emotes to Marketplace and added the Accessories section: browse Roblox accessories with search, sorting, price range and creator filters, plus Saved and Folders."] = "Раздел Emotes переименован в Marketplace, добавлен раздел «Аксессуары»: просмотр аксессуаров Roblox с поиском, сортировкой, фильтрами по цене и создателю, а также «Сохранённые» и папки.",
+		["Adding Try on for accessories: a preview window with your avatar slides in from the right, rotates on its own and can be turned by dragging."] = "Добавлена примерка аксессуаров: окно с вашим аватаром выезжает справа, само вращается и поворачивается перетаскиванием.",
+		["Adding the Wear button to accessory cards and to the Try on window: it puts the accessory on your character and turns into Take off, and worn accessories come back after respawn."] = "Добавлена кнопка «Надеть» на карточках аксессуаров и в окне примерки: она надевает аксессуар на персонажа и превращается в «Снять», а надетые аксессуары возвращаются после респавна.",
+		["Accessories now load with skeleton placeholders, a page switcher, a Retry button and search suggestions, just like the Emotes section."] = "Аксессуары теперь загружаются со скелетонами, переключателем страниц, кнопкой Retry и подсказками поиска, как в разделе Emotes.",
+		["Fixed the Try on window staying on the screen when the menu was minimized or closed, and the Saved tab not updating when an accessory was removed from it."] = "Исправлено: окно примерки оставалось на экране при сворачивании или закрытии меню, а вкладка «Сохранённые» не обновлялась при удалении из неё аксессуара.",
+		["Wear"] = "Надеть",
+		["Take off"] = "Снять",
+		["Try on"] = "Примерить",
+		["Failed to load accessories"] = "Не удалось загрузить аксессуары",
+		["Drag to rotate"] = "Перетащите, чтобы повернуть",
+		["Unable to copy the current avatar"] = "Не удалось скопировать текущий аватар",
+		["This item could not be previewed as an accessory"] = "Этот предмет нельзя примерить как аксессуар",
+		["Roblox did not allow this asset to load for preview"] = "Roblox не разрешил загрузить этот предмет для примерки",
+		["Roblox did not allow this asset to load"] = "Roblox не разрешил загрузить этот предмет",
+		["Accessory equipped"] = "Аксессуар надет",
+		["Your character is not loaded yet"] = "Персонаж ещё не загружен",
+		["This item cannot be worn as an accessory"] = "Этот предмет нельзя надеть как аксессуар",
+		["Loading..."] = "Загрузка...",
 		["Start System"] = "Запустить систему",
 		["GitHub"] = "GitHub",
 		["Link Copied ✓"] = "Ссылка скопирована ✓",
@@ -3165,6 +3296,33 @@ end
 
 function Lib.CreateTabSystem(section, sideBar, stateKey, onSwitch)
 	local views, btns, icons, order, running = {}, {}, {}, {}, {}
+	local marker
+
+	local function MarkerLook()
+		local white = State.LightTheme
+		return white and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(255, 255, 255), white and 0.88 or 0.92
+	end
+
+	local function MoveMarker(button, animate)
+		if not marker then
+			local color, alpha = MarkerLook()
+			marker = Lib.Create("Frame", {
+				Name = "TabMarker", Size = UDim2.new(1, -30, 0, 34), BackgroundColor3 = color, BackgroundTransparency = alpha,
+				BorderSizePixel = 0, Visible = false, ZIndex = 0, Parent = sideBar,
+				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 7) })
+			})
+			table.insert(Lib.ThemeHooks, function()
+				local tint, fade = MarkerLook()
+				Lib.Tween(marker, 0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundColor3 = tint, BackgroundTransparency = fade })
+			end)
+		end
+		if animate and marker.Visible then
+			Lib.Tween(marker, 0.34, Enum.EasingStyle.Quint, Enum.EasingDirection.Out, { Position = button.Position })
+		else
+			marker.Position = button.Position
+			marker.Visible = true
+		end
+	end
 	local SHOW = TweenInfo.new(0.36, Enum.EasingStyle.Quint, Enum.EasingDirection.Out, 0, false, 0.05)
 	local HIDE = TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 	local REST = UDim2.new(0, 180, 0, 10)
@@ -3198,12 +3356,13 @@ function Lib.CreateTabSystem(section, sideBar, stateKey, onSwitch)
 
 			Lib.Tween(btns[name], 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, {
 				TextColor3 = isSel and selColor or unselColor,
-				BackgroundTransparency = isSel and (isWhite and 0.88 or 0.92) or 1
+				BackgroundTransparency = 1
 			})
 
 			Tint(name, isSel and selColor or unselColor, 0.2)
 
 			if isSel then
+				MoveMarker(btns[name], previous ~= nil and previous ~= "")
 				local fresh = not view.Visible or view.GroupTransparency > 0.98
 				if fresh then
 					view.Position = UDim2.new(0, 180, 0, 10 + 14 * direction)
@@ -4169,6 +4328,8 @@ end
 
 do
 	local SortQueries = {
+		["Most Popular"] = "SortType=2&SortAggregation=5",
+		["Most Favorited"] = "SortType=1&SortAggregation=5",
 		["Most Viewed"] = "sortType=2&sortAggregation=5",
 		["Least Viewed"] = "sortType=2&sortAggregation=1",
 		["Most Liked"] = "sortType=1&sortAggregation=5",
@@ -4179,22 +4340,39 @@ do
 
 	local Kinds = {
 		Emote = { subName = "EmoteAnimations", subId = 39, cache = "EmotesCache", prefix = "Emotes_", itemType = "Asset", fallback = "Unknown Emote" },
-		Pack = { subName = "Bundles", subId = 38, cache = "AnimationPacksCache", prefix = "Packs_", itemType = "Bundle", fallback = "Animation Pack" }
+		Pack = { subName = "Bundles", subId = 38, cache = "AnimationPacksCache", prefix = "Packs_", itemType = "Bundle", fallback = "Animation Pack" },
+		Accessory = { subName = nil, subId = nil, cache = "AccessoryCache", prefix = "Accessories_", itemType = "Asset", fallback = "Accessory" }
 	}
 
 	local function Fetch(kind, page, sortType)
 		local k = Kinds[kind]
 		local result = { success = false, data = {}, totalPages = 1 }
-		local sortQuery = (SortQueries[sortType] or SortQueries["Most Liked"]) .. (State.EmotesQuery ~= "" and ("&keyword=" .. Services.HttpService:UrlEncode(State.EmotesQuery)) or "")
+		local sortQuery = (SortQueries[sortType] or SortQueries["Most Liked"])
+		if State.EmotesQuery ~= "" then sortQuery ..= "&Keyword=" .. Services.HttpService:UrlEncode(State.EmotesQuery) end
+		if kind == "Accessory" then
+			local minPrice, maxPrice = tonumber(State.AccessoryMinPrice), tonumber(State.AccessoryMaxPrice)
+			if minPrice and maxPrice and minPrice > maxPrice then minPrice, maxPrice = maxPrice, minPrice end
+			if minPrice then sortQuery ..= "&MinPrice=" .. math.max(0, math.floor(minPrice)) end
+			if maxPrice then sortQuery ..= "&MaxPrice=" .. math.max(0, math.floor(maxPrice)) end
+			if State.AccessoryCreator ~= "" then sortQuery ..= "&CreatorName=" .. Services.HttpService:UrlEncode(State.AccessoryCreator) end
+		end
 		local cache = State[k.cache]
 		local cursorKey = k.prefix .. tostring(sortType) .. "_cursor_"
 		local cursor = cache[cursorKey .. page] or ""
 
-		local urls = {
-			"https://catalog.roproxy.com/v1/search/items/details?category=AvatarAnimations&subcategory=" .. k.subName .. "&limit=30&" .. sortQuery,
-			"https://catalog.roproxy.com/v1/search/items/details?category=12&subcategory=" .. k.subId .. "&limit=30&" .. sortQuery,
-			"https://catalog.roblox.com/v1/search/items/details?category=12&subcategory=" .. k.subId .. "&limit=30&" .. sortQuery
-		}
+		local urls
+		if kind == "Accessory" then
+			urls = {
+				"https://catalog.roproxy.com/v1/search/items/details?Category=11&Subcategory=19&Limit=30&" .. sortQuery,
+				"https://catalog.roblox.com/v1/search/items/details?Category=11&Subcategory=19&Limit=30&" .. sortQuery
+			}
+		else
+			urls = {
+				"https://catalog.roproxy.com/v1/search/items/details?category=AvatarAnimations&subcategory=" .. k.subName .. "&limit=30&" .. sortQuery,
+				"https://catalog.roproxy.com/v1/search/items/details?category=12&subcategory=" .. k.subId .. "&limit=30&" .. sortQuery,
+				"https://catalog.roblox.com/v1/search/items/details?category=12&subcategory=" .. k.subId .. "&limit=30&" .. sortQuery
+			}
+		end
 
 		local failures = {}
 		for index, baseUrl in ipairs(urls) do
@@ -4234,6 +4412,7 @@ do
 							id = item.id,
 							itemType = item.itemType or k.itemType,
 							name = item.name or k.fallback,
+							creator = (item.creator and (item.creator.name or item.creatorName)) or item.creatorName or "Unknown creator",
 							price = price,
 							thumbnailId = item.id
 						}
@@ -4249,6 +4428,7 @@ do
 
 	function API.FetchEmotes(page, sortType) return Fetch("Emote", page, sortType) end
 	function API.FetchAnimationPacks(page, sortType) return Fetch("Pack", page, sortType) end
+	function API.FetchAccessories(page, sortType) return Fetch("Accessory", page, sortType) end
 end
 
 local function BackupCharacterAnimations(character)
@@ -4544,6 +4724,43 @@ UI.CustomBgImage = Lib.Create("ImageLabel", {
 })
 Lib.BindCorner(UI.CustomBgImage, "ImageCorner")
 
+UI.CustomBgVideoGroup = Lib.Create("CanvasGroup", {
+	Size = UDim2.fromScale(1, 1),
+	BackgroundTransparency = 1,
+	GroupTransparency = (100 - State.BgOpacity) / 100,
+	Visible = false,
+	ZIndex = 0,
+	Parent = UI.BackgroundContainer
+})
+Lib.BindCorner(UI.CustomBgVideoGroup, "ImageCorner")
+
+UI.CustomBgVideo = Lib.Create("VideoFrame", {
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Position = UDim2.fromScale(0.5, 0.5),
+	Size = UDim2.fromScale(1, 1),
+	BackgroundTransparency = 1,
+	Looped = true,
+	Volume = 0,
+	ZIndex = 0,
+	Parent = UI.CustomBgVideoGroup
+})
+
+Lib.VideoFit = Vector2.one
+
+function Lib.VideoSize(factor)
+	local zoom = State.BgZoom / 100 * factor
+	return UDim2.fromScale(zoom * Lib.VideoFit.X, zoom * Lib.VideoFit.Y)
+end
+
+function Lib.FitVideo()
+	local resolution, box = UI.CustomBgVideo.Resolution, UI.Main.AbsoluteSize
+	if resolution.X > 0 and resolution.Y > 0 and box.Y > 0 then
+		local ratio = resolution.X / resolution.Y / (box.X / box.Y)
+		Lib.VideoFit = ratio >= 1 and Vector2.new(ratio, 1) or Vector2.new(1, 1 / ratio)
+		UI.CustomBgVideo.Size = Lib.VideoSize(1)
+	end
+end
+
 UI.Main = Lib.Create("Frame", {
 	Name = "Main",
 	Size = State.OriginalSize,
@@ -4599,6 +4816,254 @@ do
 		elseif container then
 			Lib.Tween(container, 0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { GroupTransparency = 1 }).Completed:Connect(function()
 				if not active then container.Visible = false end
+			end)
+		end
+	end
+end
+
+do
+	local Tweens = Services.Tween
+	local Linear, Sine, InOut, Quad, Out = Enum.EasingStyle.Linear, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, Enum.EasingStyle.Quad, Enum.EasingDirection.Out
+	local Circle = UDim.new(1, 0)
+	local Snow, Wire = Color3.fromRGB(238, 247, 255), Color3.fromRGB(38, 58, 84)
+	local Bulbs = {
+		Color3.fromRGB(255, 82, 82), Color3.fromRGB(255, 206, 84), Color3.fromRGB(94, 230, 140), Color3.fromRGB(96, 165, 250)
+	}
+	local Stops = { 0.18, 0.5, 0.82 }
+	local Swags, Steps = 3, 36
+
+	function Lib.BuildWinterDecor(parent, live)
+		local rng = Random.new(11)
+		local pulses, flakes = {}, {}
+
+		local function Dot(name, size, position, color, alpha)
+			return Lib.Create("Frame", {
+				Name = name, Size = UDim2.fromOffset(size, size), AnchorPoint = Vector2.new(0.5, 0.5), Position = position,
+				BackgroundColor3 = color, BackgroundTransparency = alpha, BorderSizePixel = 0, Parent = parent,
+				Lib.Create("UICorner", { CornerRadius = Circle })
+			})
+		end
+
+		local span = 1.6 / (Swags * Steps)
+		for swag = 0, Swags - 1 do
+			for step = 0, Steps - 1 do
+				local t = step / Steps
+				Lib.Create("Frame", {
+					Name = "Wire", Size = UDim2.new(span, 0, 0, 2), AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.new((swag + t) / Swags, 0, 0, 2 + math.sin(t * math.pi) * 9),
+					BackgroundColor3 = Wire, BorderSizePixel = 0, Parent = parent
+				})
+			end
+		end
+
+		local count = 0
+		for swag = 0, Swags - 1 do
+			for _, t in ipairs(Stops) do
+				count += 1
+				local color = Bulbs[(count - 1) % #Bulbs + 1]
+				local position = UDim2.new((swag + t) / Swags, 0, 0, 8 + math.sin(t * math.pi) * 9)
+				local glow = Dot("Glow", 15, position, color, 0.82)
+				local bulb = Dot("Bulb", 7, position, color, 0)
+				if live then
+					local info = TweenInfo.new(0.9 + rng:NextNumber() * 1.2, Sine, InOut, -1, true)
+					pulses[#pulses + 1] = Tweens:Create(bulb, info, { BackgroundTransparency = 0.5 })
+					pulses[#pulses + 1] = Tweens:Create(glow, info, { BackgroundTransparency = 0.95 })
+				end
+			end
+		end
+
+		for side = 0, 1 do
+			for i = 0, 6 do
+				local x = side == 0 and i * 0.03 or 1 - i * 0.03
+				Dot("Drift", 48 - i * 5 + rng:NextInteger(-3, 3), UDim2.new(x, 0, 1, rng:NextInteger(0, 8)), Snow, 0.05 + i * 0.03)
+			end
+		end
+
+		for _ = 1, live and 22 or 14 do
+			local x, y = rng:NextNumber(), rng:NextNumber()
+			local flake = Dot("Flake", rng:NextInteger(3, 6), UDim2.fromScale(x, y), Color3.new(1, 1, 1), 0.1 + rng:NextNumber() * 0.5)
+			if live then
+				local goal = { Position = UDim2.fromScale(math.clamp(x + rng:NextNumber(-0.06, 0.06), 0, 1), 1.04) }
+				local total = 8 + rng:NextNumber() * 8
+				local first = Tweens:Create(flake, TweenInfo.new(total * (1.04 - y) / 1.08, Linear), goal)
+				local loop = Tweens:Create(flake, TweenInfo.new(total, Linear, Out, -1), goal)
+				local restart = UDim2.fromScale(x, -0.04)
+				first.Completed:Connect(function(state)
+					if state == Enum.PlaybackState.Completed then
+						flake.Position = restart
+						loop:Play()
+					end
+				end)
+				flakes[#flakes + 1] = { flake = flake, origin = UDim2.fromScale(x, y), first = first, loop = loop }
+			end
+		end
+
+		return {
+			Play = function()
+				for _, item in ipairs(flakes) do
+					item.flake.Position = item.origin
+					item.first:Play()
+				end
+				for _, pulse in ipairs(pulses) do pulse:Play() end
+			end,
+			Stop = function()
+				for _, item in ipairs(flakes) do
+					item.first:Cancel()
+					item.loop:Cancel()
+				end
+				for _, pulse in ipairs(pulses) do pulse:Cancel() end
+			end
+		}
+	end
+
+	local container, active, control
+
+	function Lib.SetWinterDecor(on)
+		if on == active then return end
+		active = on
+		if on then
+			if not container then
+				container = Lib.Create("CanvasGroup", {
+					Name = "WinterDecor", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, GroupTransparency = 1,
+					ZIndex = 4, Visible = false, Parent = UI.Main
+				})
+				Lib.BindCorner(container, "DecorCorner")
+				control = Lib.BuildWinterDecor(container, true)
+			end
+			container.Visible = true
+			control.Play()
+			Lib.Tween(container, 0.45, Quad, Out, { GroupTransparency = 0 })
+		elseif container then
+			Lib.Tween(container, 0.3, Quad, Out, { GroupTransparency = 1 }).Completed:Once(function()
+				if not active then
+					container.Visible = false
+					control.Stop()
+				end
+			end)
+		end
+	end
+end
+
+do
+	local Sine, InOut, Quad, Out = Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, Enum.EasingStyle.Quad, Enum.EasingDirection.Out
+	local Pink, Orange, Cyan = Color3.fromRGB(255, 62, 150), Color3.fromRGB(255, 154, 48), Color3.fromRGB(70, 224, 236)
+	local Circle = UDim.new(1, 0)
+
+	function Lib.BuildGTADecor(parent, live)
+		local rng = Random.new(6)
+		local pulses = {}
+
+		local glow = Lib.Create("Frame", {
+			Name = "Glow", Size = UDim2.fromScale(1, 0.46), AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1),
+			BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = parent,
+			Lib.Create("UIGradient", {
+				Rotation = 90,
+				Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Pink), ColorSequenceKeypoint.new(1, Orange) }),
+				Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0.82) })
+			})
+		})
+
+		local outer = live and 270 or 96
+		local inner = live and 210 or 76
+		local core = live and 150 or 54
+
+		local function Disc(name, size, color, alpha, extra)
+			return Lib.Create("Frame", {
+				Name = name, Size = UDim2.fromOffset(size, size), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 1),
+				BackgroundColor3 = color, BackgroundTransparency = alpha, BorderSizePixel = 0, Parent = parent,
+				Lib.Create("UICorner", { CornerRadius = Circle }),
+				extra
+			})
+		end
+
+		local haloOuter = Disc("SunHaloOuter", outer, Orange, 0.93)
+		local haloInner = Disc("SunHaloInner", inner, Pink, 0.86)
+		local sun = Disc("Sun", core, Color3.new(1, 1, 1), 0, Lib.Create("UIGradient", {
+			Rotation = 90,
+			Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 228, 120)),
+				ColorSequenceKeypoint.new(0.45, Orange),
+				ColorSequenceKeypoint.new(1, Pink)
+			}),
+			Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 0.5) })
+		}))
+
+		Lib.Create("Frame", {
+			Name = "Bloom", Size = UDim2.new(1, 0, 0, 16), BackgroundColor3 = Pink, BorderSizePixel = 0, Parent = parent,
+			Lib.Create("UIGradient", {
+				Rotation = 90, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.74), NumberSequenceKeypoint.new(1, 1) })
+			})
+		})
+
+		Lib.Create("Frame", {
+			Name = "Neon", Size = UDim2.new(1, 0, 0, 2), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.05,
+			BorderSizePixel = 0, Parent = parent,
+			Lib.Create("UIGradient", {
+				Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Pink), ColorSequenceKeypoint.new(0.5, Orange), ColorSequenceKeypoint.new(1, Cyan) })
+			})
+		})
+
+		for _ = 1, live and 18 or 12 do
+			local size = rng:NextInteger(2, 3)
+			local alpha = 0.3 + rng:NextNumber() * 0.5
+			local star = Lib.Create("Frame", {
+				Name = "Star", Size = UDim2.fromOffset(size, size), AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(rng:NextNumber(0.02, 0.98), rng:NextNumber(0.04, 0.4)),
+				BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = alpha, BorderSizePixel = 0, Parent = parent,
+				Lib.Create("UICorner", { CornerRadius = Circle })
+			})
+			if live then
+				pulses[#pulses + 1] = Services.Tween:Create(star, TweenInfo.new(1 + rng:NextNumber() * 1.8, Sine, InOut, -1, true), { BackgroundTransparency = 0.92 })
+			end
+		end
+
+		if live then
+			pulses[#pulses + 1] = Services.Tween:Create(glow, TweenInfo.new(3.2, Sine, InOut, -1, true), { BackgroundTransparency = 0.3 })
+			pulses[#pulses + 1] = Services.Tween:Create(haloOuter, TweenInfo.new(3.6, Sine, InOut, -1, true), { BackgroundTransparency = 0.82 })
+			pulses[#pulses + 1] = Services.Tween:Create(haloInner, TweenInfo.new(3.2, Sine, InOut, -1, true), { BackgroundTransparency = 0.74 })
+			pulses[#pulses + 1] = Services.Tween:Create(sun, TweenInfo.new(3.6, Sine, InOut, -1, true), { Size = UDim2.fromOffset(core * 1.06, core * 1.06) })
+		end
+
+		return {
+			Play = function()
+				for i = 1, #pulses do pulses[i]:Play() end
+			end,
+			Stop = function()
+				for i = 1, #pulses do pulses[i]:Cancel() end
+			end
+		}
+	end
+
+	local container, active, control
+
+	function Lib.SetGTADecor(on)
+		if on == active then return end
+		active = on
+		if on then
+			if not control then
+				if container then container:Destroy() end
+				container = Lib.Create("CanvasGroup", {
+					Name = "GTADecor", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, GroupTransparency = 1,
+					ZIndex = 4, Visible = false, Parent = UI.Main
+				})
+				Lib.BindCorner(container, "DecorCorner")
+				local ok, result = pcall(Lib.BuildGTADecor, container, true)
+				if not ok then
+					container:Destroy()
+					container, active = nil, nil
+					return
+				end
+				control = result
+			end
+			container.Visible = true
+			control.Play()
+			Lib.Tween(container, 0.45, Quad, Out, { GroupTransparency = 0 })
+		elseif container then
+			Lib.Tween(container, 0.3, Quad, Out, { GroupTransparency = 1 }).Completed:Once(function()
+				if not active then
+					container.Visible = false
+					control.Stop()
+				end
 			end)
 		end
 	end
@@ -4932,7 +5397,7 @@ do
 		{ id = "Home", title = "Home", icon = "rbxassetid://128407802503574", expWidth = 76 },
 		{ id = "Features", title = "Features", icon = "rbxassetid://74917927400316", expWidth = 94 },
 		{ id = "Scripts", title = "Scripts", icon = "rbxassetid://99356660335373", expWidth = 84 },
-		{ id = "Emotes", title = "Emotes", icon = "rbxassetid://132655372254315", expWidth = 84 },
+		{ id = "Emotes", title = "Marketplace", icon = "rbxassetid://132655372254315", expWidth = 116 },
 		{ id = "Settings", title = "Settings", icon = "rbxassetid://112763474266331", expWidth = 94 }
 	}
 	local TAB_COUNT = #NavTabsData
@@ -5982,13 +6447,35 @@ end
 function Lib.BuildUpdateLog(view)
 	local releases = {
 		{
-			version = "V3.7.1", date = "Nov 10", latest = true,
+			version = "V3.8", date = "Nov 19", latest = true,
+			notes = {
+				"Redesigned Appearance > Background: backgrounds are now a tile gallery with None, your saved backgrounds and an Add tile; pressing Add smoothly reveals the field for an Asset ID or link right below the tiles.",
+				"Hover a background tile to see its Asset ID or URL, hover it and press the red cross to remove it. Pressing Use applies the background and saves it as a tile.",
+				"Adding video backgrounds: paste a link or a workspace file ending in .mp4 or .webm, or video: followed by a video asset ID. The video loops without sound and follows Background Opacity, Background Zoom and Animated Drift Effect.",
+				"Image links from outside Roblox are now downloaded and cached, so they work as a background too. GIF files are not supported.",
+				"Panel Transparency now goes up to 100%, so panels, cards and their outlines can be made completely invisible.",
+				"Adding the Winter menu theme: a deep night-blue palette with an icy accent, a twinkling garland along the top edge, snowdrifts in the bottom corners and softly falling snowflakes.",
+				"The Winter theme is available in Appearance > Theme, in the UI Studio theme list and in saved configs, and its decorations are shown in the live preview and in UI Studio.",
+				"The Winter decorations are drawn with interface elements instead of images, so they need no extra downloads and follow the window corner radius.",
+				"Adding the GTA VI menu theme in honor of the game's release: a neon dusk palette with a pink-orange sunset glow, a setting sun, twinkling stars and a neon edge along the top.",
+				"App Font buttons now have a thin outline, zoom in on hover and show the name of the font in a small tooltip.",
+				"Theme cards now zoom in on hover and their colour strips become a little brighter.",
+				"Near maximum Panel Transparency, the Asset ID / URL field, the source selector, the current track card, saved tracks, the playlist button and name field, Config name and Search configs now get an outline so they stay visible.",
+				"The highlight of the sidebar sub-tabs now slides smoothly to the selected tab instead of fading in on each button.",
+				"Renamed Emotes to Marketplace and added the Accessories section: browse Roblox accessories with search, sorting, price range and creator filters, plus Saved and Folders.",
+				"Adding Try on for accessories: a preview window with your avatar slides in from the right, rotates on its own and can be turned by dragging.",
+				"Adding the Wear button to accessory cards and to the Try on window: it puts the accessory on your character and turns into Take off, and worn accessories come back after respawn.",
+				"Accessories now load with skeleton placeholders, a page switcher, a Retry button and search suggestions, just like the Emotes section.",
+				"Fixed the Try on window staying on the screen when the menu was minimized or closed, and the Saved tab not updating when an accessory was removed from it."
+			}
+		},
+		{
+			version = "V3.7.1", date = "Nov 14",
 			notes = {
 				"Fixed the Developer Console and Remote Spy windows changing their transparency with Panel Transparency and their settings text being hard to read.",
 				"Fixed the cursor flying to the top left corner and becoming unusable when Mouse Aim is enabled.",
 				"Adding Panel Transparency support to Navigation Style: Floating Dock, Floating Pill, Segmented and Icon Rail.",
 				"Adding Panel Transparency support to theme cards, Add Custom Theme, the All Themes button and the font buttons in Appearance.",
-				"Fixed the display and checking of updates.",
 				"Adding Panel Transparency support to the sliding tab highlight at the top of Appearance.",
 				"Adding Panel Transparency support to the Trim, Reset, Delete, Clear and Open buttons in QoL.",
 				"Adding Panel Transparency support to the Copy, Go, Save Here, Back and Clear buttons in Teleport.",
@@ -5996,7 +6483,7 @@ function Lib.BuildUpdateLog(view)
 			}
 		},
 		{
-			version = "V3.7", date = "Date TBA",
+			version = "V3.7", date = "Nov 9",
 			notes = {
 				"Adding a version check via GitHub: the hub compares your version with the latest release and tells you when an update is available.",
 				"Adding the update status to the Update Log and the welcome screen with a manual Check for Updates button.",
@@ -23306,6 +23793,8 @@ do
 		end)
 	end
 
+
+
 	do
 		local cell, gap = UDim2.fromOffset(190, 236), UDim2.fromOffset(15, 15)
 		local savedScroll, savedEmpty = Lib.MakeCardList(View_Saved, "No saved scripts yet\nTap the star on a script card to save it", cell, gap, 10)
@@ -23344,7 +23833,7 @@ do
 	local EmotesSection = Lib.Create("CanvasGroup", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Visible = false, Parent = UI.ContentArea })
 	UI.EmotesSection = EmotesSection
 
-	local EmTitle = Lib.Create("TextLabel", { Size = UDim2.new(1, -30, 0, 30), Position = UDim2.new(0, 20, 0, 10), BackgroundTransparency = 1, Text = "Emotes", TextColor3 = Color3.fromRGB(255, 255, 255), TextSize = 20, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left })
+	local EmTitle = Lib.Create("TextLabel", { Size = UDim2.new(1, -30, 0, 30), Position = UDim2.new(0, 20, 0, 10), BackgroundTransparency = 1, Text = "Marketplace", TextColor3 = Color3.fromRGB(255, 255, 255), TextSize = 20, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left })
 	Lib.RegisterThemeText(EmTitle, "Primary")
 
 	local EmSub = Lib.Create("TextLabel", { Size = UDim2.new(1, -30, 0, 20), AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 15, 1, -15), BackgroundTransparency = 1, Text = "Roblox Marketplace", TextColor3 = Color3.fromRGB(100, 100, 100), TextSize = 11, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left })
@@ -23355,38 +23844,60 @@ do
 	local function ClearEmotesDataCache()
 		State.EmotesCache = {}
 		State.AnimationPacksCache = {}
+		State.AccessoryCache = {}
+		State.AccessoryGen += 1
+		State.AccessoriesPage = 1
 		State.EmotesPage = 1
 		State.EmotesLoading = false
 		State.EmotesGen = State.EmotesGen + 1
-		if State.CurrentEmotesTab == "Browse" and Lib.LoadEmotesPage then Lib.LoadEmotesPage(1) end
+		if State.CurrentEmotesTab == "Emotes" and Lib.LoadEmotesPage then Lib.LoadEmotesPage(1)
+		elseif State.CurrentEmotesTab == "Accessories" and Lib.LoadAccessoriesPage then Lib.LoadAccessoriesPage(1) end
 	end
 
 	Lib.EmoteStores = { Saved = Lib.MakeStore("SeptusHub_SavedEmotes.json"), Recent = Lib.MakeStore("SeptusHub_RecentEmotes.json", 40) }
+	Lib.AccessoryStores = { Saved = Lib.MakeStore("SeptusHub_SavedAccessories.json") }
 
 	local MakeEmotesTab
 	Lib.SwitchEmotesTab, MakeEmotesTab = Lib.CreateTabSystem(EmotesSection, EmotesSideBar, "CurrentEmotesTab", function(tabName)
-		if tabName == "Browse" and not State.EmotesLoading then
+		if tabName == "Emotes" and not State.EmotesLoading then
 			local currentCache = (State.EmotesCategory == "Emotes") and State.EmotesCache or State.AnimationPacksCache
 			if not currentCache[State.EmotesPage] then
 				Lib.LoadEmotesPage(State.EmotesPage)
 			end
+		elseif tabName == "Accessories" and Lib.LoadAccessoriesPage then
+			Lib.LoadAccessoriesPage(State.AccessoriesPage)
 		end
+		if tabName == "Accessories" then State.MarketplaceSection = "Accessories"
+		elseif tabName == "Emotes" then State.MarketplaceSection = "Emotes" end
+		if Lib.EmoteFilter then Lib.EmoteFilter.Button.SetCount(Lib.EmoteFilter.Count()) end
 		if Lib.OnEmotesTab then Lib.OnEmotesTab(tabName) end
 	end)
 
-	local View_EmotesBrowse = MakeEmotesTab("Browse", 50)
-	local View_EmotesSaved = MakeEmotesTab("Saved", 90)
-	local View_EmotesRecent = MakeEmotesTab("Recent", 130)
+	local View_EmotesBrowse = MakeEmotesTab("Emotes", 50)
+	local View_Accessories = MakeEmotesTab("Accessories", 90)
+	local View_EmotesSaved = MakeEmotesTab("Saved", 130)
+	local View_EmotesRecent = MakeEmotesTab("Recent", 170)
 
 	local EmFilter = {}
+	Lib.EmoteFilter = EmFilter
 	function EmFilter.Count()
 		local count = 0
-		if State.EmotesCategory ~= "Emotes" then count += 1 end
-		if State.EmotesSort ~= "Most Liked" then count += 1 end
+		if State.MarketplaceSection == "Accessories" then
+			if State.AccessorySortLabel ~= "Most Popular" then count += 1 end
+			if State.AccessoryMinPrice ~= "" then count += 1 end
+			if State.AccessoryMaxPrice ~= "" then count += 1 end
+			if State.AccessoryCreator ~= "" then count += 1 end
+		else
+			if State.EmotesCategory ~= "Emotes" then count += 1 end
+			if State.EmotesSort ~= "Most Liked" then count += 1 end
+		end
 		return count
 	end
 	EmFilter.Modal = Lib.BuildFilterModal("Emote Filters", "Refine how the hub is browsed")
-	EmFilter.Button = Lib.MakeFilterButton(EmotesSideBar, function() EmFilter.Modal.Open() end)
+	EmFilter.AccessoryModal = Lib.BuildFilterModal("Accessory Filters", "Set a price range, popularity and creator")
+	EmFilter.Button = Lib.MakeFilterButton(EmotesSideBar, function()
+		if State.MarketplaceSection == "Accessories" then EmFilter.AccessoryModal.Open() else EmFilter.Modal.Open() end
+	end)
 	function EmFilter.Changed()
 		EmFilter.Button.SetCount(EmFilter.Count())
 		ClearEmotesDataCache()
@@ -23402,6 +23913,46 @@ do
 			EmFilter.Changed()
 		end, index, spec[4])
 	end
+	local accessorySorts = { "Most Popular", "Most Favorited", "Newest" }
+	Lib.MakeFilterChips(EmFilter.AccessoryModal.Content, "Sort accessories by", accessorySorts, function(option)
+		return State.AccessorySortLabel == option
+	end, function(option)
+		State.AccessorySortLabel = option
+		EmFilter.Changed()
+	end, 1, 168)
+	local priceRow = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 62), BackgroundTransparency = 1, LayoutOrder = 2, Parent = EmFilter.AccessoryModal.Content })
+	local priceTitle = Lib.Create("TextLabel", { Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, Text = "Price range (Robux)", TextSize = 12, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = priceRow })
+	Lib.RegisterThemeText(priceTitle, "Primary")
+	local function MakeAccessoryInput(parent, placeholder, position, initial, onCommit)
+		local box = Lib.Create("TextBox", { Size = UDim2.new(0.48, 0, 0, 34), Position = position, BackgroundColor3 = Color3.fromRGB(22, 22, 22), Text = initial,
+			PlaceholderText = placeholder, PlaceholderColor3 = Color3.fromRGB(120, 120, 120), TextColor3 = Color3.fromRGB(235, 235, 235), TextSize = 12,
+			Font = Enum.Font.GothamMedium, ClearTextOnFocus = false, Parent = parent, Lib.Create("UICorner", { CornerRadius = UDim.new(0, 7) }),
+			Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 8) }) })
+		Lib.RegisterThemeElement(box, "BackgroundColor3", 0.7)
+		Lib.RegisterThemeText(box, "Primary")
+		box.FocusLost:Connect(function() onCommit(box.Text) end)
+		return box
+	end
+	MakeAccessoryInput(priceRow, "Min", UDim2.fromOffset(0, 24), State.AccessoryMinPrice, function(value)
+		State.AccessoryMinPrice = tostring(math.max(0, math.floor(tonumber(value) or 0)))
+		if value == "" then State.AccessoryMinPrice = "" end
+		EmFilter.Changed()
+	end)
+	MakeAccessoryInput(priceRow, "Max", UDim2.new(0.52, 0, 0, 24), State.AccessoryMaxPrice, function(value)
+		State.AccessoryMaxPrice = tostring(math.max(0, math.floor(tonumber(value) or 0)))
+		if value == "" then State.AccessoryMaxPrice = "" end
+		EmFilter.Changed()
+	end)
+	local creatorRow = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 62), BackgroundTransparency = 1, LayoutOrder = 3, Parent = EmFilter.AccessoryModal.Content })
+	local creatorTitle = Lib.Create("TextLabel", { Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, Text = "Creator username", TextSize = 12, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = creatorRow })
+	Lib.RegisterThemeText(creatorTitle, "Primary")
+	local creatorBox = Lib.Create("TextBox", { Size = UDim2.new(1, 0, 0, 34), Position = UDim2.fromOffset(0, 24), BackgroundColor3 = Color3.fromRGB(22, 22, 22), Text = State.AccessoryCreator,
+		PlaceholderText = "Enter creator username", PlaceholderColor3 = Color3.fromRGB(120, 120, 120), TextColor3 = Color3.fromRGB(235, 235, 235), TextSize = 12,
+		Font = Enum.Font.GothamMedium, ClearTextOnFocus = false, Parent = creatorRow, Lib.Create("UICorner", { CornerRadius = UDim.new(0, 7) }),
+		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 8) }) })
+	Lib.RegisterThemeElement(creatorBox, "BackgroundColor3", 0.7)
+	Lib.RegisterThemeText(creatorBox, "Primary")
+	creatorBox.FocusLost:Connect(function() State.AccessoryCreator = creatorBox.Text:match("^%s*(.-)%s*$"); EmFilter.Changed() end)
 	EmFilter.Button.SetCount(EmFilter.Count())
 
 	local EmotesScroll = Lib.Create("ScrollingFrame", { Size = UDim2.new(1, 0, 1, -40), Position = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1, ScrollBarThickness = 2, ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), BorderSizePixel = 0, Parent = View_EmotesBrowse })
@@ -23484,10 +24035,470 @@ do
 		end)
 	end
 
+	local templates, worn, wearing = {}, {}, {}
+	local wearEvent = Instance.new("BindableEvent")
+	local White, Black = Color3.fromRGB(255, 255, 255), Color3.fromRGB(0, 0, 0)
+	local Quad, Quint, Out, In = Enum.EasingStyle.Quad, Enum.EasingStyle.Quint, Enum.EasingDirection.Out, Enum.EasingDirection.In
+	local tryOnGui, tryOnToken, requestedPage = nil, 0, 1
+	Lib.WornAccessories = worn
+
+	local function Hover(button)
+		button.MouseEnter:Connect(function() Lib.Tween(button, 0.15, Quad, Out, { BackgroundTransparency = 0.14 }) end)
+		button.MouseLeave:Connect(function() Lib.Tween(button, 0.15, Quad, Out, { BackgroundTransparency = 0 }) end)
+	end
+
+	local function LocalHumanoid()
+		local character = App.Player.Character
+		return character and character:FindFirstChildOfClass("Humanoid")
+	end
+
+	local function AccessoryTemplate(assetId)
+		local cached = templates[assetId]
+		if cached then return cached end
+		local loaders = {
+			function() return Services.InsertService:LoadAsset(assetId) end,
+			function() return game:GetObjects("rbxassetid://" .. assetId)[1] end,
+			function() return game:GetService("InsertService"):LoadAsset(tonumber(assetId)) end
+		}
+		for i = 1, #loaders do
+			local ok, root = pcall(loaders[i])
+			if ok and typeof(root) == "Instance" then
+				local accessory = root:IsA("Accessory") and root or root:FindFirstChildWhichIsA("Accessory", true)
+				if accessory then
+					accessory.Parent = nil
+					templates[assetId] = accessory
+					if root ~= accessory then root:Destroy() end
+					return accessory
+				end
+				root:Destroy()
+			end
+		end
+		return nil
+	end
+
+	function Lib.TakeOffAccessory(assetId)
+		local entry = worn[assetId]
+		if not entry then return end
+		worn[assetId] = nil
+		pcall(entry.Object.Destroy, entry.Object)
+		wearEvent:Fire()
+	end
+
+	local function AttachAccessory(part0, c0, handle, c1)
+		local weld = Instance.new("Weld")
+		weld.Name = "AccessoryWeld"
+		handle.CFrame = part0.CFrame * c0 * c1:Inverse()
+		weld.Part0, weld.Part1, weld.C0, weld.C1 = part0, handle, c0, c1
+		weld.Parent = handle
+	end
+
+	local function FixAccessory(accessory, character)
+		local handle = accessory:FindFirstChild("Handle")
+		if not handle or not handle:IsA("BasePart") then return end
+		for _, part in ipairs(accessory:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.Anchored, part.CanCollide, part.Massless = false, false, true
+			end
+		end
+		task.wait()
+		if accessory.Parent ~= character then return end
+		local weld = handle:FindFirstChild("AccessoryWeld")
+		if weld and weld:IsA("JointInstance") and weld.Part0 and weld.Part1 and weld.Part0:IsDescendantOf(character) and weld.Part1:IsDescendantOf(character) then return end
+		if weld then weld:Destroy() end
+		local targets = {}
+		for _, object in ipairs(character:GetDescendants()) do
+			if object:IsA("Attachment") and not targets[object.Name] and object.Parent:IsA("BasePart") and not object:IsDescendantOf(accessory) and not object.Parent:FindFirstAncestorOfClass("Accessory") then
+				targets[object.Name] = object
+			end
+		end
+		for _, own in ipairs(handle:GetChildren()) do
+			local target = own:IsA("Attachment") and targets[own.Name]
+			if target then return AttachAccessory(target.Parent, target.CFrame, handle, own.CFrame) end
+		end
+		local head = character:FindFirstChild("Head")
+		if head and head:IsA("BasePart") then
+			AttachAccessory(head, CFrame.new(0, head.Size.Y / 2, 0), handle, accessory.AttachmentPoint)
+		end
+	end
+
+	function Lib.WearAccessory(assetId, silent)
+		if worn[assetId] or wearing[assetId] then return false end
+		local function Fail(text)
+			wearing[assetId] = nil
+			wearEvent:Fire()
+			if not silent then Lib.Notify({ Title = "Accessories", Text = text }) end
+			return false
+		end
+		wearing[assetId] = true
+		wearEvent:Fire()
+		local template = AccessoryTemplate(assetId)
+		if not template then return Fail("Roblox did not allow this asset to load") end
+		local humanoid = LocalHumanoid()
+		if not humanoid then return Fail("Your character is not loaded yet") end
+		local accessory = template:Clone()
+		if not pcall(humanoid.AddAccessory, humanoid, accessory) then
+			accessory:Destroy()
+			return Fail("This item cannot be worn as an accessory")
+		end
+		FixAccessory(accessory, humanoid.Parent)
+		wearing[assetId] = nil
+		worn[assetId] = { Object = accessory }
+		wearEvent:Fire()
+		if not silent then Lib.Notify({ Title = "Accessories", Text = "Accessory equipped" }) end
+		return true
+	end
+
+	Lib.C(App.Player.CharacterAdded, function(character)
+		if next(worn) == nil then return end
+		local ids = {}
+		for id in pairs(worn) do ids[#ids + 1] = id; worn[id] = nil end
+		wearEvent:Fire()
+		character:WaitForChild("Humanoid", 10)
+		task.wait(1.5)
+		for _, id in ipairs(ids) do task.spawn(Lib.WearAccessory, id, true) end
+	end)
+
+	local function BindWear(button, assetId)
+		local function Sync()
+			if wearing[assetId] then
+				button.Text, button.BackgroundColor3, button.TextColor3 = "Loading...", Color3.fromRGB(70, 70, 70), White
+			elseif worn[assetId] then
+				button.Text, button.BackgroundColor3, button.TextColor3 = "Take off", Color3.fromRGB(220, 50, 50), White
+			else
+				button.Text, button.BackgroundColor3, button.TextColor3 = "Wear", White, Black
+			end
+		end
+		Sync()
+		local connection = wearEvent.Event:Connect(Sync)
+		button.Destroying:Connect(function() connection:Disconnect() end)
+		button.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			if worn[assetId] then
+				Lib.TakeOffAccessory(assetId)
+			elseif not wearing[assetId] then
+				Lib.WearAccessory(assetId)
+			end
+		end)
+		Hover(button)
+	end
+
+	local function CloseTryOn(instant)
+		tryOnToken += 1
+		local gui = tryOnGui
+		tryOnGui = nil
+		if not gui then return end
+		if instant then
+			gui:Destroy()
+			return
+		end
+		Lib.Tween(gui, 0.28, Quint, In, { Position = UDim2.new(1, 360, 0.5, 0) }).Completed:Connect(function() gui:Destroy() end)
+	end
+
+	function Lib.ShowAccessoryTryOn(data)
+		CloseTryOn(true)
+		tryOnToken += 1
+		local token = tryOnToken
+		local assetId = tonumber(data.id)
+		local gui = Lib.Create("Frame", {
+			Name = "AccessoryTryOn", AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 360, 0.5, 0), Size = UDim2.new(0, 330, 1, -24),
+			BackgroundColor3 = Color3.fromRGB(18, 18, 18), Active = true, ZIndex = 60, Parent = UI.ContentArea,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 12) }),
+			Lib.Create("UIStroke", { Color = Color3.fromRGB(70, 70, 70), Transparency = 0.25 }),
+			Lib.Create("UISizeConstraint", { MinSize = Vector2.new(330, 300), MaxSize = Vector2.new(330, 440) })
+		})
+		tryOnGui = gui
+		Lib.RegisterThemeElement(gui, "BackgroundColor3", 0.5)
+		local heading = Lib.Create("TextLabel", {
+			Size = UDim2.new(1, -56, 0, 20), Position = UDim2.fromOffset(16, 11), BackgroundTransparency = 1, Text = tostring(data.name), TextSize = 14,
+			Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(240, 240, 240), TextXAlignment = Enum.TextXAlignment.Left,
+			TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 61, Parent = gui
+		})
+		Lib.RegisterThemeText(heading, "Primary")
+		local sub = Lib.Create("TextLabel", {
+			Size = UDim2.new(1, -56, 0, 14), Position = UDim2.fromOffset(16, 32), BackgroundTransparency = 1,
+			Text = "by " .. tostring(data.creator or "Unknown creator") .. "  \u{2022}  " .. tostring(data.price or ""), TextSize = 11, Font = Enum.Font.GothamMedium,
+			TextColor3 = Color3.fromRGB(140, 140, 140), TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 61, Parent = gui
+		})
+		Lib.RegisterThemeText(sub, "Secondary")
+		local close = Lib.Create("TextButton", {
+			Size = UDim2.fromOffset(28, 28), Position = UDim2.new(1, -40, 0, 10), BackgroundTransparency = 1, Text = "\u{00D7}", TextSize = 22,
+			Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(150, 150, 150), AutoButtonColor = false, ZIndex = 62, Parent = gui
+		})
+		Lib.RegisterThemeText(close, "Secondary")
+		close.MouseEnter:Connect(function() Lib.Tween(close, 0.15, Quad, Out, { TextColor3 = Color3.fromRGB(235, 235, 235) }) end)
+		close.MouseLeave:Connect(function() Lib.Tween(close, 0.15, Quad, Out, { TextColor3 = Color3.fromRGB(150, 150, 150) }) end)
+		close.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			CloseTryOn(false)
+		end)
+		local viewport = Lib.Create("ViewportFrame", {
+			Size = UDim2.new(1, -20, 1, -110), Position = UDim2.fromOffset(10, 56), BackgroundColor3 = Color3.fromRGB(24, 24, 24), Active = true,
+			Ambient = Color3.fromRGB(170, 170, 170), LightColor = Color3.fromRGB(255, 255, 255), LightDirection = Vector3.new(-1, -1, -1), ZIndex = 61, Parent = gui,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
+		})
+		Lib.RegisterThemeElement(viewport, "BackgroundColor3", 0.7)
+		local status = Lib.Create("TextLabel", {
+			Size = UDim2.new(1, -24, 0, 42), Position = UDim2.new(0, 12, 0.5, -21), BackgroundTransparency = 1, Text = "", TextColor3 = Color3.fromRGB(160, 160, 160),
+			TextSize = 12, Font = Enum.Font.GothamMedium, TextWrapped = true, ZIndex = 63, Parent = viewport
+		})
+		Lib.RegisterThemeText(status, "Secondary")
+		local hint = Lib.Create("TextLabel", {
+			Size = UDim2.new(1, 0, 0, 16), Position = UDim2.new(0, 0, 1, -22), BackgroundTransparency = 1, Text = "Drag to rotate", TextColor3 = Color3.fromRGB(130, 130, 130),
+			TextSize = 11, Font = Enum.Font.GothamMedium, Visible = false, ZIndex = 63, Parent = viewport
+		})
+		Lib.RegisterThemeText(hint, "Secondary")
+		local shimmer = Lib.Skeleton.Block(viewport, UDim2.fromScale(1, 1), UDim2.new(), 8)
+		shimmer.ZIndex = 62
+		local wearBtn = Lib.Create("TextButton", {
+			Size = UDim2.new(1, -20, 0, 34), Position = UDim2.new(0, 10, 1, -44), BackgroundColor3 = White, Text = "Wear", TextColor3 = Black, TextSize = 13,
+			Font = Enum.Font.GothamBold, AutoButtonColor = false, ZIndex = 62, Parent = gui, Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
+		})
+		BindWear(wearBtn, assetId)
+
+		local world = Instance.new("WorldModel")
+		world.Parent = viewport
+		local camera = Instance.new("Camera")
+		camera.FieldOfView = 40
+		camera.Parent = viewport
+		viewport.CurrentCamera = camera
+
+		local UIS = Services.UserInputService
+		local yaw, dragging, lastX, ready = 0.5, false, 0, false
+		local center, radius, height = Vector3.zero, 9, 0.5
+		local connections = {}
+		viewport.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				dragging, lastX = true, input.Position.X
+			end
+		end)
+		connections[1] = UIS.InputChanged:Connect(function(input)
+			if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+				yaw -= (input.Position.X - lastX) * 0.012
+				lastX = input.Position.X
+			end
+		end)
+		connections[2] = UIS.InputEnded:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+		end)
+		connections[3] = Services.Run.RenderStepped:Connect(function(dt)
+			local shown = EmotesSection.Visible
+			if gui.Visible ~= shown then gui.Visible = shown end
+			if not shown or not ready or State.Minimized or not UI.Main.Visible then return end
+			if not dragging then yaw += dt * 0.5 end
+			camera.CFrame = CFrame.lookAt(center + Vector3.new(math.sin(yaw) * radius, height, math.cos(yaw) * radius), center)
+		end)
+		gui.Destroying:Connect(function()
+			for _, connection in ipairs(connections) do connection:Disconnect() end
+		end)
+
+		local function Done(message)
+			if shimmer then
+				local gradient = shimmer:FindFirstChildOfClass("UIGradient")
+				if gradient then gradient:Destroy() end
+				shimmer:Destroy()
+				shimmer = nil
+			end
+			status.Text = message or ""
+		end
+
+		Lib.Tween(gui, 0.42, Quint, Out, { Position = UDim2.new(1, -12, 0.5, 0) })
+
+		task.spawn(function()
+			local character = App.Player.Character or App.Player.CharacterAdded:Wait()
+			if token ~= tryOnToken then return end
+			local cloned, clone = pcall(character.Clone, character)
+			if not cloned or not clone then return Done("Unable to copy the current avatar") end
+			local humanoid = clone:FindFirstChildOfClass("Humanoid")
+			for _, object in ipairs(clone:GetDescendants()) do
+				if object:IsA("LuaSourceContainer") then
+					object:Destroy()
+				elseif object:IsA("BasePart") then
+					object.Anchored = true
+				end
+			end
+			if humanoid then humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end
+			clone.Parent = world
+			local message
+			if not worn[assetId] then
+				local template = AccessoryTemplate(assetId)
+				if token ~= tryOnToken then return end
+				if not template then
+					message = "Roblox did not allow this asset to load for preview"
+				elseif not humanoid then
+					message = "This item could not be previewed as an accessory"
+				else
+					local accessory = template:Clone()
+					for _, part in ipairs(accessory:GetDescendants()) do
+						if part:IsA("BasePart") then part.Anchored = true end
+					end
+					if not pcall(humanoid.AddAccessory, humanoid, accessory) then
+						accessory:Destroy()
+						message = "This item could not be previewed as an accessory"
+					end
+				end
+			end
+			clone:PivotTo(CFrame.new())
+			local box, size = clone:GetBoundingBox()
+			center, radius, height = box.Position, math.max(7, size.Y * 1.75), size.Y * 0.1
+			ready = true
+			hint.Visible = true
+			Done(message)
+		end)
+	end
+
+	local AccessoryScroll = Lib.Create("ScrollingFrame", { Size = UDim2.new(1, 0, 1, -40), BackgroundTransparency = 1, ScrollBarThickness = 2, ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), BorderSizePixel = 0, Parent = View_Accessories })
+	local AccessoryGrid = Lib.Create("UIGridLayout", { CellSize = UDim2.fromOffset(185, 230), CellPadding = UDim2.fromOffset(12, 12), SortOrder = Enum.SortOrder.LayoutOrder, Parent = AccessoryScroll })
+	Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 5), PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingBottom = UDim.new(0, 15), Parent = AccessoryScroll })
+	AccessoryGrid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+		AccessoryScroll.CanvasSize = UDim2.new(0, 0, 0, AccessoryGrid.AbsoluteContentSize.Y + 20)
+	end)
+
+	Lib.AccessorySearch = Lib.BuildBrowseSearch(View_Accessories, AccessoryScroll, 40, "Search accessories...", function(query)
+		if State.EmotesQuery == query then return end
+		State.EmotesQuery = query
+		ClearEmotesDataCache()
+	end)
+
+	local AccessoryPagination = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 30), Position = UDim2.new(0, 0, 1, -30), BackgroundTransparency = 1, Parent = View_Accessories })
+	local AccessoryPrev = Lib.Create("TextButton", { Size = UDim2.fromOffset(30, 30), Position = UDim2.new(0.5, -70, 0, 0), BackgroundColor3 = Color3.fromRGB(15, 15, 15), Text = "‹", TextColor3 = Color3.fromRGB(200, 200, 200), TextSize = 16, Font = Enum.Font.GothamMedium, Parent = AccessoryPagination, Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }) })
+	Lib.RegisterThemeElement(AccessoryPrev, "BackgroundColor3", 0.5)
+	local AccessoryPageLabel = Lib.Create("TextLabel", { Size = UDim2.fromOffset(80, 30), Position = UDim2.new(0.5, -40, 0, 0), BackgroundTransparency = 1, Text = "Page 1 / 1", TextColor3 = Color3.fromRGB(200, 200, 200), TextSize = 12, Font = Enum.Font.GothamMedium, Parent = AccessoryPagination })
+	Lib.RegisterThemeText(AccessoryPageLabel, "Secondary")
+	local AccessoryNext = Lib.Create("TextButton", { Size = UDim2.fromOffset(30, 30), Position = UDim2.new(0.5, 40, 0, 0), BackgroundColor3 = Color3.fromRGB(15, 15, 15), Text = "›", TextColor3 = Color3.fromRGB(200, 200, 200), TextSize = 16, Font = Enum.Font.GothamMedium, Parent = AccessoryPagination, Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }) })
+	Lib.RegisterThemeElement(AccessoryNext, "BackgroundColor3", 0.5)
+
+	local AccessoryLoadingLabel = Lib.Create("TextLabel", { Size = UDim2.new(1, 0, 1, -40), BackgroundTransparency = 1, Text = "Loading accessories...", TextColor3 = Color3.fromRGB(150, 150, 150), TextSize = 15, Font = Enum.Font.GothamMedium, Visible = false, Parent = View_Accessories })
+	Lib.RegisterThemeText(AccessoryLoadingLabel, "Secondary")
+	Lib.Skeleton.Watch(AccessoryLoadingLabel, { ["Loading accessories..."] = true }, function()
+		return Lib.Skeleton.Grid(AccessoryScroll, Vector2.new(185, 230), 12)
+	end)
+
+	local AccessoryErrorLabel = Lib.Create("TextLabel", { Size = UDim2.new(1, -40, 0, 120), AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 20, 0.5, 0), BackgroundTransparency = 1, Text = "Failed to load accessories", TextColor3 = Color3.fromRGB(255, 80, 80), TextSize = 13, Font = Enum.Font.GothamMedium, TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Bottom, Visible = false, Parent = View_Accessories })
+	local AccessoryRetryBtn = Lib.Create("TextButton", { Size = UDim2.fromOffset(100, 34), Position = UDim2.new(0.5, -50, 0.5, 10), BackgroundColor3 = White, Text = "Retry", TextColor3 = Black, TextSize = 13, Font = Enum.Font.GothamBold, Visible = false, Parent = View_Accessories, Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }) })
+	AccessoryRetryBtn.MouseEnter:Connect(function() Lib.Tween(AccessoryRetryBtn, 0.15, Quad, Out, { BackgroundColor3 = Color3.fromRGB(210, 210, 210) }) end)
+	AccessoryRetryBtn.MouseLeave:Connect(function() Lib.Tween(AccessoryRetryBtn, 0.15, Quad, Out, { BackgroundColor3 = White }) end)
+
+	local function CreateAccessoryCard(data, order, parent, onChange)
+		local assetId = tonumber(data.id)
+		local card = Lib.Create("Frame", { Size = UDim2.fromOffset(185, 230), BackgroundColor3 = Color3.fromRGB(15, 15, 15), LayoutOrder = order, Parent = parent or AccessoryScroll, Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) }) })
+		Lib.RegisterThemeElement(card, "BackgroundColor3", 0.5)
+		local image = Lib.Create("ImageLabel", { Size = UDim2.new(1, -16, 0, 110), Position = UDim2.fromOffset(8, 8), BackgroundColor3 = Color3.fromRGB(22, 22, 22), Image = "rbxthumb://type=Asset&id=" .. tostring(data.thumbnailId or data.id) .. "&w=420&h=420", ScaleType = Enum.ScaleType.Fit, Parent = card, Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }) })
+		Lib.RegisterThemeElement(image, "BackgroundColor3", 0.7)
+		local key = tostring(data.id)
+		local slim = { id = data.id, itemType = "Asset", name = data.name, price = data.price, thumbnailId = data.thumbnailId or data.id, creator = data.creator }
+		Lib.MakeStar(card, UDim2.new(1, -36, 0, 14), Lib.AccessoryStores.Saved.Has(key), function()
+			local on = Lib.AccessoryStores.Saved.Toggle(key, slim)
+			if onChange then task.defer(onChange) end
+			return on
+		end)
+		Lib.MakeFolderButton(card, UDim2.new(1, -64, 0, 14), "AccessoryCollections", key, slim, data.name)
+		local name = Lib.Create("TextLabel", { Size = UDim2.new(1, -16, 0, 18), Position = UDim2.fromOffset(8, 124), BackgroundTransparency = 1, Text = data.name, TextColor3 = Color3.fromRGB(240, 240, 240), TextSize = 13, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = card })
+		Lib.RegisterThemeText(name, "Primary")
+		local creator = Lib.Create("TextLabel", { Size = UDim2.new(1, -16, 0, 15), Position = UDim2.fromOffset(8, 143), BackgroundTransparency = 1, Text = "by " .. tostring(data.creator or "Unknown creator"), TextColor3 = Color3.fromRGB(150, 150, 150), TextSize = 10, Font = Enum.Font.Gotham, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = card })
+		Lib.RegisterThemeText(creator, "Secondary")
+		local isFree = data.price == "Free"
+		local price = Lib.Create("TextLabel", { Size = UDim2.new(1, -16, 0, 16), Position = UDim2.fromOffset(8, 162), BackgroundTransparency = 1, Text = data.price, TextColor3 = isFree and Color3.fromRGB(80, 220, 120) or Color3.fromRGB(160, 160, 160), TextSize = 12, Font = Enum.Font.Gotham, TextXAlignment = Enum.TextXAlignment.Left, Parent = card })
+		if not isFree then Lib.RegisterThemeText(price, "Secondary") end
+		local tryBtn = Lib.Create("TextButton", {
+			Size = UDim2.new(0.5, -11, 0, 30), Position = UDim2.fromOffset(8, 192), BackgroundColor3 = Color3.fromRGB(45, 45, 45), Text = "Try on", TextColor3 = White, TextSize = 12, Font = Enum.Font.GothamBold, AutoButtonColor = false, Parent = card,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
+			Lib.Create("UIStroke", { ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Color = Color3.fromRGB(80, 80, 80), Transparency = 0.4 })
+		})
+		local wearBtn = Lib.Create("TextButton", {
+			Size = UDim2.new(0.5, -11, 0, 30), Position = UDim2.new(0.5, 3, 0, 192), BackgroundColor3 = White, Text = "Wear", TextColor3 = Black, TextSize = 12, Font = Enum.Font.GothamBold, AutoButtonColor = false, Parent = card,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
+		})
+		tryBtn.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			Lib.ShowAccessoryTryOn(data)
+		end)
+		Hover(tryBtn)
+		BindWear(wearBtn, assetId)
+	end
+	Lib.AccessoryCollections = Lib.BuildCollections(MakeEmotesTab("Accessory Folders", 250), "SeptusHub_AccessoryCollections.json", UDim2.fromOffset(185, 230), UDim2.fromOffset(12, 12), 8, CreateAccessoryCard)
+	function Lib.LoadAccessoriesPage(page)
+		if State.AccessoriesLoading then return end
+		State.AccessoriesLoading = true
+		requestedPage = page
+		local gen = State.AccessoryGen
+		for _, child in ipairs(AccessoryScroll:GetChildren()) do
+			if child:IsA("Frame") then child:Destroy() end
+		end
+		AccessoryLoadingLabel.Text = "Loading accessories..."
+		AccessoryLoadingLabel.Visible = true
+		AccessoryErrorLabel.Visible = false
+		AccessoryRetryBtn.Visible = false
+		AccessoryPagination.Visible = false
+		AccessoryScroll.Visible = false
+
+		task.spawn(function()
+			local result = State.AccessoryCache[page]
+			if not result then
+				local ok, fetched = Lib.Timed(function() return API.FetchAccessories(page, State.AccessorySortLabel) end, 90)
+				result = ok and fetched or { success = false, error = "script error: " .. tostring(fetched) }
+				if result.success and gen == State.AccessoryGen then State.AccessoryCache[page] = result end
+			end
+			State.AccessoriesLoading = false
+			if gen ~= State.AccessoryGen then
+				if State.CurrentEmotesTab == "Accessories" then task.defer(Lib.LoadAccessoriesPage, State.AccessoriesPage) end
+				return
+			end
+			if State.CurrentEmotesTab ~= "Accessories" then return end
+
+			if result.success and result.data and #result.data > 0 then
+				State.AccessoriesPage = page
+				State.AccessoriesTotalPages = result.totalPages or page
+				AccessoryPageLabel.Text = "Page " .. tostring(page) .. " / " .. tostring(State.AccessoriesTotalPages)
+				for index, data in ipairs(result.data) do CreateAccessoryCard(data, index) end
+				AccessoryScroll.CanvasPosition = Vector2.zero
+				if page == 1 then
+					local query = State.EmotesQuery:lower()
+					local suggestions
+					if query ~= "" then
+						suggestions = {}
+						for _, item in ipairs(result.data) do
+							local lowered = item.name:lower()
+							if lowered:sub(1, #query) == query or lowered:find(" " .. query, 1, true) then
+								suggestions[#suggestions + 1] = { Name = item.name, Sub = item.price, Image = "rbxthumb://type=Asset&id=" .. tostring(item.thumbnailId or item.id) .. "&w=150&h=150" }
+								if #suggestions == 10 then break end
+							end
+						end
+					end
+					Lib.AccessorySearch.SetSuggestions(suggestions)
+				end
+				AccessoryLoadingLabel.Visible = false
+				AccessoryScroll.Visible = true
+				AccessoryPagination.Visible = true
+			elseif result.empty then
+				Lib.AccessorySearch.SetSuggestions(nil)
+				AccessoryLoadingLabel.Text = "Nothing found"
+			else
+				AccessoryLoadingLabel.Visible = false
+				local reason = result.error
+				AccessoryErrorLabel.Text = "Failed to load accessories" .. ((reason and reason ~= "") and ("\n" .. reason:sub(1, 420)) or "\nNo items returned")
+				AccessoryErrorLabel.Visible = true
+				AccessoryRetryBtn.Visible = true
+			end
+		end)
+	end
+
+	AccessoryRetryBtn.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		Lib.LoadAccessoriesPage(requestedPage)
+	end)
+	AccessoryPrev.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		if State.AccessoriesPage > 1 and not State.AccessoriesLoading then Lib.LoadAccessoriesPage(State.AccessoriesPage - 1) end
+	end)
+	AccessoryNext.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		if State.AccessoriesPage < State.AccessoriesTotalPages and not State.AccessoriesLoading then Lib.LoadAccessoriesPage(State.AccessoriesPage + 1) end
+	end)
+
 	do
 		local cell, gap = UDim2.fromOffset(185, 230), UDim2.fromOffset(12, 12)
 		local savedScroll, savedEmpty = Lib.MakeCardList(View_EmotesSaved, "No saved emotes yet\nTap the star on an emote card to save it", cell, gap, 8)
-		Lib.EmoteCollections = Lib.BuildCollections(MakeEmotesTab("Collections", 170), "SeptusHub_EmoteCollections.json", cell, gap, 8, CreateEmoteCard)
+		Lib.EmoteCollections = Lib.BuildCollections(MakeEmotesTab("Collections", 210), "SeptusHub_EmoteCollections.json", cell, gap, 8, CreateEmoteCard)
 		local recentScroll, recentEmpty = Lib.MakeCardList(View_EmotesRecent, "No recent emotes yet\nEmotes you play will appear here", cell, gap, 8)
 
 		local function Fill(scroll, empty, store, onChange)
@@ -23501,13 +24512,28 @@ do
 
 		local function FillSaved() Fill(savedScroll, savedEmpty, Lib.EmoteStores.Saved, FillSaved) end
 
+		local function FillAccessorySaved()
+			for _, child in ipairs(savedScroll:GetChildren()) do
+				if child:IsA("Frame") then child:Destroy() end
+			end
+			local saved = Lib.AccessoryStores.Saved.List()
+			for index, entry in ipairs(saved) do CreateAccessoryCard(entry.data, index, savedScroll, FillAccessorySaved) end
+			savedEmpty.Visible = #saved == 0
+		end
+
 		function Lib.OnEmotesTab(tabName)
 			if tabName == "Saved" then
-				FillSaved()
+				if State.MarketplaceSection == "Accessories" then
+					FillAccessorySaved()
+				else
+					FillSaved()
+				end
 			elseif tabName == "Recent" then
 				Fill(recentScroll, recentEmpty, Lib.EmoteStores.Recent)
 			elseif tabName == "Collections" then
 				Lib.EmoteCollections.Show()
+			elseif tabName == "Accessory Folders" then
+				Lib.AccessoryCollections.Show()
 			end
 		end
 	end
@@ -23784,6 +24810,7 @@ function Lib.BuildMusic(group)
 		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10) })
 	})
 	Lib.RegisterThemeElement(modeBtn, "BackgroundColor3", 0.7, true)
+	Lib.Edge(modeBtn)
 	Lib.RegisterThemeText(modeBtn, "Primary")
 
 	local chevron = Lib.Create("TextLabel", {
@@ -23800,6 +24827,7 @@ function Lib.BuildMusic(group)
 		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
 	})
 	Lib.RegisterThemeElement(input, "BackgroundColor3", 0.7, true)
+	Lib.Edge(input)
 	Lib.RegisterThemeText(input, "Primary")
 
 	local addBtn = Lib.Create("TextButton", {
@@ -23851,6 +24879,7 @@ function Lib.BuildMusic(group)
 		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
 	})
 	Lib.RegisterThemeElement(plBtn, "BackgroundColor3", 0.7, true)
+	Lib.Edge(plBtn)
 	local plTitle = Lib.Create("TextLabel", {
 		Size = UDim2.new(1, -30, 1, 0), Position = UDim2.fromOffset(10, 0), BackgroundTransparency = 1, Text = "",
 		TextColor3 = Color3.fromRGB(240, 240, 240), TextSize = 12, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left,
@@ -23871,6 +24900,7 @@ function Lib.BuildMusic(group)
 		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
 	})
 	Lib.RegisterThemeElement(plName, "BackgroundColor3", 0.7, true)
+	Lib.Edge(plName)
 	Lib.RegisterThemeText(plName, "Primary")
 
 	local function PlButton(text, x, accent)
@@ -23882,6 +24912,7 @@ function Lib.BuildMusic(group)
 		})
 		if not accent then
 			Lib.RegisterThemeElement(button, "BackgroundColor3", 0.7, true)
+			Lib.Edge(button)
 			Lib.RegisterThemeText(button, "Primary")
 		end
 		return button
@@ -23997,6 +25028,7 @@ function Lib.BuildMusic(group)
 		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
 	})
 	Lib.RegisterThemeElement(box, "BackgroundColor3", 0.7, true)
+	Lib.Edge(box)
 
 	local function IconButton(text, x)
 		return Lib.Create("TextButton", {
@@ -24182,6 +25214,7 @@ function Lib.BuildMusic(group)
 				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
 			})
 			Lib.RegisterThemeElement(item, "BackgroundColor3", 0.7, true)
+			Lib.Edge(item)
 
 			local play = Lib.Create("TextButton", {
 				Size = UDim2.fromOffset(28, 28), Position = UDim2.new(0, 8, 0.5, -14), BackgroundTransparency = 1, Text = "▶",
@@ -24897,12 +25930,16 @@ function Lib.DeriveTheme(spec)
 		out.SwitchOff = light and Color3.fromRGB(205, 205, 210) or Color3.fromRGB(38, 38, 38)
 		out.SwitchOn = light and Color3.fromRGB(20, 20, 20) or (isDefaultBlack and Color3.fromRGB(46, 213, 115) or spec)
 		out.Halloween = false
+		out.Winter = false
+		out.GTA = false
 	else
 		out.Light = Lib.Luma(spec.Background) > 0.6
 		out.Base = spec.Background
 		out.Main, out.Card, out.Item = spec.Background, spec.Surface, spec.Item
 		out.Primary, out.Secondary, out.SwitchOn, out.SwitchOff = spec.Text, spec.Muted, spec.Accent, spec.SwitchOff
 		out.Halloween = spec.Halloween == true
+		out.Winter = spec.Winter == true
+		out.GTA = spec.GTA == true
 	end
 	return out
 end
@@ -24921,7 +25958,7 @@ function Lib.BuildUIPreview(parent, scale, layoutOrder, options)
 		Home = { "Overview", "Account", "Update Log" },
 		Features = { "Movement", "Visuals", "Combat" },
 		Scripts = { "Browse", "Saved", "Recent" },
-		Emotes = { "Emotes", "Saved", "Recent" },
+		Emotes = { "Emotes", "Accessories", "Saved", "Recent", "Collections", "Accessory Folders" },
 		Settings = { "Appearance", "Config" }
 	}
 	local reg = { card = {}, item = {}, input = {}, primary = {}, secondary = {}, accent = {}, thumb = {}, button = {}, switch = {}, slider = {}, nav = {}, sub = {} }
@@ -25095,6 +26132,18 @@ function Lib.BuildUIPreview(parent, scale, layoutOrder, options)
 		BackgroundTransparency = 1, Image = Lib.HalloweenWeb, ImageTransparency = 0.15, ScaleType = Enum.ScaleType.Fit, Parent = decor
 	})
 
+	local winterCorner = Lib.Create("UICorner", { CornerRadius = UDim.new(0, State.CornerRadius) })
+	local winterDecor = Lib.Create("CanvasGroup", {
+		Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Visible = false, ZIndex = 4, Parent = win, winterCorner
+	})
+	Lib.BuildWinterDecor(winterDecor, false)
+
+	local gtaCorner = Lib.Create("UICorner", { CornerRadius = UDim.new(0, State.CornerRadius) })
+	local gtaDecor = Lib.Create("CanvasGroup", {
+		Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Visible = false, ZIndex = 4, Parent = win, gtaCorner
+	})
+	Lib.BuildGTADecor(gtaDecor, false)
+
 	local function BuildPage(name)
 		local page = Lib.Create("Frame", { Name = name, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Visible = false, Parent = content })
 		pages[name] = page
@@ -25213,7 +26262,7 @@ function Lib.BuildUIPreview(parent, scale, layoutOrder, options)
 		local rows = {
 			{ "Corner Radius", function() return State.CornerRadius / 28 end, function() return tostring(State.CornerRadius) end },
 			{ "Window Transparency", function() return State.WindowTransparency / 80 end, function() return State.WindowTransparency .. "%" end },
-			{ "Panel Transparency", function() return State.PanelTransparency / 70 end, function() return State.PanelTransparency .. "%" end }
+			{ "Panel Transparency", function() return State.PanelTransparency / 100 end, function() return State.PanelTransparency .. "%" end }
 		}
 		for i, row in ipairs(rows) do
 			local y = (i - 1) * 50
@@ -25345,16 +26394,19 @@ function Lib.BuildUIPreview(parent, scale, layoutOrder, options)
 			c = {
 				Main = theme.Main, Card = theme.Card, Item = theme.Item, Primary = palette.Primary, Secondary = palette.Secondary,
 				SwitchOn = palette.SwitchOn, SwitchOff = palette.SwitchOff, Light = State.LightTheme,
-				Halloween = type(State.CustomTheme) == "table" and State.CustomTheme.Halloween == true
+				Halloween = type(State.CustomTheme) == "table" and State.CustomTheme.Halloween == true,
+				GTA = type(State.CustomTheme) == "table" and State.CustomTheme.GTA == true
 			}
 		end
 		cur = c
 
 		local radius = UDim.new(0, State.CornerRadius)
-		winCorner.CornerRadius, bgCorner.CornerRadius, decorCorner.CornerRadius = radius, radius, radius
+		winCorner.CornerRadius, bgCorner.CornerRadius, decorCorner.CornerRadius, winterCorner.CornerRadius, gtaCorner.CornerRadius = radius, radius, radius, radius, radius
 		win.BackgroundColor3 = c.Main
 		win.BackgroundTransparency = State.WindowTransparency / 100
 		decor.Visible = c.Halloween == true
+		winterDecor.Visible = c.Winter == true
+		gtaDecor.Visible = c.GTA == true
 
 		headerIcon.Image = c.Halloween and Lib.HalloweenHeader.Icon or Lib.DefaultHeaderIcon
 		headerLogo.Image = c.Halloween and Lib.HalloweenHeader.Logo or (c.Light and "rbxassetid://105446913647633" or "rbxassetid://97808676894113")
@@ -25616,6 +26668,8 @@ function Lib.OpenUIStudio()
 			P.headerLogo.Position = UDim2.fromOffset(D.HideLogo and 14 or 66, 10)
 		end
 		P.decor.Visible = c.Halloween
+		P.winter.Visible = c.Winter == true
+		P.gta.Visible = c.GTA == true
 	end
 
 	local function PaintNav()
@@ -25934,11 +26988,23 @@ function Lib.OpenUIStudio()
 		end
 
 		for _, child in ipairs(copy:GetChildren()) do
-			if child.Name == "ResizeHandle" or child.Name == "HalloweenDecor" then child:Destroy() end
+			if child.Name == "ResizeHandle" or child.Name == "HalloweenDecor" or child.Name == "WinterDecor" or child.Name == "GTADecor" then child:Destroy() end
 		end
 
 		local decorCorner = Lib.Create("UICorner", { CornerRadius = UDim.new(0, State.CornerRadius) })
 		P.corner[#P.corner + 1] = decorCorner
+		local winterCorner = Lib.Create("UICorner", { CornerRadius = UDim.new(0, State.CornerRadius) })
+		P.corner[#P.corner + 1] = winterCorner
+		P.winter = Lib.Create("CanvasGroup", {
+			Name = "StudioWinter", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Visible = false, ZIndex = 4, Parent = copy, winterCorner
+		})
+		Lib.BuildWinterDecor(P.winter, false)
+		local gtaStudioCorner = Lib.Create("UICorner", { CornerRadius = UDim.new(0, State.CornerRadius) })
+		P.corner[#P.corner + 1] = gtaStudioCorner
+		P.gta = Lib.Create("CanvasGroup", {
+			Name = "StudioGTA", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Visible = false, ZIndex = 4, Parent = copy, gtaStudioCorner
+		})
+		Lib.BuildGTADecor(P.gta, false)
 		P.decor = Lib.Create("CanvasGroup", {
 			Name = "StudioDecor", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Visible = false, ZIndex = 4, Parent = copy, decorCorner
 		})
@@ -26365,7 +27431,9 @@ function Lib.OpenUIStudio()
 		local list = {}
 		for i = 1, presetsCount do list[#list + 1] = { i, Lib.ThemePresets[i], i } end
 		list[#list + 1] = { 0, Lib.HalloweenTheme, presetsCount + 1 }
-		for k, theme in ipairs(State.CustomThemes) do list[#list + 1] = { presetsCount + k, theme, presetsCount + 1 + k } end
+		list[#list + 1] = { -1, Lib.WinterTheme, presetsCount + 2 }
+		list[#list + 1] = { -2, Lib.GTATheme, presetsCount + 3 }
+		for k, theme in ipairs(State.CustomThemes) do list[#list + 1] = { presetsCount + k, theme, presetsCount + 3 + k } end
 		for _, entry in ipairs(list) do
 			local index, spec, slot = entry[1], entry[2], entry[3]
 			local isTable = typeof(spec) == "table"
@@ -26513,7 +27581,7 @@ function Lib.OpenUIStudio()
 	local function Fx() return D.Fx end
 	AddSlider(windowGroup, "Corner Radius", 0, 28, Self, "CornerRadius", "", "window")
 	AddSlider(windowGroup, "Window Transparency", 0, 80, Self, "WindowTransparency", "%", "window")
-	AddSlider(windowGroup, "Panel Transparency", 0, 70, Self, "PanelTransparency", "%", "window")
+	AddSlider(windowGroup, "Panel Transparency", 0, 100, Self, "PanelTransparency", "%", "window")
 	AddToggle(windowGroup, "Hide Logo", "Hides the header icon", Self, "HideLogo", "window")
 	AddToggle(windowGroup, "Hide Name", "Hides the header title", Self, "HideName", "window", true)
 
@@ -28272,7 +29340,7 @@ do
 		local FILTERS = { "All Themes", "Built-in", "Custom" }
 		local Quad, Out = Enum.EasingStyle.Quad, Enum.EasingDirection.Out
 		local filter, records = 1, {}
-		local Rebuild, addCard
+		local Rebuild, addCard, addSlot
 
 		local Section = Lib.Create("Frame", {
 			Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = Color3.fromRGB(15, 15, 15), LayoutOrder = layoutOrder, Parent = parent,
@@ -28312,25 +29380,46 @@ do
 		Lib.MarkPanel(filterButton)
 		Lib.RegisterThemeText(filterButton, "Primary")
 
-		local Grid = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1, LayoutOrder = 2, Parent = Section })
-		local GridLayout = Lib.Create("UIGridLayout", {
-			CellSize = UDim2.new(1 / 3, -6, 0, 46), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder, Parent = Grid
+		local Grid = Lib.Create("Frame", {
+			Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 2, Parent = Section,
+			Lib.Create("UIGridLayout", { CellSize = UDim2.new(1 / 3, -6, 0, 46), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder })
 		})
-		GridLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-			Grid.Size = UDim2.new(1, 0, 0, GridLayout.AbsoluteContentSize.Y)
-		end)
 
 		local function Hover()
 			if State.LightTheme then return Lib.Theme.Item:Lerp(Color3.new(0, 0, 0), 0.06) end
 			return Lib.Lighten(Lib.Theme.Item, 0.07)
 		end
 
-		local function Bind(card)
+		local function Slot(order)
+			return Lib.Create("Frame", { Name = "Slot", BackgroundTransparency = 1, LayoutOrder = order, Parent = Grid })
+		end
+
+		local function Bright(color)
+			local h, s, v = color:ToHSV()
+			return Color3.fromHSV(h, math.min(1, s * 1.08), math.min(1, v + (1 - v) * 0.3 + 0.05))
+		end
+
+		local function Bind(card, slot, scale, bars, colors)
 			card.MouseEnter:Connect(function()
+				slot.ZIndex = 3
 				Lib.Tween(card, 0.15, Quad, Out, { BackgroundColor3 = Hover() })
+				Lib.Tween(scale, 0.15, Quad, Out, { Scale = 1.06 })
+				if bars then
+					for k = 1, #bars do
+						Lib.Tween(bars[k], 0.15, Quad, Out, { BackgroundColor3 = Bright(colors[k]) })
+					end
+				end
 			end)
 			card.MouseLeave:Connect(function()
 				Lib.Tween(card, 0.15, Quad, Out, { BackgroundColor3 = Lib.Theme.Item })
+				if bars then
+					for k = 1, #bars do
+						Lib.Tween(bars[k], 0.18, Quad, Out, { BackgroundColor3 = colors[k] })
+					end
+				end
+				Lib.Tween(scale, 0.18, Quad, Out, { Scale = 1 }).Completed:Once(function(state)
+					if state == Enum.PlaybackState.Completed then slot.ZIndex = 1 end
+				end)
 			end)
 		end
 
@@ -28383,9 +29472,12 @@ do
 		local function AddCard(index, order, name, spec, custom)
 			local derived = Lib.DeriveTheme(spec)
 			local stroke = Lib.Create("UIStroke", { Color = Lib.Palette.Primary, Thickness = 1.5, Transparency = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
+			local slot = Slot(order)
+			local scale = Lib.Create("UIScale", { Scale = 1 })
 			local card = Lib.Create("TextButton", {
-				BackgroundColor3 = Color3.fromRGB(22, 22, 22), Text = "", AutoButtonColor = false, LayoutOrder = order, Parent = Grid,
-				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) }), stroke
+				Size = UDim2.fromScale(1, 1), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+				BackgroundColor3 = Color3.fromRGB(22, 22, 22), Text = "", AutoButtonColor = false, Parent = slot,
+				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) }), stroke, scale
 			})
 			Lib.RegisterThemeElement(card, "BackgroundColor3", 0.7)
 			Lib.MarkPanel(card)
@@ -28395,8 +29487,9 @@ do
 				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 5) })
 			})
 			local colors = { derived.Main, derived.Card, derived.SwitchOn, derived.Primary }
+			local bars = {}
 			for k = 1, 4 do
-				Lib.Create("Frame", {
+				bars[k] = Lib.Create("Frame", {
 					Size = UDim2.new(0.25, k < 4 and 1 or 0, 1, 0), Position = UDim2.fromScale((k - 1) * 0.25, 0), BackgroundColor3 = colors[k], BorderSizePixel = 0, Parent = strips
 				})
 			end
@@ -28414,7 +29507,7 @@ do
 			Lib.RegisterThemeText(check, "Primary")
 
 			records[index] = { Stroke = stroke, Check = check }
-			Bind(card)
+			Bind(card, slot, scale, bars, colors)
 
 			card.MouseButton1Click:Connect(function()
 				Lib.PlayClick()
@@ -28437,7 +29530,7 @@ do
 
 		function Rebuild()
 			for _, child in ipairs(Grid:GetChildren()) do
-				if child:IsA("GuiButton") and child ~= addCard then child:Destroy() end
+				if child.Name == "Slot" and child ~= addSlot then child:Destroy() end
 			end
 			table.clear(records)
 			local presets = #Lib.ThemePresets
@@ -28451,13 +29544,18 @@ do
 					AddCard(i, 100 + i, NAMES[i] or ("Theme " .. i), Lib.ThemePresets[i])
 				end
 				AddCard(0, 200, "Halloween 🎃", Lib.HalloweenTheme)
+				AddCard(-1, 201, "Winter ❄", Lib.WinterTheme)
+				AddCard(-2, 202, "GTA VI 🌴", Lib.GTATheme)
 			end
 			UpdateSelection()
 		end
 
+		addSlot = Slot(0)
+		local addScale = Lib.Create("UIScale", { Scale = 1 })
 		addCard = Lib.Create("TextButton", {
-			BackgroundColor3 = Color3.fromRGB(22, 22, 22), Text = "", AutoButtonColor = false, LayoutOrder = 0, Parent = Grid,
-			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
+			Size = UDim2.fromScale(1, 1), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+			BackgroundColor3 = Color3.fromRGB(22, 22, 22), Text = "", AutoButtonColor = false, Parent = addSlot,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) }), addScale
 		})
 		Lib.RegisterThemeElement(addCard, "BackgroundColor3", 0.7)
 		Lib.MarkPanel(addCard)
@@ -28478,7 +29576,7 @@ do
 			TextSize = 11, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = addCard
 		})
 		Lib.RegisterThemeText(addLabel, "Primary")
-		Bind(addCard)
+		Bind(addCard, addSlot, addScale)
 
 		addCard.MouseButton1Click:Connect(function()
 			Lib.PlayClick()
@@ -28557,8 +29655,8 @@ do
 		Lib.RegisterThemeText(fontDesc, "Secondary")
 
 		local FontListScroll = Lib.Create("ScrollingFrame", {
-			Size = UDim2.new(1, -28, 0, 42),
-			Position = UDim2.new(0, 14, 0, 52),
+			Size = UDim2.new(1, -18, 0, 46),
+			Position = UDim2.new(0, 9, 0, 47),
 			BackgroundTransparency = 1,
 			ScrollBarThickness = 0,
 			CanvasSize = UDim2.new(0, 0, 0, 0),
@@ -28570,6 +29668,10 @@ do
 			Padding = UDim.new(0, 8),
 			SortOrder = Enum.SortOrder.LayoutOrder,
 			Parent = FontListScroll
+		})
+
+		Lib.Create("UIPadding", {
+			PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5), PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5), Parent = FontListScroll
 		})
 
 		FontListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
@@ -28633,17 +29735,65 @@ do
 			if writefile then pcall(writefile, FONT_FILE, Http:JSONEncode(customFonts)) end
 		end
 
+		local Quad, Out = Enum.EasingStyle.Quad, Enum.EasingDirection.Out
+		local TipLabel = Lib.Create("TextLabel", {
+			Size = UDim2.fromOffset(0, 0), AutomaticSize = Enum.AutomaticSize.XY, BackgroundTransparency = 1, Text = "", TextSize = 11,
+			Font = Enum.Font.GothamBold, TextColor3 = Color3.fromRGB(240, 240, 240), TextTransparency = 1, ZIndex = 21
+		})
+		local TipStroke = Lib.Create("UIStroke", {
+			Thickness = 1, Transparency = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Color = Color3.fromRGB(150, 150, 150)
+		})
+		local Tip = Lib.Create("Frame", {
+			Name = "FontTip", Size = UDim2.fromOffset(0, 0), AutomaticSize = Enum.AutomaticSize.XY, AnchorPoint = Vector2.new(0.5, 1),
+			BackgroundColor3 = Color3.fromRGB(22, 22, 22), BackgroundTransparency = 1, BorderSizePixel = 0, Visible = false, ZIndex = 20, Parent = FontSection,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }), TipStroke,
+			Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9), PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5) }),
+			TipLabel
+		})
+		local tipToken = 0
+
+		local function ShowTip(holder, text)
+			tipToken += 1
+			TipLabel.Text = text
+			local half = (TipLabel.TextBounds.X + 18) / 2
+			local origin = FontSection.AbsolutePosition
+			local x = math.clamp(holder.AbsolutePosition.X - origin.X + holder.AbsoluteSize.X / 2, half + 6, FontSection.AbsoluteSize.X - half - 6)
+			local y = holder.AbsolutePosition.Y - origin.Y - 5
+			Tip.BackgroundColor3 = Lib.Lighten(Lib.Theme.Item, 0.06)
+			TipStroke.Color = Lib.Palette.Secondary
+			TipLabel.TextColor3 = Lib.Palette.Primary
+			Tip.Position = UDim2.fromOffset(x, y + 4)
+			Tip.Visible = true
+			Lib.Tween(Tip, 0.14, Quad, Out, { Position = UDim2.fromOffset(x, y), BackgroundTransparency = 0 })
+			Lib.Tween(TipLabel, 0.14, Quad, Out, { TextTransparency = 0 })
+			Lib.Tween(TipStroke, 0.14, Quad, Out, { Transparency = 0.55 })
+		end
+
+		local function HideTip()
+			tipToken += 1
+			local mine = tipToken
+			Lib.Tween(TipLabel, 0.1, Quad, Out, { TextTransparency = 1 })
+			Lib.Tween(TipStroke, 0.1, Quad, Out, { Transparency = 1 })
+			Lib.Tween(Tip, 0.1, Quad, Out, { BackgroundTransparency = 1 }).Completed:Once(function()
+				if mine == tipToken then Tip.Visible = false end
+			end)
+		end
+
 		local function AddFontButton(key, data, order, entry)
+			local Holder = Lib.Create("Frame", { Size = UDim2.fromOffset(36, 36), BackgroundTransparency = 1, LayoutOrder = order, Parent = FontListScroll })
+			local Scale = Lib.Create("UIScale", { Scale = 1 })
 			local Item = Lib.Create("TextButton", {
-				Size = UDim2.fromOffset(36, 36),
+				Size = UDim2.fromScale(1, 1),
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5),
 				BackgroundColor3 = Color3.fromRGB(22, 22, 22),
 				Text = "Aa",
 				TextColor3 = Color3.fromRGB(240, 240, 240),
 				TextSize = 14,
 				AutoButtonColor = false,
-				LayoutOrder = order,
-				Parent = FontListScroll,
-				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
+				Parent = Holder,
+				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) }),
+				Scale
 			})
 			Lib.PinFont(Item)
 			if data.boldFace then Item.FontFace = data.boldFace else Item.Font = data.bold end
@@ -28659,6 +29809,11 @@ do
 				Transparency = isSelected and 0 or 1,
 				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 				Parent = Item
+			})
+
+			local Outline = Lib.Create("UIStroke", {
+				Name = "FontOutline", Color = Lib.Palette.Primary, Thickness = 1, Transparency = 0.78,
+				ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = Item
 			})
 
 			local CheckBadge = Lib.Create("Frame", {
@@ -28678,7 +29833,20 @@ do
 				})
 			})
 
-			fontBtns[key] = { Item = Item, Stroke = Stroke, Badge = CheckBadge, Data = data, Entry = entry }
+			fontBtns[key] = { Item = Item, Holder = Holder, Stroke = Stroke, Outline = Outline, Badge = CheckBadge, Data = data, Entry = entry }
+
+			local label = entry and entry.name or data.name
+			Item.MouseEnter:Connect(function()
+				Holder.ZIndex = 3
+				Lib.Tween(Scale, 0.14, Quad, Out, { Scale = 1.14 })
+				ShowTip(Holder, label)
+			end)
+			Item.MouseLeave:Connect(function()
+				HideTip()
+				Lib.Tween(Scale, 0.16, Quad, Out, { Scale = 1 }).Completed:Once(function(state)
+					if state == Enum.PlaybackState.Completed then Holder.ZIndex = 1 end
+				end)
+			end)
 
 			if entry then
 				local Remove = Lib.Create("TextButton", {
@@ -28702,7 +29870,8 @@ do
 					local wasSelected = selectedKey == key
 					fontBtns[key] = nil
 					Lib.FontSelectors[key] = nil
-					Item:Destroy()
+					HideTip()
+					Holder:Destroy()
 					if wasSelected then Select(1) end
 				end)
 			end
@@ -28790,6 +29959,13 @@ do
 			end)
 		end
 
+		table.insert(Lib.ThemeHooks, function()
+			local color = Lib.Palette.Primary
+			for _, info in pairs(fontBtns) do
+				info.Outline.Color = color
+			end
+		end)
+
 		local FontInput = Lib.Create("TextBox", {
 			Size = UDim2.new(1, -104, 0, 32),
 			Position = UDim2.new(0, 14, 0, 104),
@@ -28849,7 +30025,7 @@ do
 		State.WindowTransparency = val
 		UI.Main.BackgroundTransparency = val / 100
 	end)
-	Lib.CreateSettingSliderItem(ThemeWindowGroup, "Panel Transparency", "Adjust opacity of the setting panels and cards", 0, 70, State.PanelTransparency, function(val)
+	Lib.CreateSettingSliderItem(ThemeWindowGroup, "Panel Transparency", "Adjust opacity of the setting panels and cards", 0, 100, State.PanelTransparency, function(val)
 		if val == State.PanelTransparency then return end
 		State.PanelTransparency = val
 		Lib.ApplyPanelTransparency()
@@ -28955,39 +30131,194 @@ do
 	}
 
 	local CustomBgGroup = Lib.CreateFeatureGroup(Pages.Background, "Custom & Animated Background", 5)
-	local BgCard = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 52), BackgroundTransparency = 1, Parent = CustomBgGroup })
+	local Quint, Quad, Out = Enum.EasingStyle.Quint, Enum.EasingStyle.Quad, Enum.EasingDirection.Out
+	local Http = Services.HttpService
+	local FILE, CACHE = "SeptusHub_Backgrounds.json", "SeptusHub_BgCache"
+	local VIDEO_EXT = { mp4 = true, webm = true }
+	local FILE_EXT = { mp4 = true, webm = true, png = true, jpg = true, jpeg = true, webp = true }
+	local TILE, REVEAL_H = 58, 44
+	local WHITE, DARK = Color3.fromRGB(255, 255, 255), Color3.fromRGB(32, 32, 32)
+	local saved, tiles, built = {}, {}, {}
+	local Highlight, Rebuild
+
+	if isfile and readfile then
+		pcall(function()
+			if not isfile(FILE) then return end
+			for _, value in ipairs(Http:JSONDecode(readfile(FILE))) do
+				if type(value) == "string" and value ~= "" then saved[#saved + 1] = value end
+			end
+		end)
+	end
+
+	local function Persist()
+		if writefile then pcall(writefile, FILE, Http:JSONEncode(saved)) end
+	end
+
+	local function Trim(text)
+		return text:match("^%s*(.-)%s*$")
+	end
+
+	local function ExtOf(value)
+		return value:lower():gsub("[%?#].*$", ""):match("%.(%w+)$")
+	end
+
+	local function IsLocal(value)
+		if not isfile then return false end
+		local ok, found = pcall(isfile, value)
+		return ok and found
+	end
+
+	local function Classify(value)
+		if value:lower():sub(1, 6) == "video:" then return true, Trim(value:sub(7)) end
+		return VIDEO_EXT[ExtOf(value)] == true, value
+	end
+
+	local function Hash(text)
+		local h = 5381
+		for i = 1, #text do h = (h * 33 + text:byte(i)) % 4294967296 end
+		return string.format("%08x", h)
+	end
+
+	local function Localize(value, fallbackExt)
+		local get = getcustomasset or getsynasset
+		if not get then return nil end
+		local ok, result = pcall(function()
+			if IsLocal(value) then return get(value) end
+			if not (value:match("^https?://") and writefile and isfile) then return nil end
+			local ext = ExtOf(value)
+			local path = CACHE .. "/" .. Hash(value) .. "." .. (FILE_EXT[ext] and ext or fallbackExt)
+			if not isfile(path) then
+				if makefolder and isfolder and not isfolder(CACHE) then makefolder(CACHE) end
+				writefile(path, game:HttpGet(value))
+			end
+			return get(path)
+		end)
+		return ok and result or nil
+	end
+
+	local function Caption(value)
+		if value:match("^%d+$") then return value end
+		return value:gsub("[%?#].*$", ""):match("([^/\\]+)$") or value
+	end
+
+	local Tip = Lib.Create("TextLabel", {
+		AnchorPoint = Vector2.new(0.5, 1), AutomaticSize = Enum.AutomaticSize.XY, Size = UDim2.fromOffset(0, 0),
+		BackgroundColor3 = Color3.fromRGB(10, 10, 10), BackgroundTransparency = 0.05, TextColor3 = WHITE, TextSize = 11,
+		Font = Enum.Font.GothamMedium, TextWrapped = true, Visible = false, ZIndex = 200, Parent = UI.Screen,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
+		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5) }),
+		Lib.Create("UISizeConstraint", { MaxSize = Vector2.new(280, math.huge) })
+	})
+
+	local function ShowTip(anchor, text)
+		local position, size, screen = anchor.AbsolutePosition, anchor.AbsoluteSize, UI.Screen.AbsoluteSize
+		Tip.Text = text
+		Tip.Position = UDim2.fromOffset(math.clamp(position.X + size.X / 2, 100, math.max(100, screen.X - 100)), position.Y - 6)
+		Tip.TextTransparency, Tip.BackgroundTransparency = 1, 1
+		Tip.Visible = true
+		Lib.Tween(Tip, 0.12, Quad, Out, { TextTransparency = 0, BackgroundTransparency = 0.05 })
+	end
+
+	local function HideTip()
+		Tip.Visible = false
+	end
+
+	local BgCard = Lib.Create("Frame", {
+		Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = CustomBgGroup,
+		Lib.Create("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12), PaddingTop = UDim.new(0, 12), PaddingBottom = UDim.new(0, 12) })
+	})
+
+	local Row = Lib.Create("Frame", {
+		Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 1, Parent = BgCard,
+		Lib.Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Wraps = true, Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder })
+	})
+
+	local Reveal = Lib.Create("CanvasGroup", {
+		Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1, GroupTransparency = 1, Visible = false, LayoutOrder = 2, Parent = BgCard
+	})
 
 	local bgInput = Lib.Create("TextBox", {
-		Size = UDim2.new(1, -166, 0, 36),
-		Position = UDim2.new(0, 12, 0, 8),
+		Size = UDim2.new(1, -92, 0, 36),
+		Position = UDim2.fromOffset(0, 4),
 		BackgroundColor3 = Color3.fromRGB(22, 22, 22),
-		PlaceholderText = "Paste Asset ID or Image URL...",
+		PlaceholderText = "Paste Asset ID, image or video URL...",
 		PlaceholderColor3 = Color3.fromRGB(110, 110, 110),
 		TextColor3 = Color3.fromRGB(240, 240, 240),
 		TextSize = 12,
 		Font = Enum.Font.GothamMedium,
 		Text = State.CustomBackgroundId,
 		ClearTextOnFocus = false,
-		Parent = BgCard,
-		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		ClipsDescendants = true,
+		Parent = Reveal,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) }),
 		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
 	})
 	Lib.RegisterThemeElement(bgInput, "BackgroundColor3", 0.7, true)
 	Lib.RegisterThemeText(bgInput, "Primary")
 
+	local useBtn = Lib.Create("TextButton", {
+		Size = UDim2.fromOffset(82, 36), Position = UDim2.new(1, -82, 0, 4), BackgroundColor3 = WHITE,
+		Text = "Use", TextColor3 = Color3.fromRGB(0, 0, 0), TextSize = 12, Font = Enum.Font.GothamBold, AutoButtonColor = false, Parent = Reveal,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
+	})
+
+	local function HideVideo()
+		UI.CustomBgVideo.Playing = false
+		UI.CustomBgVideo.Video = ""
+		UI.CustomBgVideoGroup.Visible = false
+	end
+
+	local function ShowVideo(source)
+		local video = UI.CustomBgVideo
+		video.Video = source
+		UI.CustomBgVideoGroup.Visible = true
+		video.Playing = true
+		if video.IsLoaded then Lib.FitVideo() else video.Loaded:Once(Lib.FitVideo) end
+	end
+
 	local function UpdateBg()
-		local val = bgInput.Text:match("^%s*(.-)%s*$")
+		local val = Trim(bgInput.Text)
 		State.CustomBackgroundId = val
 		local image = UI.CustomBgImage
 		local mine = (Lib.BgToken or 0) + 1
 		Lib.BgToken = mine
+		Lib.BgAssetId, Lib.BgResolved = nil, nil
+		HideVideo()
+		Highlight()
 		if val == "" then
 			image.Visible = false
-			Lib.BgAssetId, Lib.BgResolved = nil, nil
 			Lib.RefreshBgSaturation()
 			return
 		end
+		local isVideo, value = Classify(val)
+		if isVideo then
+			image.Visible = false
+			Lib.RefreshBgSaturation()
+			task.spawn(function()
+				local source = value:match("^%d+$") and ("rbxassetid://" .. value) or value:match("^rbxassetid://%d+$") or Localize(value, "mp4")
+				if Lib.BgToken ~= mine then return end
+				if source then
+					ShowVideo(source)
+				else
+					Lib.Notify({ Title = "Background", Text = "Video backgrounds need an executor with getcustomasset" })
+				end
+			end)
+			return
+		end
 		local resolved, id = Lib.ResolveImage(val)
+		if not id and (val:match("^https?://") or IsLocal(val)) then
+			image.Visible = false
+			Lib.RefreshBgSaturation()
+			task.spawn(function()
+				local source = Localize(val, "png") or val
+				if Lib.BgToken ~= mine then return end
+				image.Image = source
+				image.Visible = true
+			end)
+			return
+		end
 		image.Image = resolved
 		image.Visible = true
 		Lib.BgResolved, Lib.BgAssetId = resolved, id
@@ -29008,139 +30339,173 @@ do
 		end)
 	end
 
-	do
-		local FILE = "SeptusHub_Backgrounds.json"
-		local saved = {}
+	local function MakeTile(order, caption, glyph, key, tipText)
+		local tile = Lib.Create("Frame", { Size = UDim2.fromOffset(TILE, TILE + 20), BackgroundTransparency = 1, LayoutOrder = order, Parent = Row })
+		local stroke = Lib.Create("UIStroke", { Color = WHITE, Thickness = 2, Transparency = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
+		local button = Lib.Create("ImageButton", {
+			Size = UDim2.fromOffset(TILE, TILE), BackgroundColor3 = DARK, AutoButtonColor = false, ScaleType = Enum.ScaleType.Crop, Parent = tile,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 10) }), stroke
+		})
+		Lib.RegisterThemeElement(button, "BackgroundColor3", 0.7, true)
+		local glyphLabel = Lib.Create("TextLabel", {
+			Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = glyph, TextSize = 22, Font = Enum.Font.GothamMedium, Parent = button
+		})
+		Lib.RegisterThemeText(glyphLabel, "Primary")
+		local badge = Lib.Create("Frame", {
+			Size = UDim2.fromOffset(16, 16), Position = UDim2.fromOffset(4, 4), BackgroundColor3 = WHITE, Visible = false, ZIndex = 3, Parent = button,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) }),
+			Lib.Create("TextLabel", {
+				Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "✓", TextColor3 = Color3.fromRGB(0, 0, 0),
+				TextSize = 11, Font = Enum.Font.GothamBold, ZIndex = 4
+			})
+		})
+		local label = Lib.Create("TextLabel", {
+			Size = UDim2.new(1, 0, 0, 12), Position = UDim2.fromOffset(0, TILE + 5), BackgroundTransparency = 1, Text = caption, TextSize = 10,
+			Font = Enum.Font.GothamMedium, TextTruncate = Enum.TextTruncate.AtEnd, Parent = tile
+		})
+		Lib.RegisterThemeText(label, "Secondary")
+		if tipText then
+			tile.MouseEnter:Connect(function() ShowTip(button, tipText) end)
+			tile.MouseLeave:Connect(HideTip)
+			tile.Destroying:Connect(HideTip)
+		end
+		if key then tiles[key] = { Stroke = stroke, Badge = badge } end
+		return tile, button, glyphLabel
+	end
 
-		if isfile and readfile then
-			pcall(function()
-				if not isfile(FILE) then return end
-				for _, value in ipairs(Services.HttpService:JSONDecode(readfile(FILE))) do
-					if type(value) == "string" and value ~= "" then saved[#saved + 1] = value end
-				end
+	Highlight = function()
+		local current = State.CustomBackgroundId
+		for key, entry in pairs(tiles) do
+			local on = key == current
+			entry.Badge.Visible = on
+			Lib.Tween(entry.Stroke, 0.15, Quad, Out, { Transparency = on and 0 or 1 })
+		end
+	end
+
+	local function MakeSaved(index, value)
+		local isVideo = Classify(value)
+		local numeric = not isVideo and select(2, Lib.ResolveImage(value)) or nil
+		local tile, button = MakeTile(index, Caption(value), isVideo and "▶" or "", value, numeric and ("Asset ID: " .. numeric) or value)
+		local remove = Lib.Create("TextButton", {
+			Size = UDim2.fromOffset(18, 18), Position = UDim2.fromOffset(TILE - 14, -4), BackgroundColor3 = Color3.fromRGB(220, 50, 50),
+			Text = "×", TextColor3 = WHITE, TextSize = 13, Font = Enum.Font.GothamBold, AutoButtonColor = false, Visible = false, ZIndex = 5, Parent = tile,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) })
+		})
+		tile.MouseEnter:Connect(function() remove.Visible = true end)
+		tile.MouseLeave:Connect(function() remove.Visible = false end)
+		if numeric then
+			button.Image = "rbxthumb://type=Asset&id=" .. numeric .. "&w=150&h=150"
+		elseif not isVideo then
+			task.spawn(function()
+				local source = Localize(value, "png")
+				if source and button.Parent then button.Image = source end
 			end)
 		end
-
-		local function Persist()
-			if writefile then pcall(writefile, FILE, Services.HttpService:JSONEncode(saved)) end
-		end
-
-		local applyBtn = Lib.Create("TextButton", {
-			Size = UDim2.fromOffset(70, 36), Position = UDim2.new(1, -148, 0, 8), BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-			Text = "Apply", TextColor3 = Color3.fromRGB(0, 0, 0), TextSize = 12, Font = Enum.Font.GothamBold, Parent = BgCard,
-			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
-		})
-		local saveBtn = Lib.Create("TextButton", {
-			Size = UDim2.fromOffset(60, 36), Position = UDim2.new(1, -72, 0, 8), BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-			Text = "Save", TextColor3 = Color3.fromRGB(0, 0, 0), TextSize = 12, Font = Enum.Font.GothamBold, Parent = BgCard,
-			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
-		})
-
-		local SavedFrame = Lib.Create("Frame", {
-			Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = CustomBgGroup,
-			Lib.Create("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
-			Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12), PaddingBottom = UDim.new(0, 10) })
-		})
-
-		local function Rebuild()
-			for _, child in ipairs(SavedFrame:GetChildren()) do
-				if child:IsA("GuiObject") then child:Destroy() end
-			end
-
-			local header = Lib.Create("TextLabel", {
-				Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, Text = #saved == 0 and "No saved backgrounds yet" or "Saved Asset IDs",
-				TextColor3 = Color3.fromRGB(150, 150, 150), TextSize = 11, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left,
-				LayoutOrder = 0, Parent = SavedFrame
-			})
-			Lib.RegisterThemeText(header, "Secondary")
-
-			for i, id in ipairs(saved) do
-				local resolved, numeric = Lib.ResolveImage(id)
-				local item = Lib.Create("Frame", {
-					Size = UDim2.new(1, 0, 0, 50), BackgroundColor3 = Color3.fromRGB(22, 22, 22), LayoutOrder = i, Parent = SavedFrame,
-					Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
-				})
-				Lib.RegisterThemeElement(item, "BackgroundColor3", 0.7, true)
-
-				Lib.Create("ImageLabel", {
-					Size = UDim2.fromOffset(38, 38), Position = UDim2.fromOffset(6, 6), BackgroundColor3 = Color3.fromRGB(40, 40, 40),
-					Image = numeric and ("rbxthumb://type=Asset&id=" .. numeric .. "&w=150&h=150") or resolved,
-					ScaleType = Enum.ScaleType.Crop, Parent = item,
-					Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
-				})
-
-				local label = Lib.Create("TextLabel", {
-					Size = UDim2.new(1, -152, 1, 0), Position = UDim2.fromOffset(54, 0), BackgroundTransparency = 1, Text = numeric or id,
-					TextColor3 = Color3.fromRGB(240, 240, 240), TextSize = 12, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left,
-					TextTruncate = Enum.TextTruncate.AtEnd, Parent = item
-				})
-				Lib.RegisterThemeText(label, "Primary")
-
-				local useBtn = Lib.Create("TextButton", {
-					Size = UDim2.fromOffset(50, 28), Position = UDim2.new(1, -88, 0.5, -14), BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-					Text = "Use", TextColor3 = Color3.fromRGB(0, 0, 0), TextSize = 11, Font = Enum.Font.GothamBold, Parent = item,
-					Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
-				})
-				local deleteBtn = Lib.Create("TextButton", {
-					Size = UDim2.fromOffset(28, 28), Position = UDim2.new(1, -34, 0.5, -14), BackgroundColor3 = Color3.fromRGB(220, 50, 50),
-					Text = "×", TextColor3 = Color3.fromRGB(255, 255, 255), TextSize = 14, Font = Enum.Font.GothamBold, Parent = item,
-					Lib.Create("UICorner", { CornerRadius = UDim.new(0, 6) })
-				})
-
-				useBtn.MouseButton1Click:Connect(function()
-					Lib.PlayClick()
-					bgInput.Text = id
-					UpdateBg()
-					Lib.Notify({ Title = "Background", Text = "Custom background applied!" })
-				end)
-				deleteBtn.MouseButton1Click:Connect(function()
-					Lib.PlayClick()
-					table.remove(saved, i)
-					Persist()
-					Rebuild()
-				end)
-			end
-		end
-
-		applyBtn.MouseButton1Click:Connect(function()
+		button.MouseButton1Click:Connect(function()
 			Lib.PlayClick()
+			bgInput.Text = value
 			UpdateBg()
 			Lib.Notify({ Title = "Background", Text = "Custom background applied!" })
 		end)
-
-		saveBtn.MouseButton1Click:Connect(function()
+		remove.MouseButton1Click:Connect(function()
 			Lib.PlayClick()
-			local val = bgInput.Text:match("^%s*(.-)%s*$")
-			if val == "" then
-				Lib.Notify({ Title = "Background", Text = "Enter an Asset ID first" })
-			elseif table.find(saved, val) then
-				Lib.Notify({ Title = "Background", Text = "Already saved" })
-			elseif #saved >= 40 then
+			local at = table.find(saved, value)
+			if at then
+				table.remove(saved, at)
+				Persist()
+				Rebuild()
+			end
+		end)
+		return tile
+	end
+
+	Rebuild = function()
+		for _, tile in ipairs(built) do tile:Destroy() end
+		table.clear(built)
+		for key in pairs(tiles) do
+			if key ~= "" then tiles[key] = nil end
+		end
+		for index, value in ipairs(saved) do built[index] = MakeSaved(index, value) end
+		Highlight()
+	end
+
+	local _, noneButton = MakeTile(0, "None", "×", "", nil)
+	local _, addButton, addGlyph = MakeTile(9999, "Add", "+", nil, nil)
+	local open = false
+
+	local function SetOpen(state)
+		open = state
+		if state then
+			bgInput.Text = ""
+			Reveal.Visible = true
+		end
+		Lib.Tween(addGlyph, 0.3, Quint, Out, { Rotation = state and 45 or 0 })
+		Lib.Tween(Reveal, 0.35, Quint, Out, { Size = UDim2.new(1, 0, 0, state and REVEAL_H or 0), GroupTransparency = state and 0 or 1 }).Completed:Once(function()
+			if not open then Reveal.Visible = false end
+		end)
+	end
+
+	local function Use()
+		Lib.PlayClick()
+		local val = Trim(bgInput.Text)
+		if val == "" then
+			Lib.Notify({ Title = "Background", Text = "Enter an Asset ID or URL first" })
+			return
+		end
+		if ExtOf(val) == "gif" then
+			Lib.Notify({ Title = "Background", Text = "GIF is not supported, use mp4, webm or an image" })
+			return
+		end
+		UpdateBg()
+		if not table.find(saved, val) then
+			if #saved >= 40 then
 				Lib.Notify({ Title = "Background", Text = "Saved list is full" })
 			else
 				saved[#saved + 1] = val
 				Persist()
 				Rebuild()
-				Lib.Notify({ Title = "Background", Text = "Asset ID saved" })
 			end
-		end)
-
-		Rebuild()
+		end
+		Lib.Notify({ Title = "Background", Text = "Custom background applied!" })
+		SetOpen(false)
 	end
+
+	noneButton.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		bgInput.Text = ""
+		UpdateBg()
+		Lib.Notify({ Title = "Background", Text = "Background removed" })
+	end)
+	addButton.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		SetOpen(not open)
+	end)
+	useBtn.MouseButton1Click:Connect(Use)
+	bgInput.FocusLost:Connect(function(enter)
+		if enter then Use() end
+	end)
+	Lib.C(UI.Main:GetPropertyChangedSignal("AbsoluteSize"), Lib.FitVideo)
+
+	Rebuild()
 
 	Lib.CreateSettingToggleItem(CustomBgGroup, "Animated Drift Effect", "Slowly pans and animates the custom background image", State.AnimatedBgEnabled, function(val)
 		State.AnimatedBgEnabled = val
 		if not val then
 			Lib.Tween(UI.CustomBgImage, 0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, { Position = UDim2.fromScale(0.5, 0.5), Size = Lib.BgSize(1) })
+			Lib.Tween(UI.CustomBgVideo, 0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, { Position = UDim2.fromScale(0.5, 0.5), Size = Lib.VideoSize(1) })
 		end
 	end)
 	Lib.CreateSettingSliderItem(CustomBgGroup, "Background Opacity", "How visible the custom background image is", 10, 100, State.BgOpacity, function(val)
 		State.BgOpacity = val
 		UI.CustomBgImage.ImageTransparency = (100 - val) / 100
+		UI.CustomBgVideoGroup.GroupTransparency = (100 - val) / 100
 	end)
 	Lib.CreateSettingSliderItem(CustomBgGroup, "Background Zoom", "Enlarges the image so corners baked into it get cropped by the window", 100, 160, State.BgZoom, function(val)
 		State.BgZoom = val
-		if not State.AnimatedBgEnabled then UI.CustomBgImage.Size = Lib.BgSize(1) end
+		if not State.AnimatedBgEnabled then
+			UI.CustomBgImage.Size = Lib.BgSize(1)
+			UI.CustomBgVideo.Size = Lib.VideoSize(1)
+		end
 	end)
 	Lib.CreateSettingSliderItem(CustomBgGroup, "Background Saturation", "Color intensity of the custom background image", 0, 200, State.BgSaturation, function(val)
 		State.BgSaturation = val
@@ -29739,10 +31104,12 @@ end
 
 	task.spawn(function()
 		while not State.Unloaded do
-			if State.AnimatedBgEnabled and UI.CustomBgImage.Visible then
-				Lib.Tween(UI.CustomBgImage, 4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, { Position = UDim2.fromScale(0.47, 0.47), Size = Lib.BgSize(1.1) })
+			local isVideo = UI.CustomBgVideoGroup.Visible
+			local layer, sizeOf = isVideo and UI.CustomBgVideo or UI.CustomBgImage, isVideo and Lib.VideoSize or Lib.BgSize
+			if State.AnimatedBgEnabled and (isVideo or layer.Visible) then
+				Lib.Tween(layer, 4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, { Position = UDim2.fromScale(0.47, 0.47), Size = sizeOf(1.1) })
 				task.wait(4)
-				Lib.Tween(UI.CustomBgImage, 4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, { Position = UDim2.fromScale(0.5, 0.5), Size = Lib.BgSize(1) })
+				Lib.Tween(layer, 4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, { Position = UDim2.fromScale(0.5, 0.5), Size = sizeOf(1) })
 				task.wait(4)
 			else
 				task.wait(1)
@@ -29782,6 +31149,7 @@ end
 		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
 	})
 	Lib.RegisterThemeElement(cfgNameInput, "BackgroundColor3", 0.7, true)
+	Lib.Edge(cfgNameInput)
 	Lib.RegisterThemeText(cfgNameInput, "Primary")
 
 	local saveCfgBtn = Lib.Create("TextButton", {
@@ -29909,10 +31277,10 @@ end
 		PlaceCfg.Empty.Visible = shown == 0
 	end
 
-	Lib.MakeSearchBox(Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 44), BackgroundTransparency = 1, LayoutOrder = 1, Parent = SavedConfigsGroup }), "Search configs...", UDim2.fromOffset(12, 7), UDim2.new(1, -24, 0, 32), 0.12, function(text)
+	Lib.Edge(select(2, Lib.MakeSearchBox(Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 44), BackgroundTransparency = 1, LayoutOrder = 1, Parent = SavedConfigsGroup }), "Search configs...", UDim2.fromOffset(12, 7), UDim2.new(1, -24, 0, 32), 0.12, function(text)
 		PlaceCfg.Query = Lib.Lower(text)
 		PlaceCfg.Filter()
-	end)
+	end)))
 
 	local CONFIG_FOLDER = "SeptusHub_Configs"
 	local AUTO_FILE = "SeptusHub_AutoLoad.txt"
@@ -30634,9 +32002,11 @@ function Lib.SwitchMainTab(tab)
 			Lib.LoadScriptsPage(1)
 		end
 	elseif tab == "Emotes" then
-		local currentCache = (State.EmotesCategory == "Emotes") and State.EmotesCache or State.AnimationPacksCache
-		if not currentCache[1] and not State.EmotesLoading and Lib.LoadEmotesPage then
-			Lib.LoadEmotesPage(1)
+		if State.CurrentEmotesTab == "Accessories" then
+			if not State.AccessoryCache[1] and not State.AccessoriesLoading and Lib.LoadAccessoriesPage then Lib.LoadAccessoriesPage(1) end
+		else
+			local currentCache = (State.EmotesCategory == "Emotes") and State.EmotesCache or State.AnimationPacksCache
+			if not currentCache[1] and not State.EmotesLoading and Lib.LoadEmotesPage then Lib.LoadEmotesPage(1) end
 		end
 	end
 end
@@ -30903,7 +32273,7 @@ local function StartLoadingSequence(Blur)
 	Lib.SwitchTab("Overview")
 	Lib.SwitchFeaturesTab("Visuals")
 	Lib.SwitchScriptsTab("Browse")
-	Lib.SwitchEmotesTab("Browse")
+	Lib.SwitchEmotesTab("Emotes")
 	Lib.SwitchSettingsTab("Appearance")
 	Lib.SwitchMainTab("Home")
 	task.delay(4, function() Lib.CascadeReady = true end)
