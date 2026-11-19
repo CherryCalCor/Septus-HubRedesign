@@ -219,10 +219,10 @@ local Refs = App.Refs
 
 Lib.Conns = {}
 Lib.Version = {
-	Current = "3.8",
-	Display = "V3.8",
-	Url = "https://raw.githubusercontent.com/CherryCalCor/SeptusHub/refs/heads/main/version.json",
-	Repo = "https://github.com/CherryCalCor/SeptusHub",
+	Current = "3.8.1",
+	Display = "V3.8.1",
+	Url = "https://raw.githubusercontent.com/CherryCalCor/Septus-HubRedesign/refs/heads/main/version.json",
+	Repo = "https://github.com/CherryCalCor/Septus-HubRedesign",
 	Status = "idle",
 	Listeners = {}
 }
@@ -807,10 +807,26 @@ do
 		update()
 	end
 
+	function Lib.Solidify(backdrop)
+		local panels, edges = UI.PanelElements, Lib.EdgeStrokes
+		for _, node in ipairs(backdrop:GetDescendants()) do
+			if panels[node] then
+				panels[node] = nil
+				node.BackgroundTransparency = 0
+				Lib.PanelStroke(node, false)
+			elseif edges[node] then
+				edges[node] = nil
+				node.Transparency = 1
+			end
+		end
+	end
+
 	function Lib.GlassOpen(backdrop)
 		users = users + 1
 		Prepare(backdrop)
 		Fit(backdrop)
+		Lib.Solidify(backdrop)
+		task.defer(Lib.Solidify, backdrop)
 		local light = State.LightTheme
 		backdrop.BackgroundColor3 = light and Color3.new(1, 1, 1) or Lib.Theme.Main:Lerp(Color3.new(1, 1, 1), 0.2)
 		backdrop.BackgroundTransparency = 1
@@ -1316,6 +1332,13 @@ do
 		["Adding the Wear button to accessory cards and to the Try on window: it puts the accessory on your character and turns into Take off, and worn accessories come back after respawn."] = "Добавлена кнопка «Надеть» на карточках аксессуаров и в окне примерки: она надевает аксессуар на персонажа и превращается в «Снять», а надетые аксессуары возвращаются после респавна.",
 		["Accessories now load with skeleton placeholders, a page switcher, a Retry button and search suggestions, just like the Emotes section."] = "Аксессуары теперь загружаются со скелетонами, переключателем страниц, кнопкой Retry и подсказками поиска, как в разделе Emotes.",
 		["Fixed the Try on window staying on the screen when the menu was minimized or closed, and the Saved tab not updating when an accessory was removed from it."] = "Исправлено: окно примерки оставалось на экране при сворачивании или закрытии меню, а вкладка «Сохранённые» не обновлялась при удалении из неё аксессуара.",
+		["Fixed the character freezing in place after the script was fully turned off: closing the hub now unanchors the character, removes leftover movers and re-enables every Humanoid state it had disabled."] = "Исправлено: персонаж замерзал на месте после полного выключения скрипта. Теперь при закрытии хаба персонаж разанкоривается, убираются оставшиеся движители и снова включаются все состояния Humanoid, которые скрипт отключал.",
+		["Fixed the character staying anchored after Stalk Active was switched off."] = "Исправлено: персонаж оставался заанкоренным после выключения Stalk Active.",
+		["Fixed the settings windows (ESP, Compatibility Report, Aim, Server List, Bunny Hop, RTX Shader Editor, RTX Presets, Models, Custom Crosshair, Custom Mouse and World) changing their transparency with Panel Transparency and leaving only text at the maximum value."] = "Исправлено: окна настроек (ESP, Compatibility Report, Aim, Server List, Bunny Hop, RTX Shader Editor, RTX Presets, Models, Custom Crosshair, Custom Mouse и World) меняли прозрачность вместе с Panel Transparency, а на максимуме оставался один текст.",
+		["Fixed the SH button in Classic style leaving only its text at the maximum Panel Transparency."] = "Исправлено: у кнопки SH в стиле Classic на максимуме Panel Transparency оставался только текст.",
+		["Fixed the FPS drop with ESP enabled: Drawing objects are no longer rewritten with the same values, visibility checks run less often and the per-frame tables are reused."] = "Исправлена просадка FPS при включённом ESP: объекты Drawing больше не перезаписываются одинаковыми значениями, проверки видимости выполняются реже, а таблицы кадра используются повторно.",
+		["Fixed ESP slowly eating memory: target data and pool counters are reused every frame instead of being recreated."] = "Исправлено: ESP постепенно съедал память. Данные целей и счётчики пулов теперь переиспользуются каждый кадр, а не создаются заново.",
+		["Adding snowfall and a snow cap to the SH button in the Winter theme, in both Classic and Dynamic Island styles."] = "Добавлены снегопад и снежная шапка на кнопку SH в зимней теме, в стилях Classic и Dynamic Island.",
 		["Wear"] = "Надеть",
 		["Take off"] = "Снять",
 		["Try on"] = "Примерить",
@@ -4921,6 +4944,7 @@ do
 	function Lib.SetWinterDecor(on)
 		if on == active then return end
 		active = on
+		if Lib.SetSHSnow then Lib.SetSHSnow(on) end
 		if on then
 			if not container then
 				container = Lib.Create("CanvasGroup", {
@@ -6447,7 +6471,19 @@ end
 function Lib.BuildUpdateLog(view)
 	local releases = {
 		{
-			version = "V3.8", date = "Nov 19", latest = true,
+			version = "V3.8.1", date = "Nov 20", latest = true,
+			notes = {
+				"Fixed the character freezing in place after the script was fully turned off: closing the hub now unanchors the character, removes leftover movers and re-enables every Humanoid state it had disabled.",
+				"Fixed the character staying anchored after Stalk Active was switched off.",
+				"Fixed the settings windows (ESP, Compatibility Report, Aim, Server List, Bunny Hop, RTX Shader Editor, RTX Presets, Models, Custom Crosshair, Custom Mouse and World) changing their transparency with Panel Transparency and leaving only text at the maximum value.",
+				"Fixed the SH button in Classic style leaving only its text at the maximum Panel Transparency.",
+				"Fixed the FPS drop with ESP enabled: Drawing objects are no longer rewritten with the same values, visibility checks run less often and the per-frame tables are reused.",
+				"Fixed ESP slowly eating memory: target data and pool counters are reused every frame instead of being recreated.",
+				"Adding snowfall and a snow cap to the SH button in the Winter theme, in both Classic and Dynamic Island styles."
+			}
+		},
+		{
+			version = "V3.8", date = "Date TBA",
 			notes = {
 				"Redesigned Appearance > Background: backgrounds are now a tile gallery with None, your saved backgrounds and an Add tile; pressing Add smoothly reveals the field for an Asset ID or link right below the tiles.",
 				"Hover a background tile to see its Asset ID or URL, hover it and press the red cross to remove it. Pressing Use applies the background and saves it as a tile.",
@@ -14020,7 +14056,7 @@ function Lib.CreateEspCore()
 	local nameGui
 
 	local function mk(obj, g, class, props)
-		local d = Drawing.new(class)
+		local d = Lib.GuardDrawing(Drawing.new(class))
 		for k, v in pairs(props) do
 			d[k] = v
 		end
@@ -14277,12 +14313,13 @@ function Lib.CreateEspCore()
 	end
 
 	local function collectTargets()
-		local list = {}
+		local list = Lib.EspList
+		table.clear(list)
 		local T = cfg.Targets
 		if T["Player"] then
 			for _, p in ipairs(Players:GetPlayers()) do
 				if p ~= lp and p.Character and not teamBlocked(p) then
-					list[p.Character] = {Name = labelFor(p), Player = p}
+					list[p.Character] = Lib.EspEntry(p.Character, labelFor(p), p)
 				end
 			end
 		end
@@ -14292,10 +14329,10 @@ function Lib.CreateEspCore()
 					local pl = playerOf(m)
 					if pl then
 						if T["Player Humanoid"] and pl ~= lp and not teamBlocked(pl) then
-							list[m] = {Name = labelFor(pl), Player = pl}
+							list[m] = Lib.EspEntry(m, labelFor(pl), pl)
 						end
 					elseif T["Npc Humanoid (better)"] then
-						list[m] = {Name = m.Name}
+						list[m] = Lib.EspEntry(m, m.Name)
 					end
 				end
 			end
@@ -14303,12 +14340,12 @@ function Lib.CreateEspCore()
 		if T["Npc WorkSpace"] then
 			for m in pairs(npcWorkspace) do
 				if m.Parent and not isLocalCharacter(m) and not list[m] and not playerOf(m) then
-					list[m] = {Name = m.Name}
+					list[m] = Lib.EspEntry(m, m.Name)
 				end
 			end
 		end
 		if cfg.Self.Enabled and lp.Character then
-			list[lp.Character] = {Name = labelFor(lp), Player = lp, Self = true}
+			list[lp.Character] = Lib.EspEntry(lp.Character, labelFor(lp), lp, true)
 		end
 		return list
 	end
@@ -14325,35 +14362,28 @@ function Lib.CreateEspCore()
 		local minX, minY, minZ = math.huge, math.huge, math.huge
 		local maxX, maxY, maxZ = -math.huge, -math.huge, -math.huge
 		local count = 0
-
-		local function add(p)
-			local cf = p.CFrame
-			local s = p.Size
-			local r, u, l = cf.RightVector, cf.UpVector, cf.LookVector
-			local hx = 0.5 * (math.abs(r.X) * s.X + math.abs(u.X) * s.Y + math.abs(l.X) * s.Z)
-			local hy = 0.5 * (math.abs(r.Y) * s.X + math.abs(u.Y) * s.Y + math.abs(l.Y) * s.Z)
-			local hz = 0.5 * (math.abs(r.Z) * s.X + math.abs(u.Z) * s.Y + math.abs(l.Z) * s.Z)
-			local pos = cf.Position
-			minX = math.min(minX, pos.X - hx)
-			maxX = math.max(maxX, pos.X + hx)
-			minY = math.min(minY, pos.Y - hy)
-			maxY = math.max(maxY, pos.Y + hy)
-			minZ = math.min(minZ, pos.Z - hz)
-			maxZ = math.max(maxZ, pos.Z + hz)
-			count = count + 1
-		end
-
-		for _, p in ipairs(model:GetChildren()) do
-			if p:IsA("BasePart") then
-				add(p)
-			end
-		end
-		if count == 0 then
-			for _, p in ipairs(model:GetDescendants()) do
+		local list = model:GetChildren()
+		for pass = 1, 2 do
+			for i = 1, #list do
+				local p = list[i]
 				if p:IsA("BasePart") then
-					add(p)
+					local cf, s = p.CFrame, p.Size
+					local r, u, l = cf.RightVector, cf.UpVector, cf.LookVector
+					local hx = 0.5 * (math.abs(r.X) * s.X + math.abs(u.X) * s.Y + math.abs(l.X) * s.Z)
+					local hy = 0.5 * (math.abs(r.Y) * s.X + math.abs(u.Y) * s.Y + math.abs(l.Y) * s.Z)
+					local hz = 0.5 * (math.abs(r.Z) * s.X + math.abs(u.Z) * s.Y + math.abs(l.Z) * s.Z)
+					local pos = cf.Position
+					minX = math.min(minX, pos.X - hx)
+					maxX = math.max(maxX, pos.X + hx)
+					minY = math.min(minY, pos.Y - hy)
+					maxY = math.max(maxY, pos.Y + hy)
+					minZ = math.min(minZ, pos.Z - hz)
+					maxZ = math.max(maxZ, pos.Z + hz)
+					count = count + 1
 				end
 			end
+			if count > 0 or pass == 2 then break end
+			list = model:GetDescendants()
 		end
 		if count == 0 then
 			return nil
@@ -14417,9 +14447,18 @@ function Lib.CreateEspCore()
 	end
 
 	local function isVisible(model, pos, camera)
+		local cache = Lib.EspVis
+		local hit = cache[model]
+		if hit and GT - hit.t < 0.1 then return hit.v end
 		rayParams.FilterDescendantsInstances = {lp.Character, model, camera}
 		local origin = camera.CFrame.Position
-		return Workspace:Raycast(origin, pos - origin, rayParams) == nil
+		local visible = Workspace:Raycast(origin, pos - origin, rayParams) == nil
+		if hit then
+			hit.t, hit.v = GT, visible
+		else
+			cache[model] = { t = GT, v = visible }
+		end
+		return visible
 	end
 
 	local function anyEnabled()
@@ -15359,7 +15398,12 @@ function Lib.CreateEspCore()
 			pools[key] = p
 		end
 		p.frame = frame
-		p.i = {Line = 0, Triangle = 0, Circle = 0}
+		local counts = p.i
+		if counts then
+			counts.Line, counts.Triangle, counts.Circle = 0, 0, 0
+		else
+			p.i = {Line = 0, Triangle = 0, Circle = 0}
+		end
 		return p
 	end
 
@@ -15368,7 +15412,7 @@ function Lib.CreateEspCore()
 		p.i[class] = i
 		local d = p[class][i]
 		if not d then
-			d = Drawing.new(class)
+			d = Lib.GuardDrawing(Drawing.new(class))
 			if class == "Triangle" then
 				d.Filled = true
 				d.ZIndex = 1
@@ -21559,9 +21603,11 @@ do
 	local function UpdateStalk()
 		if Refs.StalkConn then Refs.StalkConn:Disconnect() Refs.StalkConn = nil end
 		if not State.StalkActive or not State.StalkTarget then
-			if App.Player.Character and App.Player.Character:FindFirstChildOfClass("Humanoid") then
-				App.Camera.CameraSubject = App.Player.Character:FindFirstChildOfClass("Humanoid")
-			end
+			local char = App.Player.Character
+			local hum = char and char:FindFirstChildOfClass("Humanoid")
+			if hum then App.Camera.CameraSubject = hum end
+			local root = char and char:FindFirstChild("HumanoidRootPart")
+			if root and not State.FakeLagUsual then root.Anchored = false end
 			return
 		end
 
@@ -21632,11 +21678,15 @@ do
 		State.IsFlinging = true
 		Lib.Notify({ Title = "Fling", Text = "Applying fling on " .. State.FlingTarget.DisplayName })
 		local oldPos = myRoot.CFrame
-		local bv = Instance.new("BodyAngularVelocity", myRoot)
+		local bv = Instance.new("BodyAngularVelocity")
+		bv.Name = "Septus_FlingBAV"
+		bv.Parent = myRoot
 		bv.AngularVelocity = Vector3.new(0, 99999, 0)
 		bv.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
 		bv.P = math.huge
-		local bt = Instance.new("BodyThrust", myRoot)
+		local bt = Instance.new("BodyThrust")
+		bt.Name = "Septus_FlingBT"
+		bt.Parent = myRoot
 		bt.Force = Vector3.new(9999, 9999, 9999)
 		if myChar:FindFirstChildOfClass("Humanoid") then myChar:FindFirstChildOfClass("Humanoid").Sit = true end
 
@@ -22421,7 +22471,7 @@ do
 		local Quad, Out = Enum.EasingStyle.Quad, Enum.EasingDirection.Out
 		button.MouseEnter:Connect(function()
 			if solid then
-				local base = State.PanelTransparency / 100
+				local base = UI.PanelElements[button] and State.PanelTransparency / 100 or 0
 				Lib.Tween(button, 0.15, Quad, Out, { BackgroundTransparency = base + (1 - base) * 0.12 })
 			else
 				Lib.Tween(button, 0.15, Quad, Out, { BackgroundColor3 = Lib.Lighten(Lib.ThemeColor(0.7), 0.07) })
@@ -22429,7 +22479,7 @@ do
 		end)
 		button.MouseLeave:Connect(function()
 			if solid then
-				Lib.Tween(button, 0.15, Quad, Out, { BackgroundTransparency = State.PanelTransparency / 100 })
+				Lib.Tween(button, 0.15, Quad, Out, { BackgroundTransparency = UI.PanelElements[button] and State.PanelTransparency / 100 or 0 })
 			else
 				Lib.Tween(button, 0.15, Quad, Out, { BackgroundColor3 = Lib.ThemeColor(0.7) })
 			end
@@ -31912,15 +31962,70 @@ end
 end
 
 
+Lib.RestoredStates = { Enum.HumanoidStateType.Seated, Enum.HumanoidStateType.Physics, Enum.HumanoidStateType.Ragdoll, Enum.HumanoidStateType.FallingDown }
+
+function Lib.ReleaseCharacter(wasFlying)
+	local char = App.Player.Character
+	if not char then return end
+	local root = char:FindFirstChild("HumanoidRootPart")
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	if root then
+		root.Anchored = false
+		for _, child in ipairs(root:GetChildren()) do
+			if child.Name:sub(1, 7) == "Septus_" then child:Destroy() end
+		end
+	end
+	if hum then
+		if wasFlying and hum.PlatformStand then hum.PlatformStand = false end
+		for _, state in ipairs(Lib.RestoredStates) do hum:SetStateEnabled(state, true) end
+	end
+end
+
+function Lib.GuardDrawing(real)
+	local cache = {}
+	return setmetatable({}, {
+		__index = function(_, key)
+			local value = cache[key]
+			if value ~= nil then return value end
+			value = real[key]
+			if type(value) == "function" then
+				return function(_, ...) return value(real, ...) end
+			end
+			return value
+		end,
+		__newindex = function(_, key, value)
+			if cache[key] ~= value then
+				cache[key] = value
+				real[key] = value
+			end
+		end
+	})
+end
+
+Lib.EspVis = setmetatable({}, { __mode = "k" })
+Lib.EspInfo = setmetatable({}, { __mode = "k" })
+Lib.EspList = {}
+
+function Lib.EspEntry(model, name, player, isSelf)
+	local info = Lib.EspInfo[model]
+	if not info then
+		info = {}
+		Lib.EspInfo[model] = info
+	end
+	info.Name, info.Player, info.Self = name, player, isSelf
+	return info
+end
+
 function Lib.Unload()
 	if State.Unloaded then return end
-	local unanchor = State.StalkActive or State.FakeLagUsual
+	local wasFlying = State.Fly
 	State.Unloaded = true
 
 	for _, title in ipairs(Lib.FeatureToggles) do
 		local control = Lib.ToggleControls[title]
 		if control and control.Get() then pcall(control.Set, false) end
 	end
+	pcall(Lib.ReleaseCharacter, wasFlying)
 
 	State.FlingTarget = nil
 	for _, name in ipairs({ "StopBring", "StopMacro", "StopCurrentEmote", "StopEsp", "StopItemEsp", "StopWorld", "StopMusic", "ReleaseBgSaturation", "StopCombat", "StopBgFx", "StopShaderFx", "StopWaypoints", "ClosePalette" }) do
@@ -31933,8 +32038,6 @@ function Lib.Unload()
 
 	local char = App.Player.Character
 	local hum = char and char:FindFirstChildOfClass("Humanoid")
-	local root = char and char:FindFirstChild("HumanoidRootPart")
-	if root and unanchor then root.Anchored = false end
 	if hum then
 		if Refs.OrigHum == hum then
 			hum.WalkSpeed, hum.UseJumpPower, hum.JumpPower = Refs.OrigWS, Refs.OrigUJP, Refs.OrigJP
@@ -31946,6 +32049,7 @@ function Lib.Unload()
 	for _, connection in ipairs(Lib.Conns) do connection:Disconnect() end
 	table.clear(Lib.Conns)
 	ClickSound:Destroy()
+	task.delay(0.3, pcall, Lib.ReleaseCharacter, wasFlying)
 end
 
 do
@@ -32698,7 +32802,7 @@ do
 			ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 		})
 	})
-	Lib.RegisterThemeElement(classic, "BackgroundColor3", 0.5)
+	Lib.Solid(function() Lib.RegisterThemeElement(classic, "BackgroundColor3", 0.5) end)
 	Lib.RegisterThemeText(classic, "Primary")
 
 	Attach(classic, function()
@@ -32863,6 +32967,56 @@ do
 	Lib.StatsTick[#Lib.StatsTick + 1] = function()
 		if expanded then UpdateInfo() end
 	end
+
+	local snow = {}
+	local SNOW_WHITE = Color3.fromRGB(240, 248, 255)
+
+	local function BuildSnow(host, radius, count, seed, capWidth)
+		local rng = Random.new(seed)
+		local group = Lib.Create("CanvasGroup", {
+			Name = "WinterSnow", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 1, Visible = false, Parent = host,
+			Lib.Create("UICorner", { CornerRadius = radius })
+		})
+		local tweens = {}
+		for _ = 1, count do
+			local x, size = rng:NextNumber(0.1, 0.9), rng:NextInteger(2, 3)
+			local flake = Lib.Create("Frame", {
+				Size = UDim2.fromOffset(size, size), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(x, -0.12),
+				BackgroundColor3 = SNOW_WHITE, BackgroundTransparency = 0.1 + rng:NextNumber() * 0.4, BorderSizePixel = 0, Parent = group,
+				Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) })
+			})
+			tweens[#tweens + 1] = TweenService:Create(flake, TweenInfo.new(2.2 + rng:NextNumber() * 2.2, Enum.EasingStyle.Linear, Enum.EasingDirection.In, -1, false, rng:NextNumber() * 2), {
+				Position = UDim2.fromScale(math.clamp(x + rng:NextNumber(-0.14, 0.14), 0, 1), 1.12)
+			})
+		end
+		local cap = Lib.Create("Frame", {
+			Name = "WinterCap", Size = UDim2.new(capWidth, 0, 0, 5), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 1),
+			BackgroundColor3 = SNOW_WHITE, BorderSizePixel = 0, Visible = false, ZIndex = 125, Parent = host,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) })
+		})
+		for _, bump in ipairs({ { 0.2, 6 }, { 0.58, 8 }, { 0.82, 5 } }) do
+			Lib.Create("Frame", {
+				Size = UDim2.fromOffset(bump[2], bump[2]), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(bump[1], 0.9),
+				BackgroundColor3 = SNOW_WHITE, BorderSizePixel = 0, ZIndex = 125, Parent = cap,
+				Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) })
+			})
+		end
+		return { Group = group, Cap = cap, Tweens = tweens }
+	end
+
+	snow[1] = BuildSnow(classic, UDim.new(0, 10), 5, 3, 0.62)
+	snow[2] = BuildSnow(island, UDim.new(0.5, 0), 9, 8, 0.5)
+
+	function Lib.SetSHSnow(on)
+		for _, item in ipairs(snow) do
+			item.Group.Visible, item.Cap.Visible = on, on
+			for _, tween in ipairs(item.Tweens) do
+				if on then tween:Play() else tween:Cancel() end
+			end
+		end
+	end
+
+	Lib.SetSHSnow(State.CustomTheme ~= nil and State.CustomTheme.Winter == true)
 
 	local saved = {}
 	UI.SHToggleButton = classic
