@@ -106,7 +106,7 @@ version V3.7
 	"Redesigned Home > Developers and Home > Info in the style of Account and Overview: outlined cards, hover animations and copyable contacts.",
     "Redesigned Home > Update Log: releases are grouped into collapsible cards with NEW and FIX badges, older versions are collapsed."
 
-ersion V3.6
+Version V3.6
 			
 	"Adding the Dynamic Island style for the SH button, choose it in Appearance > Window Customization.",
 	"Adding global search to Home, Features and Settings: type a name to find any feature or setting from any section.",
@@ -171,7 +171,7 @@ version V3.4
 	"Fixed the copying of loadstring references for scripts.",
 	"Adding a Combat subsection to Features."
 
-ersion V3.3
+Version V3.3
 			
 	"Adding search bars to the Features, Emotes, and Scripts sections.",
 	"Visual update of certain objects.",
@@ -195,7 +195,7 @@ Version = V3.1", date = "Oct 6
 			
 	"Release Septus hub V3",
 				
-ersion V3.2
+Version V3.2
 			
 	"Fixing menu bugs",
 	"Pre-release",
