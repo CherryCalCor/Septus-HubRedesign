@@ -2,7 +2,7 @@
 
 <div align="center">
 
-## V3.8.1
+## V3.9
 
 Полный редизайн UI Studio.
 
