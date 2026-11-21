@@ -4,160 +4,130 @@
 
   ## Functions
 
-Раздел: Home
+Subsection:Visuals / ESP
+Box ESP
+Name ESP
+Health ESP
+Distance ESP
+Tool ESP
+Tracer ESP
+Off-Screen Arrows
+Head Dot
+View Direction Line
+Skeleton ESP
+Chams
+History ESP
+Gradient ESP
+Item ESP
+ESP Settings
 
-· Notepad
-· Manual operation
-· Instruction manual
-· Status display
+Subsection: Models / Cosmetics
+Hat
+Face Mask
+Halo
+Orbit
+Custom Crosshair
+Custom Mouse
 
-Раздел: Server
+Subsection: Movement
 
-· Rejoin
-· Server Hop
-· Servers Toggle [Server List]
+Fly
+Bunny Hop
+Noclip
+Stalk
+WalkSpeed
+JumpPower
+FOV Changer
 
-Раздел: Visuals
+Subsection: Protection
 
-· Подраздел: ESP
-  · ESP Name
-  · ESP Outline
-  · Item ESP
-  · Box ESP
-  · Tracers
-  · X-Ray
-· Подраздел: Boost FPS
-  · Boostfps
-  · Skin Replacement
-  · Potato Mode
-  · Removing Textures
-  · FullBright
-  · Remove Effects
-· Подраздел: Misc
-  · Headless
-  · Korblox
-  · Skybox Changer
-  · Third Person Mode
-  · Radar
-  · Music Player
+Anti Fling
+Anti Sit
+Anti Void
+Anti Stun
+Anti Ragdoll
+Anti-AFK
+Auto Reconnect
 
-Раздел: Teleport
+Subsection: Combat
 
-· Teleport
-· Spectate
-· Players
-· Teleport Tool
+CFrame Aim
+Mouse Aim
+Silent Aim
+Trigger Bot
+Zero Recoil
+Zero Spread
 
-Раздел: Movement
+Subsection:Shaders / World
+RTX Shader
+Cyberpunk Neon
+Silent Hill Fog
+Halloween Nightmare
+FullBright
+No Fog
+Time Changer
+Ambient Color
+Atmosphere Tint
+Color Grade
+Bloom
+Custom Skybox
+Terrain Recolor
+World Recolor
 
-· Speed
-· Jump
-· Endless Jump
-· Climbing Walls
-· Flight (PC & Mobile)
-· Flight Speed
+Subsection:Funny
 
-Раздел: Shaders
+Fling
+Bring Parts
+Complete Suspension
+Fake Lag (Usual Lag)
+Teleport Tool
+Remove Texture
+Part Deleted
 
-· Retro Game
-· RTX / Vibrant
-· Cyberpunk Neon
-· Silent Hill
-· Deep Fried
-· Night Vision
+Subsection:Server
 
-Раздел: Protect
+Server List
+Server Hop
+Direct Connect
+Rejoin Server
+Teleport
+Position & Map
+Click-to-Teleport
+Waypoints
+Teleport History
+Teleport to Player
 
-· Anti Fling
-· Anti Sit
-· Anti void
-· Anti Stun
-· Anti Ragdoll
+Subsection:QoL
+Macro Recorder
+Custom Keybinds / Bind Manager
+Developer Utilities
+Developer Console
+Remote Spy
 
-Раздел: Funny
+Additional sections:
 
-· Stalk Mode
-· Подраздел: Fake lag
-  · Complete suspension
-  · The usual lag
-· Fling Target
-· Bring Parts
+Script Hub [ScriptBlox | Rscripts | HaxHell | Robloxscripts]
+Marketplace [Emotes + Accessories]
+Music Player
+Config Manager
+UI Studio
+Command Palette
+Custom HUD
+Executor Functions Checker
 
-Раздел: Config
-
-· Configs (Select to load)
-· Save Config
-· Auto upload
-
-Раздел: QoL
-
-· Custom Keybinds
-· Macro Recorder (Movement)
-· Loop Macro Playback
-
-Раздел: Misc
-
-· Подраздел: Different
-  · Anti-AFK
-  · Noclip
-  · Auto Reconnect
-  · Free camera
-  · Invisibility
-  · Cinematic Mode
-  · Bunny Hop
-· Подраздел: Other
-  · Developer Console
-  · Remote Spy
-
-Раздел: ScriptBlox
-
-· Search
-· Filters
-· Favorites
-· History
-
-Раздел: Emotes
-
-· Search
-· Popular
-· Viewed
-· Liked
-· Newest
-· Favorites
-
-Раздел: Help
-
-· Why is the menu taking a long time to load?
-· Why is the mascot not loaded in the notification?
-· Why are the menus lagging/hanging?
-· Why is there a server List with a single player?
-· Why aren't the servers displayed?
-· How do I create my own Notification Mascot?
-· How do I remove the background and make a PNG format?
-· How to contact us?
-· How to bypass the system key from injectors or scripts
-
-Раздел: Settings
-
-· Подраздел: Themes
-  · Indigo & Glow Purple
-  · Black & Orange
-  · Black & Red
-  · Black & Green
-  · Black & Blue
-  · Black & Cyan
-  · Black & Pink
-  · Deep Aqua & Mint
-· Подраздел: Notifications Management
-  · Enable Notifications
-  · New notification system
-  · Player Notifications
-  · Paste Character Asset ID...
-· Map render distance
-· Подраздел: Graphic Optimizations
-  · Drawing characters
-  · Drawing accessories
-  · Ray drawing
-  · Drawing shadows
-· Watermark
-· Old design
+Subsection Settings:
+Background [Photo / Video]
+Panel and menu transparency 
+Theme
+Corner Radius
+Navigation style
+Menu animation
+SH Button style
+Hide logo and name
+Background gradient
+Effects for background
+Nofitications system
+Language
+App fong
+Click sound
+Music
