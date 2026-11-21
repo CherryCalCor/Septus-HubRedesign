@@ -6,6 +6,6 @@
 
   ### V3.9
 
-Full-fledged sUNC / UNC test for injectors.
+Redesign UI studio
 
-Addition of a new subsection: Marketplace
+Comprehensive sUNC and UNC test for injectors.
