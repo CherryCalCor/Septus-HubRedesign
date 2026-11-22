@@ -4,6 +4,26 @@
 
 ## Changelog
 
+version V3.9
+			
+				"Completely redesigned UI Studio in the style of the current interface: segmented tabs Gallery, Style, Window, Background, Effects and Presets with a sliding highlight and slide and fade page transitions.",
+				"The Gallery is now a carousel: swipe, drag, use the arrows or the dots and every look appears in the live preview instantly. Each card is a mini copy of the interface that shows the colors, corner radius and gradient.",
+				"Added 4 new looks to the Gallery: Lavender, Graphite, Mint Light and Sunset Drive. Choosing a Gallery look now keeps your background image, font, header settings and window size.",
+				"Added a status line that shows whether your changes are already applied to the interface, a smooth pop of the preview when a look changes, a collapsible settings panel for a bigger preview and a zoom indicator.",
+				"Themes are now cards with colour strips, custom colors open the picker with a smooth animation, gradient styles are shown as colored tiles and sliders and switches react to hover and press.",
+				"Saved presets now have a mini preview, new presets pop into the list, and the Background tab shows a preview of the image.",
+				"All buttons and cards in UI Studio got hover and press animations, and the page cards appear one after another when a tab opens.",
+				"Adding What's New to Home > Overview: a card with the changes of the latest version, NEW and FIX badges, a Show all button and a quick jump to the Update Log.",
+				"Adding the Projects subsection to Home: cards of all projects made in Lua with a description, a Try it button that runs the project and a GitHub button that opens the repository in the browser or copies the link.",
+				"Added the first project to Projects: Anti-AFK, a small utility with a Fluent-style dashboard and a Dynamic Island on minimize.",
+				"Renamed Home > Info to Executor Test and turned it into a full executor test: instead of only checking compatibility with the hub, it now runs over a hundred behaviour checks across Environment, Closures, Metatables, Hooks, Debug, Instances, Files, Network, Crypt, Drawing, Input, Actors and Misc.",
+				"Every function is checked by its behaviour, not just its presence: files are written and read back, hooks are applied and restored, closures are compared with game functions, and Drawing, signals and cryptography are validated against known results.",
+				"Adding the Anti-Fake suite that catches stub executors: it checks closure identification, environment isolation, argument validation, hook transparency, real file storage and metatable access.",
+				"Adding the Executor Test Results window: a sidebar with every suite and its pass rate, a large pass rate with Passed, Failed and Total tested counters, a progress bar, All, Passed and Issues filters, test search, and Copy and Re-run buttons.",
+				"Septus Hub compatibility is now a suite of its own inside the results, listing every function the hub needs and what is affected when it is missing.",
+				"The Run Test button shows live progress, and optional functions are marked as Skipped and do not lower the pass rate.",
+				"Home > Overview is now scrollable and the Projects cards got hover and press animations."
+
 Version V3.8.1
 			
 	"Fixed the character freezing in place after the script was fully turned off: closing the hub now unanchors the character, removes leftover movers and re-enables every Humanoid state it had disabled.",
