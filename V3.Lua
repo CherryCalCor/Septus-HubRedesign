@@ -219,8 +219,8 @@ local Refs = App.Refs
 
 Lib.Conns = {}
 Lib.Version = {
-	Current = "3.8.1",
-	Display = "V3.8.1",
+	Current = "3.9",
+	Display = "V3.9",
 	Url = "https://raw.githubusercontent.com/CherryCalCor/Septus-HubRedesign/refs/heads/main/version.json",
 	Repo = "https://github.com/CherryCalCor/Septus-HubRedesign",
 	Status = "idle",
@@ -1273,6 +1273,48 @@ do
 		["Trigger"] = "Триггер",
 		["Trigger Bot"] = "Триггер-бот",
 		["UI Studio"] = "UI Studio",
+		["Style"] = "Стиль",
+		["Effects"] = "Эффекты",
+		["Presets"] = "Пресеты",
+		["Matches the current UI"] = "Совпадает с текущим UI",
+		["Changes not applied"] = "Изменения не применены",
+		["Applied ✓"] = "Применено ✓",
+		["Swipe or use the arrows to try a look instantly"] = "Листайте или жмите стрелки, чтобы сразу примерить образ",
+		["Font"] = "Шрифт",
+		["Shape"] = "Форма",
+		["Header"] = "Шапка",
+		["Background Image"] = "Фоновое изображение",
+		["Image Tuning"] = "Настройка изображения",
+		["No background image"] = "Нет фонового изображения",
+		["No effects"] = "Без эффектов",
+		["Stars"] = "Звёзды",
+		["Meteors"] = "Метеоры",
+		["Dust"] = "Пыль",
+		["Snowfall"] = "Снегопад",
+		["Halloween"] = "Хэллоуин",
+		["Winter"] = "Зима",
+		["GTA VI"] = "GTA VI",
+		["What's New"] = "Что нового",
+		["Projects"] = "Проекты",
+		["Projects made in Lua"] = "Проекты, созданные на Lua",
+		["Utility"] = "Утилита",
+		["Try it"] = "Попробовать",
+		["Show less"] = "Свернуть",
+		["Launched \u{2713}"] = "Запущено \u{2713}",
+		["Update Log \u{2197}"] = "Обновления \u{2197}",
+		["Check your browser or clipboard."] = "Проверьте браузер или буфер обмена.",
+		["A small utility that keeps you from being kicked for inactivity. Comes with a Fluent-style dashboard that collapses into a Dynamic Island."] = "Небольшая утилита, которая не даёт кикнуть вас за бездействие. Есть панель в стиле Fluent, которая сворачивается в Dynamic Island.",
+		["Adding What's New to Home > Overview: a card with the changes of the latest version, NEW and FIX badges, a Show all button and a quick jump to the Update Log."] = "Добавлен блок «Что нового» в «Главная > Обзор»: карточка с изменениями последней версии, бейджами NEW и FIX, кнопкой «Показать все» и быстрым переходом к «Обновлениям».",
+		["Adding the Projects subsection to Home: cards of all projects made in Lua with a description, a Try it button that runs the project and a GitHub button that opens the repository in the browser or copies the link."] = "Добавлен раздел «Проекты» на главную: карточки всех проектов, созданных на Lua, с описанием, кнопкой «Попробовать», которая запускает проект, и кнопкой GitHub, которая открывает репозиторий в браузере или копирует ссылку.",
+		["Added the first project to Projects: Anti-AFK, a small utility with a Fluent-style dashboard and a Dynamic Island on minimize."] = "В «Проекты» добавлен первый проект: Anti-AFK, небольшая утилита с панелью в стиле Fluent и Dynamic Island при сворачивании.",
+		["Home > Overview is now scrollable and the Projects cards got hover and press animations."] = "«Главная > Обзор» теперь прокручивается, а карточки «Проектов» получили анимации при наведении и нажатии.",
+		["Completely redesigned UI Studio in the style of the current interface: segmented tabs Gallery, Style, Window, Background, Effects and Presets with a sliding highlight and slide and fade page transitions."] = "Полностью обновлён дизайн UI Studio под текущий интерфейс: сегментные вкладки «Галерея», «Стиль», «Окно», «Фон», «Эффекты» и «Пресеты» со скользящим выделением и плавными переходами страниц.",
+		["The Gallery is now a carousel: swipe, drag, use the arrows or the dots and every look appears in the live preview instantly. Each card is a mini copy of the interface that shows the colors, corner radius and gradient."] = "Галерея теперь карусель: листайте, перетаскивайте, жмите стрелки или точки, и каждый образ сразу появляется в живом предпросмотре. Каждая карточка — мини-копия интерфейса с цветами, радиусом углов и градиентом.",
+		["Added 4 new looks to the Gallery: Lavender, Graphite, Mint Light and Sunset Drive. Choosing a Gallery look now keeps your background image, font, header settings and window size."] = "В галерею добавлены 4 новых образа: Lavender, Graphite, Mint Light и Sunset Drive. Выбор образа теперь сохраняет ваше фоновое изображение, шрифт, настройки шапки и размер окна.",
+		["Added a status line that shows whether your changes are already applied to the interface, a smooth pop of the preview when a look changes, a collapsible settings panel for a bigger preview and a zoom indicator."] = "Добавлена строка статуса, показывающая, применены ли изменения к интерфейсу, плавный «отклик» предпросмотра при смене образа, сворачиваемая панель настроек для большого предпросмотра и индикатор масштаба.",
+		["Themes are now cards with colour strips, custom colors open the picker with a smooth animation, gradient styles are shown as colored tiles and sliders and switches react to hover and press."] = "Темы теперь карточки с цветовыми полосками, свои цвета открывают палитру с плавной анимацией, стили градиента показаны цветными плитками, а ползунки и переключатели реагируют на наведение и нажатие.",
+		["Saved presets now have a mini preview, new presets pop into the list, and the Background tab shows a preview of the image."] = "У сохранённых пресетов появился мини-предпросмотр, новые пресеты плавно появляются в списке, а вкладка «Фон» показывает превью изображения.",
+		["All buttons and cards in UI Studio got hover and press animations, and the page cards appear one after another when a tab opens."] = "Все кнопки и карточки в UI Studio получили анимации наведения и нажатия, а карточки страницы появляются по очереди при открытии вкладки.",
 		["Unlocked from 10 Hours Played"] = "Открыто за 10 часов в игре",
 		["Update Log"] = "Обновления",
 		["Use"] = "Использовать",
@@ -2639,8 +2681,70 @@ do
 		["Hat, mask, halo"] = "Шляпа, маска, нимб",
 		["Crosshair, cursor"] = "Прицел, курсор",
 		["Light, sky, FPS"] = "Свет, небо, FPS",
+		["Renamed Home > Info to Executor Test and turned it into a full executor test: instead of only checking compatibility with the hub, it now runs over a hundred behaviour checks across Environment, Closures, Metatables, Hooks, Debug, Instances, Files, Network, Crypt, Drawing, Input, Actors and Misc."] = "Вкладка «Главная > Инфо» переименована в «Тест эксплойта» и стала полноценным тестом инжектора: вместо проверки одной лишь совместимости с хабом запускается более сотни проверок поведения в разделах Environment, Closures, Metatables, Hooks, Debug, Instances, Files, Network, Crypt, Drawing, Input, Actors и Misc.",
+		["Every function is checked by its behaviour, not just its presence: files are written and read back, hooks are applied and restored, closures are compared with game functions, and Drawing, signals and cryptography are validated against known results."] = "Каждая функция проверяется по поведению, а не только по наличию: файлы записываются и читаются обратно, хуки ставятся и снимаются, замыкания сравниваются с игровыми функциями, а Drawing, сигналы и криптография сверяются с эталонными результатами.",
+		["Adding the Anti-Fake suite that catches stub executors: it checks closure identification, environment isolation, argument validation, hook transparency, real file storage and metatable access."] = "Добавлен набор Anti-Fake для защиты от фейковых инжекторов: проверяются определение типа замыканий, изоляция окружений, валидация аргументов, прозрачность хуков, реальное хранение файлов и доступ к метатаблицам.",
+		["Adding the Executor Test Results window: a sidebar with every suite and its pass rate, a large pass rate with Passed, Failed and Total tested counters, a progress bar, All, Passed and Issues filters, test search, and Copy and Re-run buttons."] = "Добавлено окно результатов теста: список наборов с процентом прохождения, крупный процент с счётчиками «Пройдено», «Ошибки» и «Всего проверено», полоса прогресса, фильтры «Все», «Пройдено» и «Проблемы», поиск по тестам и кнопки копирования и повторного запуска.",
+		["Septus Hub compatibility is now a suite of its own inside the results, listing every function the hub needs and what is affected when it is missing."] = "Совместимость с Septus Hub теперь отдельный набор в результатах: перечислены все нужные хабу функции и то, на что влияет их отсутствие.",
+		["The Run Test button shows live progress, and optional functions are marked as Skipped and do not lower the pass rate."] = "Кнопка запуска показывает ход проверки в реальном времени, а необязательные функции помечаются как «Пропущено» и не снижают процент прохождения.",
+		["Executor Test"] = "Тест эксплойта",
+		["Executor Test Results"] = "Результаты теста эксплойта",
+		["Full executor test: behaviour checks, anti-fake probes and Septus Hub compatibility."] = "Полный тест инжектора: проверка поведения функций, защита от фейков и совместимость с Septus Hub.",
+		["Functions used by Septus Hub"] = "Функции, которые использует Septus Hub",
+		["Last Result"] = "Последний результат",
+		["View Results"] = "Открыть результаты",
+		["Pass rate"] = "Прохождение",
+		["Passed"] = "Пройдено",
+		["Issues"] = "Проблемы",
+		["Missing"] = "Отсутствует",
+		["Skipped"] = "Пропущено",
+		["Detected"] = "Найдена",
+		["Search tests..."] = "Поиск тестов...",
+		["Re-run"] = "Повторить",
+		["Total tested"] = "Всего проверено",
+		["Local report"] = "Локальный отчёт",
+		["Nothing to show"] = "Ничего не найдено",
+		["Overall"] = "Итого",
+		["All suites combined"] = "Все наборы вместе",
+		["Septus Hub"] = "Septus Hub",
+		["Functions required by this hub"] = "Функции, необходимые хабу",
+		["Environment"] = "Окружение",
+		["Closures"] = "Замыкания",
+		["Metatables"] = "Метатаблицы",
+		["Hooks"] = "Хуки",
+		["Debug"] = "Отладка",
+		["Instances"] = "Инстансы",
+		["Files"] = "Файлы",
+		["Network"] = "Сеть",
+		["Crypt"] = "Криптография",
+		["Drawing"] = "Рисование",
+		["Input"] = "Ввод",
+		["Actors"] = "Акторы",
+		["Anti-Fake"] = "Анти-фейк",
+		["Environment access, script inspection and executor identity"] = "Доступ к окружению, осмотр скриптов и определение инжектора",
+		["Closure identification, cloning and compilation"] = "Определение, клонирование и компиляция замыканий",
+		["Raw metatables and read-only tables"] = "Сырые метатаблицы и таблицы только для чтения",
+		["Function and metamethod hooking, namecall context"] = "Хуки функций и метаметодов, контекст namecall",
+		["Debug library: upvalues, constants, prototypes and stack"] = "Библиотека debug: апвэлью, константы, прототипы и стек",
+		["Instance references, hidden properties, signals and interactions"] = "Ссылки на инстансы, скрытые свойства, сигналы и взаимодействия",
+		["Workspace file system and custom assets"] = "Файловая система workspace и пользовательские ассеты",
+		["HTTP requests and web sockets"] = "HTTP-запросы и веб-сокеты",
+		["Encoding, hashing, encryption and compression"] = "Кодирование, хеширование, шифрование и сжатие",
+		["Drawing library objects and properties"] = "Объекты и свойства библиотеки Drawing",
+		["Mouse and keyboard simulation"] = "Эмуляция мыши и клавиатуры",
+		["Parallel Lua actors and communication channels"] = "Параллельные Lua-акторы и каналы связи",
+		["Clipboard, teleport queue and other utilities"] = "Буфер обмена, очередь телепорта и другие утилиты",
+		["Catches stub executors by cross-checking behaviour"] = "Выявляет инжекторы-заглушки перекрёстной проверкой поведения",
+		["Function not found"] = "Функция не найдена",
+		["Detected, not executed"] = "Найдена, не запускалась",
+		["Timed out"] = "Превышено время ожидания",
+		["Unexpected result"] = "Неожиданный результат",
+		["Report copied to the clipboard."] = "Отчёт скопирован в буфер обмена.",
+		["Clipboard is unavailable"] = "Буфер обмена недоступен",
 	}
 	local Prefixes = {
+		{ "Testing ", "Тестирование " },
+		{ "Optional: ", "Необязательно: " },
 		{ "Update available: ", "Доступно обновление: " },
 		{ "New version: ", "Новая версия: " },
 		{ "Items: ", "Элементов: " },
@@ -2692,9 +2796,14 @@ do
 		{ "Repeated: ", "Повторов: " },
 		{ "Custom ", "Свой " },
 		{ "Asset ", "Asset " },
+		{ "Failed to launch: ", "Не удалось запустить: " },
 	}
 	local Months = { Jan = "янв", Feb = "фев", Mar = "мар", Apr = "апр", May = "мая", Jun = "июн", Jul = "июл", Aug = "авг", Sep = "сен", Oct = "окт", Nov = "ноя", Dec = "дек" }
 	local Rules = {
+		{ "^(%d+) results$", "Результатов: %1" },
+		{ "^(.+)  \u{00B7}  (%d+)%% passed$", "%1  \u{00B7}  пройдено %2%%" },
+		{ "^Passed (%d+)  \u{00B7}  Failed (%d+)  \u{00B7}  Skipped (%d+)$", "Пройдено %1  \u{00B7}  Ошибок %2  \u{00B7}  Пропущено %3" },
+		{ "^Radius (%d+)$", "Радиус %1" },
 		{ "^(%d+) scanned  \u{00B7}  (%d+) found$", "Просмотрено %1  \u{00B7}  найдено %2" },
 		{ "^(%d+) servers scanned$", "Просмотрено серверов: %1" },
 		{ "^Changes: (%d+)  \u{00B7}  New: (%d+)  \u{00B7}  Fixes: (%d+)$", "Изменений: %1  \u{00B7}  Новое: %2  \u{00B7}  Фиксы: %3" },
@@ -2705,6 +2814,7 @@ do
 		{ "^Waiting for HP%.%.%. (%d+)%%$", "Ожидание HP... %1%%" },
 		{ "^Next loop in ([%d%.]+)s$", "Следующий цикл через %1 с" },
 		{ "^Playlist (%d+)$", "Плейлист %1" },
+		{ "^Show all (%d+) changes$", "Показать все изменения: %1" },
 		{ "^(.+) is also used by (.+)$", "%1 также используется: %2" },
 		{ "^Left click at ([%d%.]+)s$", "ЛКМ, %1 с" },
 		{ "^Right click at ([%d%.]+)s$", "ПКМ, %1 с" },
@@ -6471,7 +6581,29 @@ end
 function Lib.BuildUpdateLog(view)
 	local releases = {
 		{
-			version = "V3.8.1", date = "Nov 20", latest = true,
+			version = "V3.9", date = "Nov 22", latest = true,
+			notes = {
+				"Completely redesigned UI Studio in the style of the current interface: segmented tabs Gallery, Style, Window, Background, Effects and Presets with a sliding highlight and slide and fade page transitions.",
+				"The Gallery is now a carousel: swipe, drag, use the arrows or the dots and every look appears in the live preview instantly. Each card is a mini copy of the interface that shows the colors, corner radius and gradient.",
+				"Added 4 new looks to the Gallery: Lavender, Graphite, Mint Light and Sunset Drive. Choosing a Gallery look now keeps your background image, font, header settings and window size.",
+				"Added a status line that shows whether your changes are already applied to the interface, a smooth pop of the preview when a look changes, a collapsible settings panel for a bigger preview and a zoom indicator.",
+				"Themes are now cards with colour strips, custom colors open the picker with a smooth animation, gradient styles are shown as colored tiles and sliders and switches react to hover and press.",
+				"Saved presets now have a mini preview, new presets pop into the list, and the Background tab shows a preview of the image.",
+				"All buttons and cards in UI Studio got hover and press animations, and the page cards appear one after another when a tab opens.",
+				"Adding What's New to Home > Overview: a card with the changes of the latest version, NEW and FIX badges, a Show all button and a quick jump to the Update Log.",
+				"Adding the Projects subsection to Home: cards of all projects made in Lua with a description, a Try it button that runs the project and a GitHub button that opens the repository in the browser or copies the link.",
+				"Added the first project to Projects: Anti-AFK, a small utility with a Fluent-style dashboard and a Dynamic Island on minimize.",
+				"Renamed Home > Info to Executor Test and turned it into a full executor test: instead of only checking compatibility with the hub, it now runs over a hundred behaviour checks across Environment, Closures, Metatables, Hooks, Debug, Instances, Files, Network, Crypt, Drawing, Input, Actors and Misc.",
+				"Every function is checked by its behaviour, not just its presence: files are written and read back, hooks are applied and restored, closures are compared with game functions, and Drawing, signals and cryptography are validated against known results.",
+				"Adding the Anti-Fake suite that catches stub executors: it checks closure identification, environment isolation, argument validation, hook transparency, real file storage and metatable access.",
+				"Adding the Executor Test Results window: a sidebar with every suite and its pass rate, a large pass rate with Passed, Failed and Total tested counters, a progress bar, All, Passed and Issues filters, test search, and Copy and Re-run buttons.",
+				"Septus Hub compatibility is now a suite of its own inside the results, listing every function the hub needs and what is affected when it is missing.",
+				"The Run Test button shows live progress, and optional functions are marked as Skipped and do not lower the pass rate.",
+				"Home > Overview is now scrollable and the Projects cards got hover and press animations."
+			}
+		},
+		{
+			version = "V3.8.1", date = "Nov 20",
 			notes = {
 				"Fixed the character freezing in place after the script was fully turned off: closing the hub now unanchors the character, removes leftover movers and re-enables every Humanoid state it had disabled.",
 				"Fixed the character staying anchored after Stalk Active was switched off.",
@@ -6483,7 +6615,7 @@ function Lib.BuildUpdateLog(view)
 			}
 		},
 		{
-			version = "V3.8", date = "Date TBA",
+			version = "V3.8", date = "Nov 20",
 			notes = {
 				"Redesigned Appearance > Background: backgrounds are now a tile gallery with None, your saved backgrounds and an Add tile; pressing Add smoothly reveals the field for an Asset ID or link right below the tiles.",
 				"Hover a background tile to see its Asset ID or URL, hover it and press the red cross to remove it. Pressing Use applies the background and saves it as a tile.",
@@ -6679,6 +6811,8 @@ function Lib.BuildUpdateLog(view)
 		}
 	}
 
+	Lib.Releases = releases
+
 	local scroll = Lib.Create("ScrollingFrame", {
 		Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 2,
 		ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(),
@@ -6807,6 +6941,8 @@ function Lib.BuildUpdateLog(view)
 			}), "Secondary")
 		end
 	end
+
+	Lib.BuildNotes = BuildNotes
 
 	for index, release in ipairs(releases) do
 		local list, fixes = release.notes, 0
@@ -7048,6 +7184,8 @@ do
 		return value
 	end
 
+	Lib.ResolveGlobal = Resolve
+
 	function Lib.RunCompat()
 		local report = { ok = {}, bad = {}, optional = {}, total = 0 }
 		local identify = Resolve("identifyexecutor")
@@ -7071,7 +7209,7 @@ do
 					local ok, result = Lib.Timed(function() return test(found, Resolve) end, 8)
 					passed = ok and result == true
 				end
-				local record = { entry = entry, deep = test ~= nil and found ~= nil }
+				local record = { entry = entry, deep = test ~= nil and found ~= nil, found = found ~= nil }
 				report.total += 1
 				if passed then
 					report.ok[#report.ok + 1] = record
@@ -7092,45 +7230,1528 @@ do
 	end
 end
 
-function Lib.ShowCompat(report)
-	if not Lib.CompatModal then Lib.CompatModal = Lib.CreateModal("Compatibility Report", 440, 480) end
-	local modal = Lib.CompatModal
-	for _, child in ipairs(modal.Content:GetChildren()) do
-		if child:IsA("GuiObject") then child:Destroy() end
+do
+	local Resolve = Lib.ResolveGlobal
+	local FILE, DIR = "SeptusHub_exec.tmp", "SeptusHub_exec_dir"
+	local Lighting = Services.Lighting
+	local Suites, Current = {}, nil
+	Lib.ExecSuites = Suites
+
+	local function Skip(reason)
+		return { skip = reason }
 	end
 
-	local order = 0
-	local function Label(text, size, font, color, role, rich)
-		order += 1
-		local label = Lib.Create("TextLabel", {
-			Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = order,
-			Text = text, TextColor3 = color, TextSize = size, Font = font, RichText = rich or false,
-			TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true, ZIndex = 33, Parent = modal.Content
-		})
-		if role then Lib.RegisterThemeText(label, role) end
+	local function Expect(condition, reason)
+		if not condition then error(reason or "Unexpected result", 0) end
 	end
 
-	local white = Color3.new(1, 1, 1)
-	Label(string.format("%s  |  %d of %d compatible", report.executor, #report.ok, report.total), 13, Enum.Font.GothamBold, white, "Primary")
+	local function Wrap(callback)
+		local make = Resolve("newcclosure")
+		return make and make(callback) or callback
+	end
 
-	local function Section(title, color, hex, mark, list, details)
-		if #list == 0 then return end
-		Label(string.format("%s (%d)", title, #list), 13, Enum.Font.GothamBold, color)
-		for _, record in ipairs(list) do
-			local entry = record.entry
-			local note = (not details and not record.deep) and ' <font color="#8c8c8c">(detected only)</font>' or ""
-			local line = details and ("Affects: " .. entry.desc) or entry.desc
-			Label(
-				string.format('<font color="%s"><b>%s  %s</b></font>%s\n<font color="#8c8c8c">%s</font>', hex, mark, entry.label or entry.names[1], note, line),
-				12, Enum.Font.GothamMedium, white, "Primary", true
-			)
+	local function Clean()
+		local delFile, delFolder = Resolve("delfile"), Resolve("delfolder")
+		if delFile then pcall(delFile, FILE) end
+		if delFolder then pcall(delFolder, DIR) end
+	end
+
+	local function Stage()
+		return workspace.CurrentCamera or workspace
+	end
+
+	local function Dispose(object)
+		if object.Remove then object:Remove() else object:Destroy() end
+	end
+
+	local function Group(name, tag, description)
+		Current = { name = name, tag = tag, description = description, tests = {} }
+		Suites[#Suites + 1] = Current
+	end
+
+	local function Test(names, check, options)
+		options = options or {}
+		local list = {}
+		if names then
+			for alias in names:gmatch("[^|]+") do list[#list + 1] = alias end
+		end
+		Current.tests[#Current.tests + 1] = {
+			names = list, label = options.label or list[1] or "Probe", check = check, optional = options.optional,
+			detect = options.detect, value = options.value, limit = options.limit or 8
+		}
+	end
+
+	local function Detect(names, options)
+		options = options or {}
+		options.detect = true
+		Test(names, nil, options)
+	end
+
+	local function Probe(label, check)
+		Test(nil, check, { label = label })
+	end
+
+	local function SampleModule(R)
+		local modules = R("getloadedmodules")
+		local list = modules and modules()
+		return list and list[1]
+	end
+
+	Group("Environment", "EN", "Environment access, script inspection and executor identity")
+
+	Test("getgenv", function(fn)
+		local env = fn()
+		Expect(type(env) == "table", "Must return a table")
+		Expect(env.game == game and env.print == print, "Standard globals are missing")
+		env.__SeptusProbe = 7
+		local reader = type(loadstring) == "function" and loadstring("return __SeptusProbe")
+		local seen = reader and reader()
+		env.__SeptusProbe = nil
+		Expect(not reader or seen == 7, "Globals are not visible to scripts")
+	end)
+
+	Test("getrenv", function(fn, R)
+		local env = fn()
+		Expect(type(env) == "table" and env.game == game, "Not the game environment")
+		local genv = R("getgenv")
+		Expect(not genv or env ~= genv(), "Same table as getgenv")
+	end)
+
+	Test("getreg", function(fn)
+		local registry = fn()
+		Expect(type(registry) == "table" and next(registry) ~= nil, "Registry is empty")
+	end)
+
+	Test("getgc", function(fn)
+		local marker = { septus = true }
+		local list = fn(true)
+		Expect(type(list) == "table" and #list > 50, "Too few objects returned")
+		local found = false
+		for i = 1, #list do
+			if list[i] == marker then
+				found = true
+				break
+			end
+		end
+		Expect(found and marker.septus, "Live tables are not returned")
+	end, { limit = 20 })
+
+	Test("getinstances", function(fn)
+		local list = fn()
+		Expect(type(list) == "table" and #list > 100, "Too few instances returned")
+		Expect(typeof(list[1]) == "Instance", "Entries are not Instances")
+	end, { limit = 15 })
+
+	Test("getnilinstances", function(fn)
+		local probe = Instance.new("Folder")
+		local found = false
+		for _, inst in ipairs(fn()) do
+			if inst == probe then
+				found = true
+				break
+			end
+		end
+		probe:Destroy()
+		Expect(found, "Nil-parented instances are not listed")
+	end, { limit = 15 })
+
+	Test("getloadedmodules", function(fn)
+		local list = fn()
+		Expect(type(list) == "table", "Must return a table")
+		for i = 1, math.min(#list, 10) do
+			Expect(typeof(list[i]) == "Instance" and list[i]:IsA("ModuleScript"), "Entry is not a ModuleScript")
+		end
+	end)
+
+	Test("getscripts", function(fn)
+		local list = fn()
+		Expect(type(list) == "table" and #list > 0, "No scripts found")
+		Expect(typeof(list[1]) == "Instance" and list[1]:IsA("LuaSourceContainer"), "Entry is not a script")
+	end)
+
+	Test("getrunningscripts", function(fn)
+		local list = fn()
+		Expect(type(list) == "table" and #list > 0, "No running scripts found")
+		Expect(typeof(list[1]) == "Instance" and list[1]:IsA("LuaSourceContainer"), "Entry is not a script")
+	end)
+
+	Test("getsenv", function(fn, R)
+		local running = R("getrunningscripts")
+		if not running then return Skip("Needs getrunningscripts") end
+		local tried = 0
+		for _, script in ipairs(running()) do
+			if script:IsA("LocalScript") or script:IsA("ModuleScript") then
+				tried += 1
+				local ok, env = pcall(fn, script)
+				if ok and type(env) == "table" then return true end
+				if tried >= 6 then break end
+			end
+		end
+		Expect(false, "Could not read any script environment")
+	end)
+
+	Test("getscriptclosure|getscriptfunction", function(fn, R)
+		local module = SampleModule(R)
+		if not module then return Skip("No loaded module to inspect") end
+		Expect(type(fn(module)) == "function", "Must return a function")
+	end, { optional = true })
+
+	Test("getscriptbytecode", function(fn, R)
+		local module = SampleModule(R)
+		if not module then return Skip("No loaded module to inspect") end
+		local bytes = fn(module)
+		Expect(type(bytes) == "string" and #bytes > 0, "Bytecode is empty")
+	end)
+
+	Test("getscripthash", function(fn, R)
+		local module = SampleModule(R)
+		if not module then return Skip("No loaded module to inspect") end
+		local first, second = fn(module), fn(module)
+		Expect(type(first) == "string" and #first > 0 and first == second, "Hash must be a stable string")
+	end)
+
+	Test("getcallingscript", function(fn)
+		local value = fn()
+		Expect(value == nil or typeof(value) == "Instance", "Must return nil or an Instance")
+	end, { optional = true })
+
+	Test("identifyexecutor|getexecutorname", function(fn)
+		local name, version = fn()
+		Expect(type(name) == "string" and #name > 0, "Name must be a non-empty string")
+		Expect(version == nil or type(version) == "string", "Version must be a string")
+	end)
+
+	Test("getthreadidentity|getidentity|get_thread_identity", function(fn)
+		local first, second = fn(), fn()
+		Expect(type(first) == "number" and first >= 0 and first <= 9, "Identity is out of range")
+		Expect(first == second, "Identity is not stable")
+	end)
+
+	Test("setthreadidentity|setidentity|set_thread_identity", function(fn, R)
+		local get = R("getthreadidentity") or R("getidentity") or R("get_thread_identity")
+		if not get then return Skip("Needs getthreadidentity") end
+		local old = get()
+		local target = old == 2 and 3 or 2
+		fn(target)
+		local changed = get()
+		fn(old)
+		Expect(changed == target and get() == old, "Identity was not changed")
+	end)
+
+	Test("gethui", function(fn)
+		local container = fn()
+		Expect(typeof(container) == "Instance", "Must return an Instance")
+		local gui = Instance.new("ScreenGui")
+		gui.Parent = container
+		local accepted = gui.Parent == container
+		gui:Destroy()
+		Expect(accepted, "Container rejects a ScreenGui")
+	end)
+
+	Group("Closures", "CL", "Closure identification, cloning and compilation")
+
+	Test("newcclosure", function(fn, R)
+		local wrapped = fn(function(a, b) return a + b, b end)
+		Expect(type(wrapped) == "function", "Must return a function")
+		local sum, second = wrapped(2, 3)
+		Expect(sum == 5 and second == 3, "Arguments or return values are lost")
+		local ok, err = pcall(fn(function() error("septus", 0) end))
+		Expect(not ok and err == "septus", "Errors are not propagated")
+		local isC = R("iscclosure")
+		Expect(not isC or isC(wrapped), "Result is not a C closure")
+	end)
+
+	Test("iscclosure", function(fn)
+		Expect(fn(print) == true, "print must be a C closure")
+		Expect(fn(function() end) == false, "A Lua function was reported as C")
+	end)
+
+	Test("islclosure", function(fn)
+		Expect(fn(function() end) == true, "A Lua function was not recognised")
+		Expect(fn(print) == false, "print was reported as Lua")
+	end)
+
+	Test("isexecutorclosure|checkclosure|isourclosure", function(fn, R)
+		local wrap = R("newcclosure")
+		Expect(fn(function() end) == true, "Executor function was not recognised")
+		Expect(fn(print) == false, "Game function was reported as an executor closure")
+		Expect(not wrap or fn(wrap(function() end)) == true, "newcclosure result was not recognised")
+	end)
+
+	Test("clonefunction", function(fn)
+		local original = function(value) return value * 2 end
+		local copy = fn(original)
+		Expect(copy ~= original, "Clone is the same function")
+		Expect(copy(4) == 8, "Clone behaves differently")
+	end)
+
+	Test("loadstring", function(fn)
+		local chunk = fn("return 7, ...")
+		Expect(type(chunk) == "function", "Chunk did not compile")
+		local a, b = chunk(9)
+		Expect(a == 7 and b == 9, "Chunk returned wrong values")
+		local broken, message = fn("return +")
+		Expect(broken == nil and type(message) == "string", "Syntax errors are not reported")
+	end)
+
+	Group("Metatables", "MT", "Raw metatables and read-only tables")
+
+	Test("getrawmetatable", function(fn)
+		local locked = setmetatable({}, { __metatable = "locked" })
+		local raw = fn(locked)
+		Expect(type(raw) == "table" and raw.__metatable == "locked", "Locked metatables are not bypassed")
+		local mt = fn(game)
+		Expect(type(mt) == "table" and type(mt.__namecall) == "function", "Game metatable is incomplete")
+	end)
+
+	Test("setrawmetatable", function(fn)
+		local target = setmetatable({}, { __metatable = "locked" })
+		fn(target, { __index = function() return 5 end })
+		Expect(target.anything == 5, "Metatable was not replaced")
+	end)
+
+	Test("setreadonly", function(fn)
+		local target = table.freeze({})
+		fn(target, false)
+		local ok = pcall(function() target.value = 1 end)
+		Expect(ok and target.value == 1, "Frozen table cannot be unlocked")
+		fn(target, true)
+		Expect(not pcall(function() target.other = 2 end), "Table cannot be locked again")
+	end)
+
+	Test("isreadonly", function(fn)
+		Expect(fn(table.freeze({})) == true, "Frozen table was not reported read-only")
+		Expect(fn({}) == false, "Regular table was reported read-only")
+	end)
+
+	Group("Hooks", "HK", "Function and metamethod hooking, namecall context")
+
+	Test("hookfunction|replaceclosure|hookfunc", function(fn)
+		local function target() return "original" end
+		local old = fn(target, function() return "hooked" end)
+		Expect(target() == "hooked", "Hook was not applied")
+		Expect(old() == "original", "Returned original is not callable")
+	end)
+
+	Test("hookfunction|replaceclosure|hookfunc", function(fn, R)
+		local wrap = R("newcclosure")
+		if not wrap then return Skip("Needs newcclosure") end
+		local target = wrap(function() return "original" end)
+		local old = fn(target, wrap(function() return "hooked" end))
+		Expect(target() == "hooked", "C closure was not hooked")
+		Expect(old() == "original", "Original C closure is not callable")
+	end, { label = "hookfunction (C closure)" })
+
+	Test("restorefunction", function(fn, R)
+		local hook = R("hookfunction")
+		if not hook then return Skip("Needs hookfunction") end
+		local function target() return 1 end
+		hook(target, function() return 2 end)
+		Expect(target() == 2, "Hook was not applied")
+		fn(target)
+		Expect(target() == 1, "Hook was not removed")
+	end, { optional = true })
+
+	Test("hookmetamethod", function(fn)
+		local probe = Instance.new("Folder")
+		local old
+		old = fn(probe, "__index", Wrap(function(self, key)
+			if key == "SeptusKey" and self == probe then return 42 end
+			return old(self, key)
+		end))
+		local ok, value = pcall(function() return probe.SeptusKey end)
+		fn(probe, "__index", old)
+		probe:Destroy()
+		Expect(ok and value == 42, "__index hook was not applied")
+	end)
+
+	Test("getnamecallmethod", function(fn, R)
+		local hook = R("hookmetamethod")
+		if not hook then return Skip("Needs hookmetamethod") end
+		local probe = Instance.new("BindableEvent")
+		local method
+		local old
+		old = hook(probe, "__namecall", Wrap(function(self, ...)
+			if self == probe then method = fn() end
+			return old(self, ...)
+		end))
+		pcall(function() probe:Fire() end)
+		hook(probe, "__namecall", old)
+		probe:Destroy()
+		Expect(method == "Fire", "Namecall method was not captured")
+	end)
+
+	Test("setnamecallmethod", function(fn, R)
+		local hook = R("hookmetamethod")
+		if not hook then return Skip("Needs hookmetamethod") end
+		local probe = Instance.new("BindableEvent")
+		local received
+		local connection = probe.Event:Connect(function(value) received = value end)
+		local old
+		old = hook(probe, "__namecall", Wrap(function(self, ...)
+			if self == probe then fn("Fire") end
+			return old(self, ...)
+		end))
+		pcall(function() probe:SeptusAlias(7) end)
+		task.wait(0.15)
+		hook(probe, "__namecall", old)
+		connection:Disconnect()
+		probe:Destroy()
+		Expect(received == 7, "Namecall method was not replaced")
+	end)
+
+	Test("checkcaller", function(fn)
+		Expect(fn() == true, "Returned false for the executor thread")
+		local nested, spawned
+		coroutine.wrap(function() nested = fn() end)()
+		task.spawn(function() spawned = fn() end)
+		local ok, piped = pcall(fn)
+		Expect(nested == true and spawned == true and ok and piped == true, "Returned false inside nested threads")
+	end)
+
+	Group("Debug", "DB", "Debug library: upvalues, constants, prototypes and stack")
+
+	local function Upvalues()
+		local first, second = 1, "x"
+		return function() return first, second end
+	end
+
+	local function IndexOf(get, target, value)
+		for i = 1, 16 do
+			local ok, constant = pcall(get, target, i)
+			if ok and constant == value then return i end
 		end
 	end
 
-	Section("Compatible", Color3.fromRGB(46, 213, 115), "#2ed573", "✓", report.ok, false)
-	Section("Incompatible", Color3.fromRGB(235, 87, 87), "#eb5757", "✕", report.bad, true)
-	Section("Optional, unavailable", Color3.fromRGB(230, 162, 60), "#e6a23c", "–", report.optional, true)
-	modal.Open()
+	Test("debug.getupvalue", function(fn)
+		local target = Upvalues()
+		Expect(fn(target, 1) == 1 and fn(target, 2) == "x", "Wrong upvalue values")
+	end)
+
+	Test("debug.getupvalues", function(fn)
+		local list = fn(Upvalues())
+		Expect(type(list) == "table" and list[1] == 1 and list[2] == "x", "Wrong upvalue table")
+	end)
+
+	Test("debug.setupvalue", function(fn)
+		local target = Upvalues()
+		fn(target, 1, 99)
+		Expect((target()) == 99, "Upvalue was not changed")
+	end)
+
+	Test("debug.getconstant", function(fn)
+		local function sample() return "septus_const", 1337 end
+		Expect(IndexOf(fn, sample, "septus_const") and IndexOf(fn, sample, 1337), "Constants were not found")
+	end)
+
+	Test("debug.getconstants", function(fn)
+		local function sample() return "septus_const", 1337 end
+		local list = fn(sample)
+		Expect(type(list) == "table", "Must return a table")
+		local text, number = false, false
+		for _, value in pairs(list) do
+			if value == "septus_const" then text = true elseif value == 1337 then number = true end
+		end
+		Expect(text and number, "Constants are missing")
+	end)
+
+	Test("debug.setconstant", function(fn, R)
+		local get = R("debug.getconstant")
+		if not get then return Skip("Needs debug.getconstant") end
+		local function sample() return "septus_const" end
+		local index = IndexOf(get, sample, "septus_const")
+		Expect(index, "Constant was not found")
+		fn(sample, index, "changed")
+		Expect(sample() == "changed", "Constant was not changed")
+	end)
+
+	Test("debug.getproto", function(fn)
+		local function outer()
+			local function inner() return 5 end
+			return inner
+		end
+		Expect(type(fn(outer, 1)) == "function", "Must return a function")
+	end)
+
+	Test("debug.getprotos", function(fn)
+		local function outer()
+			local function inner() return 5 end
+			return inner
+		end
+		local list = fn(outer)
+		Expect(type(list) == "table" and #list == 1 and type(list[1]) == "function", "Wrong prototype list")
+	end)
+
+	Test("debug.getstack", function(fn)
+		local marker = "septus" .. tostring(7)
+		local stack = fn(1)
+		Expect(type(stack) == "table", "Must return a table")
+		local found = false
+		for _, value in pairs(stack) do
+			if value == marker then found = true end
+		end
+		Expect(found and marker ~= "", "Stack values are not visible")
+	end, { optional = true })
+
+	Test("debug.setstack", function(fn, R)
+		local get = R("debug.getstack")
+		if not get then return Skip("Needs debug.getstack") end
+		local marker = "septus" .. tostring(7)
+		local slot
+		for index, value in pairs(get(1)) do
+			if value == marker then slot = index end
+		end
+		Expect(slot, "Stack slot was not found")
+		fn(1, slot, "changed")
+		Expect(marker == "changed", "Stack value was not changed")
+	end, { optional = true })
+
+	Test("debug.getinfo", function(fn)
+		local native, lua = fn(print), fn(function() end)
+		Expect(type(native) == "table" and native.what == "C", "C function was not reported as C")
+		Expect(type(lua) == "table" and lua.what == "Lua", "Lua function was not reported as Lua")
+		local current = fn(1)
+		Expect(type(current) == "table" and type(current.currentline) == "number" and current.currentline > 0, "Current line is not reported")
+	end)
+
+	Group("Instances", "IN", "Instance references, hidden properties, signals and interactions")
+
+	Test("cloneref", function(fn)
+		local original = Instance.new("Folder")
+		local reference = fn(original)
+		reference.Name = "SeptusRef"
+		local same = original.Name == "SeptusRef"
+		local distinct = reference ~= original
+		original:Destroy()
+		Expect(typeof(reference) == "Instance" and distinct, "Reference is not a distinct Instance")
+		Expect(same, "Reference does not point to the original")
+	end)
+
+	Test("compareinstances", function(fn, R)
+		local clone = R("cloneref")
+		local original, other = Instance.new("Folder"), Instance.new("Folder")
+		local reference = clone and clone(original) or original
+		local equal, different = fn(original, reference), fn(original, other)
+		original:Destroy()
+		other:Destroy()
+		Expect(equal == true, "References to one Instance are not equal")
+		Expect(different == false, "Different Instances are equal")
+	end)
+
+	Test("gethiddenproperty", function(fn)
+		local value, hidden = fn(Lighting, "Technology")
+		Expect(value ~= nil, "Hidden property was not read")
+		Expect(type(hidden) == "boolean", "Hidden flag is missing")
+	end)
+
+	Test("sethiddenproperty", function(fn, R)
+		local get = R("gethiddenproperty")
+		if not get then return Skip("Needs gethiddenproperty") end
+		local fire = Instance.new("Fire")
+		local ok, before = pcall(get, fire, "size_xml")
+		if ok and before ~= nil then
+			fn(fire, "size_xml", 12)
+			local after = get(fire, "size_xml")
+			fire:Destroy()
+			Expect(after == 12, "Hidden property was not changed")
+			return true
+		end
+		fire:Destroy()
+		local technology = get(Lighting, "Technology")
+		fn(Lighting, "Technology", technology)
+		Expect(get(Lighting, "Technology") == technology, "Hidden property was not preserved")
+	end)
+
+	Test("isscriptable", function(fn)
+		local fire = Instance.new("Fire")
+		local visible = fn(fire, "Heat")
+		fire:Destroy()
+		Expect(visible == true, "Scriptable property was reported hidden")
+	end, { optional = true })
+
+	Test("setscriptable", function(fn)
+		local fire = Instance.new("Fire")
+		local ok = pcall(fn, fire, "size_xml", true)
+		if not ok then
+			fire:Destroy()
+			return Skip("Test property is unavailable")
+		end
+		local readable = pcall(function() return fire.size_xml end)
+		fire:Destroy()
+		Expect(readable, "Property is still not scriptable")
+	end, { optional = true })
+
+	Test("getconnections", function(fn)
+		local event = Instance.new("BindableEvent")
+		local received
+		local function handler(value) received = value end
+		event.Event:Connect(handler)
+		local list = fn(event.Event)
+		Expect(type(list) == "table" and #list >= 1, "Connections are not listed")
+		local connection = list[1]
+		local ok, callback = pcall(function() return connection.Function end)
+		Expect(ok and callback == handler, "Connection does not expose its function")
+		connection:Fire(5)
+		task.wait(0.1)
+		Expect(received == 5, "Fire did not run the handler")
+		received = nil
+		connection:Disable()
+		event:Fire(6)
+		task.wait(0.1)
+		local blocked = received == nil
+		connection:Enable()
+		event:Fire(7)
+		task.wait(0.1)
+		event:Destroy()
+		Expect(blocked, "Disable did not stop the handler")
+		Expect(received == 7, "Enable did not restore the handler")
+	end)
+
+	Test("firesignal", function(fn)
+		local event = Instance.new("BindableEvent")
+		local first, second
+		event.Event:Connect(function(a, b) first, second = a, b end)
+		fn(event.Event, 7, "x")
+		task.wait(0.1)
+		event:Destroy()
+		Expect(first == 7 and second == "x", "Handler did not receive the arguments")
+	end)
+
+	Test("getcallbackvalue", function(fn)
+		local bindable = Instance.new("BindableFunction")
+		local callback = function() end
+		bindable.OnInvoke = callback
+		local same = fn(bindable, "OnInvoke") == callback
+		bindable:Destroy()
+		Expect(same, "Callback was not returned")
+	end, { optional = true })
+
+	local function Anchored(parent)
+		local part = Instance.new("Part")
+		part.Anchored, part.CanCollide, part.Transparency = true, false, 1
+		part.Parent = parent or Stage()
+		return part
+	end
+
+	Test("fireclickdetector", function(fn)
+		local part = Anchored()
+		local detector = Instance.new("ClickDetector")
+		detector.Parent = part
+		local fired = false
+		detector.MouseClick:Connect(function() fired = true end)
+		pcall(fn, detector, 0)
+		task.wait(0.1)
+		part:Destroy()
+		Expect(fired, "MouseClick did not fire")
+	end)
+
+	Test("firetouchinterest", function(fn)
+		local first, second = Anchored(), Anchored()
+		local count = 0
+		local function touched() count += 1 end
+		first.Touched:Connect(touched)
+		second.Touched:Connect(touched)
+		pcall(fn, first, second, 0)
+		task.wait(0.1)
+		pcall(fn, first, second, 1)
+		first:Destroy()
+		second:Destroy()
+		Expect(count > 0, "Touched did not fire")
+	end)
+
+	Test("fireproximityprompt", function(fn)
+		local part = Anchored()
+		local prompt = Instance.new("ProximityPrompt")
+		prompt.Parent = part
+		local fired = false
+		prompt.Triggered:Connect(function() fired = true end)
+		pcall(fn, prompt)
+		task.wait(0.1)
+		part:Destroy()
+		Expect(fired, "Triggered did not fire")
+	end)
+
+	Group("Files", "FS", "Workspace file system and custom assets")
+
+	Test("writefile", function(fn, R)
+		Clean()
+		fn(FILE, "septus")
+		local read = R("readfile")
+		local same = not read or read(FILE) == "septus"
+		Clean()
+		Expect(same, "Written content differs")
+	end)
+
+	Test("readfile", function(fn, R)
+		local write = R("writefile")
+		if not write then return Skip("Needs writefile") end
+		local text = "septus\r\n\0\xD0\xBF end"
+		Clean()
+		write(FILE, text)
+		local same = fn(FILE) == text
+		local missing = pcall(fn, FILE .. ".missing")
+		Clean()
+		Expect(same, "Content does not round-trip")
+		Expect(not missing, "Reading a missing file does not error")
+	end)
+
+	Test("appendfile", function(fn, R)
+		local write, read = R("writefile"), R("readfile")
+		if not (write and read) then return Skip("Needs writefile and readfile") end
+		Clean()
+		write(FILE, "sep")
+		fn(FILE, "tus")
+		local content = read(FILE)
+		Clean()
+		Expect(content == "septus", "Appended content is wrong")
+	end)
+
+	Test("isfile", function(fn, R)
+		local write, make = R("writefile"), R("makefolder")
+		if not write then return Skip("Needs writefile") end
+		Clean()
+		write(FILE, "x")
+		local present, missing = fn(FILE), fn(FILE .. ".none")
+		local onFolder = false
+		if make then
+			make(DIR)
+			onFolder = fn(DIR)
+		end
+		Clean()
+		Expect(present == true and missing == false, "File detection is wrong")
+		Expect(onFolder == false, "A folder was reported as a file")
+	end)
+
+	Test("isfolder", function(fn, R)
+		local make, write = R("makefolder"), R("writefile")
+		if not make then return Skip("Needs makefolder") end
+		Clean()
+		make(DIR)
+		local present, missing = fn(DIR), fn(DIR .. "_none")
+		local onFile = false
+		if write then
+			write(FILE, "x")
+			onFile = fn(FILE)
+		end
+		Clean()
+		Expect(present == true and missing == false, "Folder detection is wrong")
+		Expect(onFile == false, "A file was reported as a folder")
+	end)
+
+	Test("makefolder", function(fn, R)
+		local check = R("isfolder")
+		Clean()
+		fn(DIR)
+		fn(DIR .. "/nested")
+		local ok = not check or (check(DIR) and check(DIR .. "/nested"))
+		Clean()
+		Expect(ok, "Folders were not created")
+	end)
+
+	Test("listfiles", function(fn, R)
+		local make, write = R("makefolder"), R("writefile")
+		if not (make and write) then return Skip("Needs makefolder and writefile") end
+		Clean()
+		make(DIR)
+		write(DIR .. "/a.txt", "1")
+		write(DIR .. "/b.txt", "2")
+		local list = fn(DIR)
+		Clean()
+		Expect(type(list) == "table" and #list == 2, "Wrong number of entries")
+		Expect(type(list[1]) == "string" and (list[1]:find("a.txt", 1, true) or list[1]:find("b.txt", 1, true)), "Entries are not paths")
+	end)
+
+	Test("delfile", function(fn, R)
+		local write, check = R("writefile"), R("isfile")
+		if not (write and check) then return Skip("Needs writefile and isfile") end
+		Clean()
+		write(FILE, "x")
+		fn(FILE)
+		Expect(check(FILE) == false, "File still exists")
+	end)
+
+	Test("delfolder", function(fn, R)
+		local make, check = R("makefolder"), R("isfolder")
+		if not (make and check) then return Skip("Needs makefolder and isfolder") end
+		Clean()
+		make(DIR)
+		fn(DIR)
+		Expect(check(DIR) == false, "Folder still exists")
+	end)
+
+	Test("loadfile", function(fn, R)
+		local write = R("writefile")
+		if not write then return Skip("Needs writefile") end
+		Clean()
+		write(FILE, "return 7, ...")
+		local chunk = fn(FILE)
+		local a, b
+		if type(chunk) == "function" then a, b = chunk(9) end
+		write(FILE, "return +")
+		local broken, message = fn(FILE)
+		Clean()
+		Expect(a == 7 and b == 9, "Chunk did not run")
+		Expect(broken == nil and type(message) == "string", "Syntax errors are not reported")
+	end, { optional = true })
+
+	Test("getcustomasset|getsynasset", function(fn, R)
+		local write = R("writefile")
+		if not write then return Skip("Needs writefile") end
+		Clean()
+		write(FILE, "septus")
+		local asset = fn(FILE)
+		Clean()
+		Expect(type(asset) == "string" and asset:find("rbxasset", 1, true), "Wrong asset path")
+	end)
+
+	Group("Network", "NW", "HTTP requests and web sockets")
+
+	Test("request|http_request|syn.request|fluxus.request|http.request", function(fn)
+		local response = fn({ Url = "https://example.com", Method = "GET" })
+		Expect(type(response) == "table", "Must return a table")
+		Expect(response.StatusCode == 200 and response.Success ~= false, "Request failed")
+		Expect(type(response.Body) == "string" and response.Body:find("Example Domain", 1, true), "Body is not the real page")
+		Expect(type(response.Headers) == "table", "Headers are missing")
+	end, { label = "request", limit = 15 })
+
+	Test("game.HttpGet", function(fn)
+		local body = fn(game, "https://example.com")
+		Expect(type(body) == "string" and body:find("Example Domain", 1, true), "Body is not the real page")
+		Expect(not pcall(fn, game, "not a url"), "Invalid URLs do not error")
+	end, { label = "game:HttpGet", limit = 15 })
+
+	Detect("WebSocket.connect", { optional = true })
+
+	Group("Crypt", "CR", "Encoding, hashing, encryption and compression")
+
+	Test("crypt.base64encode|crypt.base64_encode|base64_encode|base64encode|crypt.base64.encode", function(fn)
+		Expect(fn("Hello") == "SGVsbG8=" and fn("septus") == "c2VwdHVz", "Wrong encoding")
+	end, { label = "base64encode" })
+
+	Test("crypt.base64decode|crypt.base64_decode|base64_decode|base64decode|crypt.base64.decode", function(fn)
+		Expect(fn("SGVsbG8=") == "Hello" and fn("c2VwdHVz") == "septus", "Wrong decoding")
+	end, { label = "base64decode" })
+
+	Test("crypt.hash", function(fn)
+		local digest = fn("a", "sha256")
+		Expect(type(digest) == "string" and digest:lower() == "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb", "sha256 result is wrong")
+	end)
+
+	Test("crypt.generatehash", function(fn)
+		local a, b, c = fn("septus"), fn("septus"), fn("septus2")
+		Expect(type(a) == "string" and #a > 0, "Hash is empty")
+		Expect(a == b and a ~= c, "Hash is not deterministic")
+	end)
+
+	Test("crypt.generatebytes", function(fn)
+		local a, b = fn(16), fn(16)
+		Expect(type(a) == "string" and #a > 0 and a ~= b, "Bytes are not random")
+	end)
+
+	Test("crypt.generatekey", function(fn)
+		local a, b = fn(), fn()
+		Expect(type(a) == "string" and #a > 0 and a ~= b, "Keys are not random")
+	end)
+
+	Test("crypt.encrypt", function(fn, R)
+		local decrypt, keygen = R("crypt.decrypt"), R("crypt.generatekey")
+		if not (decrypt and keygen) then return Skip("Needs crypt.decrypt and crypt.generatekey") end
+		local key = keygen()
+		local encrypted, iv = fn("septus", key)
+		Expect(type(encrypted) == "string" and encrypted ~= "septus", "Data was not encrypted")
+		Expect(decrypt(encrypted, key, iv) == "septus", "Round trip failed")
+	end)
+
+	Test("crypt.decrypt", function(fn, R)
+		local encrypt, keygen = R("crypt.encrypt"), R("crypt.generatekey")
+		if not (encrypt and keygen) then return Skip("Needs crypt.encrypt and crypt.generatekey") end
+		local key, other = keygen(), keygen()
+		local encrypted, iv = encrypt("septus", key)
+		Expect(fn(encrypted, key, iv) == "septus", "Round trip failed")
+		local ok, wrong = pcall(fn, encrypted, other, iv)
+		Expect(not ok or wrong ~= "septus", "Decrypts with a different key")
+	end)
+
+	Test("lz4compress", function(fn, R)
+		local decompress = R("lz4decompress")
+		if not decompress then return Skip("Needs lz4decompress") end
+		local text = string.rep("septus ", 40)
+		local packed = fn(text)
+		Expect(type(packed) == "string" and #packed < #text, "Data was not compressed")
+		Expect(decompress(packed, #text) == text, "Round trip failed")
+	end, { optional = true })
+
+	Group("Drawing", "DR", "Drawing library objects and properties")
+
+	for _, kind in ipairs({ "Line", "Square", "Circle", "Text", "Triangle", "Quad", "Image" }) do
+		Test("Drawing.new", function(fn)
+			local object = fn(kind)
+			Expect(object ~= nil, "Returned nil")
+			object.Visible = false
+			object.Color = Color3.fromRGB(10, 20, 30)
+			object.Transparency = 0.5
+			local color, alpha, visible = object.Color, object.Transparency, object.Visible
+			Dispose(object)
+			Expect(visible == false, "Visible does not persist")
+			Expect(typeof(color) == "Color3" and math.abs(color.R - 10 / 255) < 0.01, "Color does not persist")
+			Expect(math.abs(alpha - 0.5) < 0.01, "Transparency does not persist")
+		end, { label = "Drawing.new(" .. kind .. ")", optional = kind == "Image" })
+	end
+
+	Test("Drawing.new", function(fn)
+		local text = fn("Text")
+		text.Text = "Septus"
+		text.Size = 20
+		text.Position = Vector2.new(10, 20)
+		local content, size, position = text.Text, text.Size, text.Position
+		Dispose(text)
+		Expect(content == "Septus" and size == 20, "Text properties do not persist")
+		Expect(typeof(position) == "Vector2" and position.X == 10 and position.Y == 20, "Position does not persist")
+	end, { label = "Drawing.new (Text properties)" })
+
+	Test("Drawing.new", function(fn)
+		Expect(not pcall(fn, "SeptusInvalid"), "Unknown drawing types are accepted")
+	end, { label = "Drawing.new (invalid type)" })
+
+	Test("Drawing.Fonts", function(fn)
+		Expect(type(fn) == "table" and fn.UI ~= nil and fn.Monospace ~= nil, "Font table is incomplete")
+	end, { value = true })
+
+	Test("isrenderobj", function(fn, R)
+		local create = R("Drawing.new")
+		if not create then return Skip("Needs Drawing.new") end
+		local line = create("Line")
+		local yes, no = fn(line), fn({})
+		Dispose(line)
+		Expect(yes == true and no == false, "Drawing objects are not recognised")
+	end, { optional = true })
+
+	Test("setrenderproperty", function(fn, R)
+		local create, get = R("Drawing.new"), R("getrenderproperty")
+		if not (create and get) then return Skip("Needs Drawing.new and getrenderproperty") end
+		local line = create("Line")
+		fn(line, "Thickness", 3)
+		local value = get(line, "Thickness")
+		Dispose(line)
+		Expect(value == 3, "Property was not changed")
+	end, { optional = true })
+
+	Test("getrenderproperty", function(fn, R)
+		local create = R("Drawing.new")
+		if not create then return Skip("Needs Drawing.new") end
+		local line = create("Line")
+		line.Thickness = 4
+		local value = fn(line, "Thickness")
+		Dispose(line)
+		Expect(value == 4, "Property was not read")
+	end, { optional = true })
+
+	Detect("cleardrawcache", { optional = true })
+
+	Group("Input", "IP", "Mouse and keyboard simulation")
+
+	Test("mousemoverel", function(fn)
+		Expect(pcall(fn, 0, 0), "Call failed")
+	end)
+
+	Test("isrbxactive|iswindowactive", function(fn)
+		Expect(type(fn()) == "boolean", "Must return a boolean")
+	end)
+
+	Detect("mouse1click")
+	Detect("mouse1press")
+	Detect("mouse1release")
+	Detect("mouse2click", { optional = true })
+	Detect("mouse2press", { optional = true })
+	Detect("mouse2release", { optional = true })
+	Detect("mousemoveabs")
+	Detect("mousescroll", { optional = true })
+	Detect("keypress")
+	Detect("keyrelease")
+
+	Group("Actors", "AC", "Parallel Lua actors and communication channels")
+
+	Test("getactors", function(fn)
+		Expect(type(fn()) == "table", "Must return a table")
+	end, { optional = true })
+
+	Detect("run_on_actor", { optional = true })
+
+	Test("create_comm_channel", function(fn, R)
+		local id, event = fn()
+		Expect(id ~= nil and typeof(event) == "Instance", "Channel was not created")
+		local get = R("get_comm_channel")
+		Expect(not get or get(id) == event, "Channel cannot be fetched by id")
+	end, { optional = true })
+
+	Detect("get_comm_channel", { optional = true })
+
+	Group("Misc", "MS", "Clipboard, teleport queue and other utilities")
+
+	Detect("setclipboard|toclipboard|set_clipboard", { label = "setclipboard" })
+	Detect("setfpscap")
+	Detect("queue_on_teleport|queueonteleport", { label = "queue_on_teleport", optional = true })
+	Detect("saveinstance", { optional = true })
+	Detect("decompile", { optional = true })
+	Detect("messagebox", { optional = true })
+
+	Group("Anti-Fake", "AF", "Catches stub executors by cross-checking behaviour")
+
+	Probe("Closure identification", function(_, R)
+		local isC, isL, isX = R("iscclosure"), R("islclosure"), R("isexecutorclosure")
+		if not (isC and isL) then return Skip("Needs iscclosure and islclosure") end
+		local function native() end
+		Expect(isC(print) and isC(game.GetService) and not isC(native), "iscclosure results are inconsistent")
+		Expect(isL(native) and not isL(print), "islclosure results are inconsistent")
+		Expect(not isX or (isX(native) and not isX(print)), "isexecutorclosure cannot separate executor and game closures")
+	end)
+
+	Probe("debug.getinfo agrees with closure type", function(_, R)
+		local info, isC = R("debug.getinfo"), R("iscclosure")
+		if not (info and isC) then return Skip("Needs debug.getinfo and iscclosure") end
+		local function native() end
+		local nativeC, luaC = info(print).what == "C", info(native).what == "Lua"
+		Expect(nativeC == isC(print), "C closure types disagree")
+		Expect(luaC == not isC(native), "Lua closure types disagree")
+	end)
+
+	Probe("newcclosure integrity", function(_, R)
+		local wrap, isC, isX = R("newcclosure"), R("iscclosure"), R("isexecutorclosure")
+		if not wrap then return Skip("Needs newcclosure") end
+		local function original(...) return select("#", ...) end
+		local wrapped = wrap(original)
+		Expect(wrapped ~= original, "Returns the same function")
+		Expect(wrapped(1, nil, nil) == 3, "Varargs are not forwarded")
+		Expect(not isC or isC(wrapped), "Wrapper is not a C closure")
+		Expect(not isX or isX(wrapped), "Wrapper is not an executor closure")
+	end)
+
+	Probe("Metatable protection", function(_, R)
+		local raw = R("getrawmetatable")
+		if not raw then return Skip("Needs getrawmetatable") end
+		Expect(type(getmetatable(game)) == "string", "Game metatable is not locked")
+		local mt = raw(game)
+		Expect(type(mt) == "table" and type(mt.__index) == "function" and type(mt.__namecall) == "function", "Game metatable is incomplete")
+		Expect(raw("").__index == string, "String metatable is wrong")
+	end)
+
+	Probe("Read-only toggling", function(_, R)
+		local raw, set, get = R("getrawmetatable"), R("setreadonly"), R("isreadonly")
+		if not (raw and set and get) then return Skip("Needs getrawmetatable, setreadonly and isreadonly") end
+		local mt = raw(game)
+		local initial = get(mt)
+		set(mt, false)
+		local unlocked = get(mt)
+		set(mt, true)
+		local locked = get(mt)
+		set(mt, initial == true)
+		Expect(unlocked == false and locked == true, "Read-only state ignores setreadonly")
+	end)
+
+	Probe("Environment isolation", function(_, R)
+		local genv, renv = R("getgenv"), R("getrenv")
+		if not (genv and renv) then return Skip("Needs getgenv and getrenv") end
+		local executor, world = genv(), renv()
+		executor.__SeptusLeak = 1
+		local leaked = world.__SeptusLeak ~= nil
+		executor.__SeptusLeak = nil
+		Expect(executor ~= world, "Environments are the same table")
+		Expect(not leaked, "Executor globals leak into the game environment")
+	end)
+
+	Probe("Argument validation", function(_, R)
+		local names = { "readfile", "writefile", "getrawmetatable", "hookfunction", "setreadonly", "iscclosure", "getconnections", "firesignal", "newcclosure", "clonefunction" }
+		local checked, strict = 0, 0
+		for _, name in ipairs(names) do
+			local fn = R(name)
+			if fn then
+				checked += 1
+				if not pcall(fn) then strict += 1 end
+			end
+		end
+		if checked < 4 then return Skip("Too few functions to judge") end
+		Expect(strict / checked >= 0.7, string.format("%d of %d functions accept missing arguments", checked - strict, checked))
+	end)
+
+	Probe("Hook transparency", function(_, R)
+		local hook = R("hookfunction")
+		if not hook then return Skip("Needs hookfunction") end
+		local function target(...) return select("#", ...) end
+		local old = hook(target, function() return -1 end)
+		local hooked, original = target(1, 2), old(1, 2, 3)
+		local restore = R("restorefunction")
+		if restore then pcall(restore, target) end
+		Expect(hooked == -1, "Hook was not applied")
+		Expect(original == 3, "Original function lost its behaviour")
+	end)
+
+	Probe("Executor identity", function(_, R)
+		local identify, isX = R("identifyexecutor"), R("isexecutorclosure")
+		if not identify then return Skip("Needs identifyexecutor") end
+		local name, again = identify(), identify()
+		Expect(type(name) == "string" and #name > 0 and name == again, "Name is not stable")
+		Expect(not isX or isX(identify), "identifyexecutor is not an executor closure")
+	end)
+
+	Probe("File persistence", function(_, R)
+		local write, read, check, list, make = R("writefile"), R("readfile"), R("isfile"), R("listfiles"), R("makefolder")
+		if not (write and read and check) then return Skip("Needs writefile, readfile and isfile") end
+		Clean()
+		local data = "a\0b\r\n\255c"
+		write(FILE, data)
+		local same, exists = read(FILE) == data, check(FILE)
+		local listed = true
+		if list and make then
+			make(DIR)
+			write(DIR .. "/probe.bin", data)
+			listed = false
+			for _, path in ipairs(list(DIR)) do
+				if path:find("probe.bin", 1, true) then listed = true end
+			end
+		end
+		Clean()
+		Expect(same, "Binary data does not round-trip")
+		Expect(exists, "isfile does not see written files")
+		Expect(listed, "listfiles does not see written files")
+	end)
+
+	Lib.ExecClean = Clean
+end
+
+do
+	local Resolve = Lib.ResolveGlobal
+
+	local function Find(test)
+		for _, name in ipairs(test.names) do
+			local value = Resolve(name)
+			if value ~= nil and (test.value or type(value) == "function") then return value end
+		end
+	end
+
+	local function Evaluate(test)
+		local result = { name = test.label }
+		local fn = Find(test)
+		if not fn and #test.names > 0 then
+			result.status = test.optional and "skip" or "missing"
+			result.reason = test.optional and "Not supported by this executor" or "Function not found"
+			return result
+		end
+		if test.detect then
+			result.status, result.detected, result.reason = "pass", true, "Detected, not executed"
+			return result
+		end
+		local ok, value = Lib.Timed(function() return test.check(fn, Resolve) end, test.limit)
+		if not ok then
+			local message = tostring(value)
+			message = message:gsub("^.-:%d+: ", "")
+			result.status = "fail"
+			result.reason = message == "timed out" and "Timed out" or message:sub(1, 110)
+		elseif value == false then
+			result.status, result.reason = "fail", "Unexpected result"
+		elseif type(value) == "table" and value.skip then
+			result.status, result.reason = "skip", value.skip
+		else
+			result.status = "pass"
+		end
+		return result
+	end
+
+	local function Tally(group)
+		for _, result in ipairs(group.results) do
+			local status = result.status
+			if status == "pass" then
+				group.passed += 1
+			elseif status == "skip" then
+				group.skipped += 1
+			else
+				group.failed += 1
+			end
+		end
+	end
+
+	function Lib.RunExecutorTest(progress)
+		local started = os.clock()
+		local catalogSize = 0
+		for _, group in ipairs(Lib.CompatCatalog) do catalogSize += #group[2] end
+		local total = catalogSize
+		for _, suite in ipairs(Lib.ExecSuites) do total += #suite.tests end
+
+		local report = { suites = {}, executor = "Unknown executor" }
+		local identify = Resolve("identifyexecutor")
+		if identify then
+			local ok, name, version = pcall(identify)
+			if ok and name then report.executor = tostring(name) .. (version and (" " .. tostring(version)) or "") end
+		end
+
+		local done = 0
+		for _, suite in ipairs(Lib.ExecSuites) do
+			local group = { name = suite.name, tag = suite.tag, description = suite.description, results = {}, passed = 0, failed = 0, skipped = 0 }
+			for _, test in ipairs(suite.tests) do
+				group.results[#group.results + 1] = Evaluate(test)
+				done += 1
+				if progress then progress(done, total) end
+			end
+			Tally(group)
+			report.suites[#report.suites + 1] = group
+		end
+		pcall(Lib.ExecClean)
+
+		local ok, compat = pcall(Lib.RunCompat)
+		if ok then
+			local missing = {}
+			for _, record in ipairs(compat.bad) do
+				if not record.found then missing[record.entry] = true end
+			end
+			local hub = { name = "Septus Hub", tag = "SH", description = "Functions required by this hub", results = {}, passed = 0, failed = 0, skipped = 0 }
+			for _, group in ipairs(Lib.CompatCatalog) do
+				for _, entry in ipairs(group[2]) do
+					local result = { name = entry.label or entry.names[1], reason = entry.desc }
+					if entry.status == "ok" then
+						result.status = "pass"
+					elseif entry.status == "optional" then
+						result.status, result.reason = "skip", "Optional: " .. entry.desc
+					else
+						result.status, result.reason = missing[entry] and "missing" or "fail", "Affects: " .. entry.desc
+					end
+					hub.results[#hub.results + 1] = result
+				end
+			end
+			Tally(hub)
+			report.suites[#report.suites + 1] = hub
+		end
+		if progress then progress(total, total) end
+
+		report.passed, report.failed, report.skipped, report.total = 0, 0, 0, 0
+		for _, group in ipairs(report.suites) do
+			report.passed += group.passed
+			report.failed += group.failed
+			report.skipped += group.skipped
+		end
+		report.total = report.passed + report.failed
+		report.elapsed = os.clock() - started
+		report.date = os.date("%b %d, %Y")
+		return report
+	end
+
+	function Lib.ExecRate(passed, failed)
+		local tested = passed + failed
+		if tested == 0 then return nil end
+		return math.floor(passed / tested * 100)
+	end
+
+	function Lib.ExecutorReportText(report)
+		local rate = Lib.ExecRate(report.passed, report.failed)
+		local lines = {
+			"Septus Hub " .. Lib.Version.Display .. " - Executor Test",
+			report.executor,
+			string.format("Pass rate %s | passed %d | failed %d | skipped %d | total %d | %.1fs", rate and (rate .. "%") or "n/a", report.passed, report.failed, report.skipped, report.total, report.elapsed),
+			""
+		}
+		for _, group in ipairs(report.suites) do
+			local groupRate = Lib.ExecRate(group.passed, group.failed)
+			lines[#lines + 1] = string.format("[%s] %s (%d/%d)", group.name, groupRate and (groupRate .. "%") or "n/a", group.passed, group.passed + group.failed)
+			for _, result in ipairs(group.results) do
+				if result.status ~= "pass" then
+					lines[#lines + 1] = string.format("  %s: %s%s", result.status, result.name, result.reason and (" - " .. result.reason) or "")
+				end
+			end
+		end
+		return table.concat(lines, "\n")
+	end
+
+	function Lib.CopyExecutorReport(report)
+		local copy = setclipboard or toclipboard or set_clipboard
+		local ok = copy and pcall(copy, Lib.ExecutorReportText(report))
+		Lib.Notify({ Title = "Executor Test", Text = ok and "Report copied to the clipboard." or "Clipboard is unavailable" })
+	end
+
+	local busy = false
+	function Lib.StartExecutorTest(setLabel)
+		if busy then return end
+		busy = true
+		task.spawn(function()
+			local ok, report = pcall(Lib.RunExecutorTest, function(done, total)
+				setLabel(string.format("Testing %d/%d", done, total))
+			end)
+			busy = false
+			setLabel(nil)
+			if not ok then
+				Lib.Notify({ Title = "Executor Test", Text = "Test failed: " .. tostring(report):sub(1, 80) })
+				return
+			end
+			Lib.ExecReport = report
+			if Lib.ExecApply then Lib.ExecApply(report) end
+			Lib.ShowExecutorResults(report)
+		end)
+	end
+end
+
+do
+	local Quad, Out = Enum.EasingStyle.Quad, Enum.EasingDirection.Out
+	local GREEN, RED, AMBER, GREY = Color3.fromRGB(46, 213, 115), Color3.fromRGB(235, 87, 87), Color3.fromRGB(230, 162, 60), Color3.fromRGB(140, 140, 140)
+	local WHITE = Color3.new(1, 1, 1)
+	local STATUS = {
+		pass = { "Passed", GREEN, "\u{2713}" },
+		fail = { "Failed", RED, "\u{2715}" },
+		missing = { "Missing", RED, "\u{2715}" },
+		skip = { "Skipped", AMBER, "\u{2013}" }
+	}
+
+	local function Make(class, props)
+		props.ZIndex = 33
+		return Lib.Create(class, props)
+	end
+
+	local function Text(parent, text, size, font, role, props)
+		props.Text, props.TextSize, props.Font, props.Parent = text, size, font, parent
+		props.BackgroundTransparency = 1
+		props.TextColor3 = props.TextColor3 or (role == "Secondary" and GREY or Color3.fromRGB(245, 245, 245))
+		local label = Make("TextLabel", props)
+		if role then Lib.RegisterThemeText(label, role) end
+		return label
+	end
+
+	local function RateColor(rate)
+		if not rate then return GREY end
+		return rate >= 90 and GREEN or (rate >= 60 and AMBER or RED)
+	end
+
+	local function RateText(rate)
+		return rate and (rate .. "%") or "\u{2014}"
+	end
+
+	local function Button(parent, text, position, anchor)
+		local button = Make("TextButton", {
+			Size = UDim2.fromOffset(0, 26), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = anchor, Position = position, BackgroundColor3 = WHITE,
+			BackgroundTransparency = 0.92, Text = text, TextColor3 = Color3.fromRGB(235, 235, 235), TextSize = 12, Font = Enum.Font.GothamMedium,
+			AutoButtonColor = false, Parent = parent,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 7) }),
+			Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
+		})
+		Lib.RegisterThemeText(button, "Primary")
+		button.MouseEnter:Connect(function() Lib.Tween(button, 0.15, Quad, Out, { BackgroundTransparency = 0.82 }) end)
+		button.MouseLeave:Connect(function() Lib.Tween(button, 0.15, Quad, Out, { BackgroundTransparency = 0.92 }) end)
+		return button
+	end
+
+	function Lib.ShowExecutorResults(report)
+		local modal = Lib.ExecModal
+		if not modal then
+			local main = UI.Main.AbsoluteSize
+			local width, height = math.clamp(main.X - 40, 420, 780), math.clamp(main.Y - 40, 380, 500)
+			modal = Lib.CreateModal("Executor Test Results", width, height)
+			modal.Content:Destroy()
+			modal.Width, modal.Height = width, height
+			Lib.ExecModal = modal
+		end
+
+		local old = modal.Window:FindFirstChild("ExecView")
+		if old then old:Destroy() end
+
+		local compact = modal.Width < 600
+		local sidebarWidth = compact and 132 or 176
+		local view = Make("Frame", { Name = "ExecView", Size = UDim2.new(1, 0, 1, -48), Position = UDim2.fromOffset(0, 48), BackgroundTransparency = 1, Parent = modal.Window })
+
+		local overall = { name = "Overall", tag = "ALL", description = "All suites combined", results = {}, passed = report.passed, failed = report.failed, skipped = report.skipped }
+		for _, group in ipairs(report.suites) do
+			for _, result in ipairs(group.results) do
+				overall.results[#overall.results + 1] = {
+					name = group.name .. " / " .. result.name, status = result.status, reason = result.reason, detected = result.detected
+				}
+			end
+		end
+		local entries = { overall }
+		for _, group in ipairs(report.suites) do entries[#entries + 1] = group end
+
+		local sidebar = Make("ScrollingFrame", {
+			Size = UDim2.new(0, sidebarWidth, 1, -12), Position = UDim2.fromOffset(10, 0), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 2,
+			ScrollBarImageColor3 = Color3.fromRGB(80, 80, 80), CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = view,
+			Lib.Create("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder })
+		})
+
+		local paneX = sidebarWidth + 22
+		local pane = Make("Frame", { Size = UDim2.new(1, -(paneX + 14), 1, -12), Position = UDim2.fromOffset(paneX, 0), BackgroundTransparency = 1, Parent = view })
+
+		local title = Text(pane, "", 20, Enum.Font.GothamBold, "Primary", { Size = UDim2.new(1, -150, 0, 26), TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd })
+		local subtitle = Text(pane, "", 11, Enum.Font.GothamMedium, "Secondary", { Size = UDim2.new(1, -150, 0, 14), Position = UDim2.fromOffset(0, 26), TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd })
+
+		local copy = Button(pane, "Copy", UDim2.new(1, 0, 0, 0), Vector2.new(1, 0))
+		local rerun = Button(pane, "Re-run", UDim2.new(1, -(compact and 56 or 62), 0, 0), Vector2.new(1, 0))
+		copy.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			Lib.CopyExecutorReport(report)
+		end)
+		rerun.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			Lib.StartExecutorTest(function(label) rerun.Text = label or "Re-run" end)
+		end)
+
+		local tiles = {}
+		local tileSpec = { { "Pass rate", 0 }, { "Passed", 1 }, { "Failed", 2 }, { "Total tested", 3 } }
+		for index, spec in ipairs(tileSpec) do
+			local tile = Make("Frame", { Size = UDim2.new(0.25, 0, 0, 52), Position = UDim2.new(0.25 * spec[2], 0, 0, 50), BackgroundTransparency = 1, Parent = pane })
+			tiles[index] = Text(tile, "", compact and 22 or 28, Enum.Font.GothamBold, "Primary", { Size = UDim2.new(1, 0, 0, 32), TextXAlignment = Enum.TextXAlignment.Left })
+			Text(tile, spec[1], 11, Enum.Font.GothamMedium, "Secondary", { Size = UDim2.new(1, 0, 0, 14), Position = UDim2.fromOffset(0, 34), TextXAlignment = Enum.TextXAlignment.Left })
+		end
+
+		local bar = Make("Frame", {
+			Size = UDim2.new(1, 0, 0, 5), Position = UDim2.fromOffset(0, 112), BackgroundColor3 = Color3.fromRGB(128, 128, 128), BackgroundTransparency = 0.75, Parent = pane,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) })
+		})
+		local fill = Make("Frame", {
+			Size = UDim2.fromScale(0, 1), BackgroundColor3 = GREEN, Parent = bar,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) })
+		})
+
+		local meta = Text(pane, string.format("%s  \u{00B7}  %.1fs  \u{00B7}  %s", report.executor, report.elapsed, report.date), 11, Enum.Font.GothamMedium, "Secondary", {
+			Size = UDim2.new(1, 0, 0, 14), Position = UDim2.fromOffset(0, 122), TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd
+		})
+
+		local filterY = 148
+		local chips, counts = {}, {}
+		local FILTERS = { "All", "Passed", "Issues" }
+		for index, name in ipairs(FILTERS) do
+			local chip = Make("TextButton", {
+				Size = UDim2.fromOffset(compact and 68 or 82, 26), Position = UDim2.fromOffset((index - 1) * (compact and 72 or 86), filterY), BackgroundColor3 = WHITE,
+				BackgroundTransparency = 1, Text = name, TextColor3 = GREY, TextSize = 12, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left,
+				AutoButtonColor = false, Parent = pane,
+				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 7) }),
+				Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10) })
+			})
+			counts[name] = Text(chip, "", 10, Enum.Font.GothamMedium, nil, { Size = UDim2.new(0, 24, 1, 0), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -4, 0, 0), TextColor3 = Color3.fromRGB(110, 110, 110) })
+			chips[name] = chip
+		end
+
+		local searchBox = Make("Frame", {
+			Size = compact and UDim2.new(1, 0, 0, 26) or UDim2.new(1, -262, 0, 26), Position = compact and UDim2.fromOffset(0, filterY + 32) or UDim2.fromOffset(262, filterY),
+			BackgroundColor3 = WHITE, BackgroundTransparency = 0.94, Parent = pane,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 7) })
+		})
+		local input = Make("TextBox", {
+			Size = UDim2.new(1, -20, 1, 0), Position = UDim2.fromOffset(10, 0), BackgroundTransparency = 1, Text = "", PlaceholderText = "Search tests...",
+			PlaceholderColor3 = Color3.fromRGB(110, 110, 110), TextColor3 = Color3.fromRGB(235, 235, 235), TextSize = 12, Font = Enum.Font.GothamMedium,
+			TextXAlignment = Enum.TextXAlignment.Left, ClearTextOnFocus = false, Parent = searchBox
+		})
+		Lib.RegisterThemeText(input, "Primary")
+
+		local listY = filterY + (compact and 66 or 34)
+		local list = Make("ScrollingFrame", {
+			Size = UDim2.new(1, 0, 1, -(listY + 22)), Position = UDim2.fromOffset(0, listY), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 2,
+			ScrollBarImageColor3 = Color3.fromRGB(80, 80, 80), CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = pane,
+			Lib.Create("UIListLayout", { Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder })
+		})
+		local footer = Text(pane, "", 11, Enum.Font.GothamMedium, "Secondary", { Size = UDim2.new(0.5, 0, 0, 16), AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Left })
+		Text(pane, "Local report", 11, Enum.Font.GothamMedium, "Secondary", { Size = UDim2.new(0.5, 0, 0, 16), AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Right })
+
+		local entry, filter, ticket = entries[1], "All", 0
+
+		local function Row(result, order)
+			local meta = STATUS[result.status]
+			local word = result.detected and "Detected" or meta[1]
+			local showReason = result.reason and (result.status ~= "pass" or result.detected)
+			local row = Make("Frame", { Size = UDim2.new(1, -6, 0, showReason and 44 or 30), BackgroundTransparency = 1, LayoutOrder = order, Parent = list })
+			Text(row, meta[3], 13, Enum.Font.GothamBold, nil, { Size = UDim2.fromOffset(20, 30), Position = UDim2.fromOffset(6, 0), TextColor3 = meta[2] })
+			Text(row, result.name, 13, Enum.Font.Code, "Primary", { Size = UDim2.new(1, -120, 0, 30), Position = UDim2.fromOffset(30, 0), TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd })
+			Text(row, word, 11, Enum.Font.GothamBold, nil, { Size = UDim2.fromOffset(76, 30), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 0), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = meta[2] })
+			if showReason then
+				Text(row, result.reason, 11, Enum.Font.GothamMedium, "Secondary", { Size = UDim2.new(1, -44, 0, 14), Position = UDim2.fromOffset(30, 25), TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd })
+			end
+		end
+
+		local function Populate()
+			ticket += 1
+			local mine = ticket
+			for _, child in ipairs(list:GetChildren()) do
+				if child:IsA("GuiObject") then child:Destroy() end
+			end
+			local query = string.lower(input.Text)
+			local shown = {}
+			for _, result in ipairs(entry.results) do
+				local status = result.status
+				local match = filter == "All" or (filter == "Passed" and status == "pass") or (filter == "Issues" and (status == "fail" or status == "missing"))
+				if match and (query == "" or string.find(string.lower(result.name), query, 1, true)) then shown[#shown + 1] = result end
+			end
+			footer.Text = string.format("%d results", #shown)
+			if #shown == 0 then
+				Text(list, "Nothing to show", 12, Enum.Font.GothamMedium, "Secondary", { Size = UDim2.new(1, 0, 0, 40), ZIndex = 33 })
+				return
+			end
+			for index, result in ipairs(shown) do
+				if ticket ~= mine then return end
+				Row(result, index)
+				if index % 40 == 0 then task.wait() end
+			end
+		end
+
+		local function SetFilter(name)
+			filter = name
+			for key, chip in pairs(chips) do
+				Lib.Tween(chip, 0.15, Quad, Out, { BackgroundTransparency = key == name and 0.9 or 1, TextColor3 = key == name and Color3.fromRGB(245, 245, 245) or GREY })
+			end
+			task.spawn(Populate)
+		end
+
+		for name, chip in pairs(chips) do
+			chip.MouseButton1Click:Connect(function()
+				Lib.PlayClick()
+				SetFilter(name)
+			end)
+		end
+
+		local debounce = 0
+		input:GetPropertyChangedSignal("Text"):Connect(function()
+			debounce += 1
+			local mine = debounce
+			task.delay(0.15, function()
+				if mine == debounce then Populate() end
+			end)
+		end)
+
+		local items = {}
+		local function Select(index)
+			entry = entries[index]
+			for i, item in ipairs(items) do
+				Lib.Tween(item, 0.15, Quad, Out, { BackgroundTransparency = i == index and 0.9 or 1 })
+			end
+			local rate = Lib.ExecRate(entry.passed, entry.failed)
+			title.Text, subtitle.Text = entry.name, entry.description
+			tiles[1].Text, tiles[1].TextColor3 = RateText(rate), RateColor(rate)
+			tiles[2].Text, tiles[2].TextColor3 = tostring(entry.passed), GREEN
+			tiles[3].Text, tiles[3].TextColor3 = tostring(entry.failed), entry.failed > 0 and RED or Color3.fromRGB(245, 245, 245)
+			tiles[4].Text = tostring(entry.passed + entry.failed)
+			fill.BackgroundColor3 = RateColor(rate)
+			fill.Size = UDim2.fromScale(0, 1)
+			Lib.Tween(fill, 0.5, Enum.EasingStyle.Quint, Out, { Size = UDim2.fromScale((rate or 0) / 100, 1) })
+			counts.All.Text, counts.Passed.Text, counts.Issues.Text = tostring(#entry.results), tostring(entry.passed), tostring(entry.failed)
+			SetFilter(entry.failed > 0 and "Issues" or "All")
+		end
+
+		for index, group in ipairs(entries) do
+			local rate = Lib.ExecRate(group.passed, group.failed)
+			local item = Make("TextButton", {
+				Size = UDim2.new(1, -4, 0, 38), BackgroundColor3 = WHITE, BackgroundTransparency = 1, AutoButtonColor = false, Text = "", LayoutOrder = index, Parent = sidebar,
+				Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
+			})
+			Text(item, group.tag, 11, Enum.Font.GothamBold, nil, { Size = UDim2.fromOffset(26, 38), Position = UDim2.fromOffset(6, 0), TextColor3 = RateColor(rate) })
+			Text(item, group.name, 12, Enum.Font.GothamMedium, "Primary", { Size = UDim2.new(1, -76, 1, 0), Position = UDim2.fromOffset(36, 0), TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd })
+			Text(item, RateText(rate), 11, Enum.Font.GothamMedium, "Secondary", { Size = UDim2.fromOffset(38, 38), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 0), TextXAlignment = Enum.TextXAlignment.Right })
+			items[index] = item
+			item.MouseEnter:Connect(function()
+				if entry ~= group then Lib.Tween(item, 0.15, Quad, Out, { BackgroundTransparency = 0.95 }) end
+			end)
+			item.MouseLeave:Connect(function()
+				if entry ~= group then Lib.Tween(item, 0.15, Quad, Out, { BackgroundTransparency = 1 }) end
+			end)
+			item.MouseButton1Click:Connect(function()
+				if entry == group then return end
+				Lib.PlayClick()
+				Select(index)
+			end)
+		end
+
+		Select(1)
+		modal.Open()
+	end
 end
 
 function Lib.BuildDevelopers(view)
@@ -7288,7 +8909,249 @@ function Lib.BuildDevelopers(view)
 	end
 end
 
-function Lib.BuildInfo(view)
+function Lib.OpenLink(url)
+	local UIS, Gui = Services.UserInputService, Services.GuiService
+	local mobile = UIS.TouchEnabled and not UIS.KeyboardEnabled and not UIS.MouseEnabled
+	local opened = not mobile and pcall(Gui.OpenBrowserWindow, Gui, url)
+	return opened, Lib.CopyText(url)
+end
+
+function Lib.BuildWhatsNew(parent, order)
+	local release = Lib.Releases and Lib.Releases[1]
+	if not release then return end
+	local list, PREVIEW, HEAD = release.notes, 3, 54
+	local Quad, Quint, Out = Enum.EasingStyle.Quad, Enum.EasingStyle.Quint, Enum.EasingDirection.Out
+	local expanded, settled, running = false, false, nil
+
+	local card = Lib.Create("Frame", {
+		Size = UDim2.new(1, 0, 0, HEAD), BackgroundColor3 = Color3.fromRGB(15, 15, 15), ClipsDescendants = true, LayoutOrder = order, Parent = parent,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 12) }),
+		Lib.Create("UIStroke", { Color = Color3.fromRGB(128, 128, 128), Transparency = 0.88, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
+	})
+	Lib.RegisterThemeElement(card, "BackgroundColor3", 0.5)
+	Lib.HoverStroke(card)
+
+	local left = Lib.Create("Frame", {
+		Size = UDim2.new(1, -140, 0, 24), Position = UDim2.fromOffset(16, 15), BackgroundTransparency = 1, Parent = card,
+		Lib.Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder })
+	})
+	Lib.RegisterThemeText(Lib.Create("TextLabel", {
+		Size = UDim2.fromOffset(0, 24), AutomaticSize = Enum.AutomaticSize.X, LayoutOrder = 1, BackgroundTransparency = 1, Text = "What's New",
+		TextColor3 = Color3.fromRGB(245, 245, 245), TextSize = 16, Font = Enum.Font.GothamBold, Parent = left
+	}), "Primary")
+	Lib.RegisterThemeText(Lib.Create("TextLabel", {
+		Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X, LayoutOrder = 2, BackgroundColor3 = Color3.fromRGB(128, 128, 128), BackgroundTransparency = 0.8,
+		Text = release.version, TextColor3 = Color3.fromRGB(245, 245, 245), TextSize = 10, Font = Enum.Font.GothamBold, Parent = left,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 5) }),
+		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) })
+	}), "Primary")
+
+	local link = Lib.Create("TextButton", {
+		Size = UDim2.fromOffset(0, 24), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -14, 0, 15),
+		BackgroundTransparency = 1, AutoButtonColor = false, Text = "Update Log \u{2197}", TextColor3 = Color3.fromRGB(140, 140, 140),
+		TextSize = 12, Font = Enum.Font.GothamMedium, Parent = card
+	})
+	Lib.RegisterThemeText(link, "Secondary")
+	link.MouseEnter:Connect(function() Lib.Tween(link, 0.15, Quad, Out, { TextColor3 = Lib.Palette.Primary }) end)
+	link.MouseLeave:Connect(function() Lib.Tween(link, 0.15, Quad, Out, { TextColor3 = Lib.Palette.Secondary }) end)
+	link.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		Lib.SwitchTab("Update Log")
+	end)
+
+	local body = Lib.Create("Frame", {
+		Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Position = UDim2.fromOffset(0, HEAD), BackgroundTransparency = 1, Parent = card,
+		Lib.Create("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 16), PaddingBottom = UDim.new(0, 14) })
+	})
+	Lib.BuildNotes(body, list)
+
+	local extra = {}
+	for _, row in ipairs(body:GetChildren()) do
+		if row:IsA("Frame") and row.LayoutOrder > PREVIEW then
+			row.Visible = false
+			extra[#extra + 1] = row
+		end
+	end
+
+	local function Fit(time)
+		if running then running:Cancel() end
+		local goal = UDim2.new(1, 0, 0, HEAD + body.AbsoluteSize.Y)
+		if time == 0 then
+			card.Size = goal
+			return
+		end
+		running = Services.Tween:Create(card, TweenInfo.new(time, Quint, Out), { Size = goal })
+		running:Play()
+	end
+
+	body:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+		Fit(settled and 0.3 or 0)
+		settled = true
+	end)
+
+	if #extra == 0 then return end
+	local label = string.format("Show all %d changes", #list)
+	local more = Lib.Create("TextButton", {
+		Size = UDim2.new(1, 0, 0, 30), LayoutOrder = #list + 1, AutoButtonColor = false, BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 0.94,
+		Text = label, TextColor3 = Color3.fromRGB(235, 235, 235), TextSize = 12, Font = Enum.Font.GothamMedium, Parent = body,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) }),
+		Lib.Create("UIScale", { Scale = 1 })
+	})
+	Lib.RegisterThemeText(more, "Primary")
+	local scale = more:FindFirstChildOfClass("UIScale")
+	more.MouseEnter:Connect(function() Lib.Tween(more, 0.15, Quad, Out, { BackgroundTransparency = 0.88 }) end)
+	more.MouseLeave:Connect(function()
+		Lib.Tween(more, 0.15, Quad, Out, { BackgroundTransparency = 0.94 })
+		Lib.Tween(scale, 0.15, Quad, Out, { Scale = 1 })
+	end)
+	more.MouseButton1Down:Connect(function() Lib.Tween(scale, 0.08, Quad, Out, { Scale = 0.97 }) end)
+	more.MouseButton1Up:Connect(function() Lib.Tween(scale, 0.2, Enum.EasingStyle.Back, Out, { Scale = 1 }) end)
+	more.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		expanded = not expanded
+		for i = 1, #extra do extra[i].Visible = expanded end
+		more.Text = expanded and "Show less" or label
+	end)
+end
+
+function Lib.BuildProjects(view)
+	local Quad, Back, Out = Enum.EasingStyle.Quad, Enum.EasingStyle.Back, Enum.EasingDirection.Out
+
+	local Projects = {
+		{
+			name = "Anti-AFK", badge = "AF", tag = "Utility",
+			description = "A small utility that keeps you from being kicked for inactivity. Comes with a Fluent-style dashboard that collapses into a Dynamic Island.",
+			source = "https://raw.githubusercontent.com/CherryCalCor/Anti-AFK.Lua/refs/heads/main/Anti-AFK.Lua",
+			repo = "https://github.com/CherryCalCor/Anti-AFK.Lua"
+		}
+	}
+
+	local scroll = Lib.Create("ScrollingFrame", {
+		Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 2,
+		ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = view,
+		Lib.Create("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }),
+		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 12), PaddingBottom = UDim.new(0, 14) })
+	})
+
+	local top = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 28), BackgroundTransparency = 1, LayoutOrder = 0, Parent = scroll })
+	Lib.RegisterThemeText(Lib.Create("TextLabel", {
+		Size = UDim2.new(0.6, 0, 1, 0), Position = UDim2.fromOffset(2, 0), BackgroundTransparency = 1, Text = "Projects", TextColor3 = Color3.fromRGB(255, 255, 255),
+		TextSize = 20, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = top
+	}), "Primary")
+	Lib.RegisterThemeText(Lib.Create("TextLabel", {
+		Size = UDim2.new(0.4, 0, 1, 0), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -4, 0, 0), BackgroundTransparency = 1,
+		Text = "Projects made in Lua", TextColor3 = Color3.fromRGB(140, 140, 140), TextSize = 12, Font = Enum.Font.GothamMedium,
+		TextXAlignment = Enum.TextXAlignment.Right, Parent = top
+	}), "Secondary")
+
+	local function Button(parent, text, order, rest)
+		local button = Lib.Create("TextButton", {
+			Size = UDim2.fromOffset(116, 32), LayoutOrder = order, AutoButtonColor = false, BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = rest,
+			Text = text, TextColor3 = Color3.fromRGB(235, 235, 235), TextSize = 12, Font = Enum.Font.GothamMedium, Parent = parent,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) }),
+			Lib.Create("UIStroke", { Color = Color3.fromRGB(128, 128, 128), Transparency = 0.75, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+			Lib.Create("UIScale", { Scale = 1 })
+		})
+		Lib.RegisterThemeText(button, "Primary")
+		local scale, stroke = button:FindFirstChildOfClass("UIScale"), button:FindFirstChildOfClass("UIStroke")
+		button.MouseEnter:Connect(function()
+			Lib.Tween(button, 0.15, Quad, Out, { BackgroundTransparency = rest - 0.08 })
+			Lib.Tween(stroke, 0.15, Quad, Out, { Transparency = 0.5 })
+		end)
+		button.MouseLeave:Connect(function()
+			Lib.Tween(button, 0.15, Quad, Out, { BackgroundTransparency = rest })
+			Lib.Tween(stroke, 0.2, Quad, Out, { Transparency = 0.75 })
+			Lib.Tween(scale, 0.15, Quad, Out, { Scale = 1 })
+		end)
+		button.MouseButton1Down:Connect(function() Lib.Tween(scale, 0.08, Quad, Out, { Scale = 0.95 }) end)
+		button.MouseButton1Up:Connect(function() Lib.Tween(scale, 0.2, Back, Out, { Scale = 1 }) end)
+		return button
+	end
+
+	for index, project in ipairs(Projects) do
+		local card = Lib.Create("Frame", {
+			Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = Color3.fromRGB(15, 15, 15), LayoutOrder = index, Parent = scroll,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 12) }),
+			Lib.Create("UIStroke", { Color = Color3.fromRGB(128, 128, 128), Transparency = 0.88, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+			Lib.Create("UIListLayout", { Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder }),
+			Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 16), PaddingBottom = UDim.new(0, 16), PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 16) })
+		})
+		Lib.RegisterThemeElement(card, "BackgroundColor3", 0.5)
+		Lib.HoverStroke(card)
+
+		local head = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 42), BackgroundTransparency = 1, LayoutOrder = 1, Parent = card })
+		local badge = Lib.Create("TextLabel", {
+			Size = UDim2.fromOffset(42, 42), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 0.92, Text = project.badge,
+			TextColor3 = Color3.fromRGB(255, 255, 255), TextSize = 15, Font = Enum.Font.GothamBold, Parent = head,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 11) })
+		})
+		Lib.RegisterThemeText(badge, "Primary")
+		card.MouseEnter:Connect(function() Lib.Tween(badge, 0.2, Quad, Out, { BackgroundTransparency = 0.84 }) end)
+		card.MouseLeave:Connect(function() Lib.Tween(badge, 0.25, Quad, Out, { BackgroundTransparency = 0.92 }) end)
+
+		Lib.RegisterThemeText(Lib.Create("TextLabel", {
+			Size = UDim2.new(1, -130, 0, 20), Position = UDim2.fromOffset(54, 2), BackgroundTransparency = 1, Text = project.name, TextColor3 = Color3.fromRGB(245, 245, 245),
+			TextSize = 16, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = head
+		}), "Primary")
+		Lib.RegisterThemeText(Lib.Create("TextLabel", {
+			Size = UDim2.new(1, -130, 0, 14), Position = UDim2.fromOffset(54, 25), BackgroundTransparency = 1, Text = project.tag, TextColor3 = Color3.fromRGB(140, 140, 140),
+			TextSize = 11, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, Parent = head
+		}), "Secondary")
+		Lib.RegisterThemeText(Lib.Create("TextLabel", {
+			Size = UDim2.fromOffset(0, 20), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 2),
+			BackgroundColor3 = Color3.fromRGB(128, 128, 128), BackgroundTransparency = 0.8, Text = "LUA", TextColor3 = Color3.fromRGB(245, 245, 245),
+			TextSize = 10, Font = Enum.Font.GothamBold, Parent = head,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, 5) }),
+			Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) })
+		}), "Primary")
+
+		Lib.RegisterThemeText(Lib.Create("TextLabel", {
+			Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, LayoutOrder = 2, BackgroundTransparency = 1, Text = project.description,
+			TextColor3 = Color3.fromRGB(145, 145, 145), TextSize = 13, Font = Enum.Font.GothamMedium, TextWrapped = true,
+			TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, Parent = card
+		}), "Secondary")
+
+		local row = Lib.Create("Frame", {
+			Size = UDim2.new(1, 0, 0, 32), BackgroundTransparency = 1, LayoutOrder = 3, Parent = card,
+			Lib.Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder })
+		})
+		local try = Button(row, "Try it", 1, 0.86)
+		local github = Button(row, "GitHub", 2, 0.94)
+
+		local running, locked = false, false
+		try.MouseButton1Click:Connect(function()
+			if running then return end
+			running = true
+			Lib.PlayClick()
+			try.Text = "Loading..."
+			task.spawn(function()
+				local ok, err = pcall(function() loadstring(game:HttpGet(project.source))() end)
+				if not ok then Lib.Notify({ Title = project.name, Text = "Failed to launch: " .. tostring(err):sub(1, 80) }) end
+				if try.Parent then try.Text = ok and "Launched \u{2713}" or "Try it" end
+				if ok then
+					task.wait(1.6)
+					if try.Parent then try.Text = "Try it" end
+				end
+				running = false
+			end)
+		end)
+
+		github.MouseButton1Click:Connect(function()
+			if locked then return end
+			locked = true
+			Lib.PlayClick()
+			task.spawn(function()
+				local opened, copied = Lib.OpenLink(project.repo)
+				Lib.Notify({ Title = "GitHub", Text = (opened or copied) and "Check your browser or clipboard." or ("Clipboard is unavailable: " .. project.repo) })
+				task.wait(1)
+				locked = false
+			end)
+		end)
+	end
+end
+
+function Lib.BuildExecutorTest(view)
 	local scroll = Lib.Create("ScrollingFrame", {
 		Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 2,
 		ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(),
@@ -7318,13 +9181,13 @@ function Lib.BuildInfo(view)
 	}), "Primary")
 
 	Lib.RegisterThemeText(Lib.Create("TextLabel", {
-		Size = UDim2.new(1, -220, 0, 20), Position = UDim2.fromOffset(68, 12), BackgroundTransparency = 1, Text = "Executor Functions",
+		Size = UDim2.new(1, -220, 0, 20), Position = UDim2.fromOffset(68, 12), BackgroundTransparency = 1, Text = "Executor Test",
 		TextColor3 = Color3.fromRGB(255, 255, 255), TextSize = 15, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = header
 	}), "Primary")
 
 	Lib.RegisterThemeText(Lib.Create("TextLabel", {
 		Size = UDim2.new(1, -220, 0, 28), Position = UDim2.fromOffset(68, 33), BackgroundTransparency = 1,
-		Text = "Every UNC / sUNC function used by this hub. Run the test to check your executor.",
+		Text = "Full executor test: behaviour checks, anti-fake probes and Septus Hub compatibility.",
 		TextColor3 = Color3.fromRGB(140, 140, 140), TextSize = 11, Font = Enum.Font.GothamMedium, TextWrapped = true,
 		TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, Parent = header
 	}), "Secondary")
@@ -7353,6 +9216,48 @@ function Lib.BuildInfo(view)
 		bad = { "Missing", Color3.fromRGB(235, 87, 87) },
 		optional = { "Optional", Color3.fromRGB(230, 162, 60) }
 	}
+
+	local summary = Lib.Create("Frame", {
+		Size = UDim2.new(1, 0, 0, 62), BackgroundColor3 = Color3.fromRGB(15, 15, 15), LayoutOrder = Next(), Visible = false, Parent = scroll,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 12) }),
+		Lib.Create("UIStroke", { Color = Color3.fromRGB(128, 128, 128), Transparency = 0.88, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
+	})
+	Lib.RegisterThemeElement(summary, "BackgroundColor3", 0.5)
+	Lib.HoverStroke(summary)
+
+	local summaryTitle = Lib.Create("TextLabel", {
+		Size = UDim2.new(1, -160, 0, 20), Position = UDim2.fromOffset(16, 12), BackgroundTransparency = 1, Text = "", TextColor3 = Color3.fromRGB(245, 245, 245),
+		TextSize = 14, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = summary
+	})
+	Lib.RegisterThemeText(summaryTitle, "Primary")
+	local summaryDetail = Lib.Create("TextLabel", {
+		Size = UDim2.new(1, -160, 0, 14), Position = UDim2.fromOffset(16, 34), BackgroundTransparency = 1, Text = "", TextColor3 = Color3.fromRGB(140, 140, 140),
+		TextSize = 11, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, Parent = summary
+	})
+	Lib.RegisterThemeText(summaryDetail, "Secondary")
+
+	local open = Lib.Create("TextButton", {
+		Size = UDim2.fromOffset(0, 32), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0),
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 0.92, Text = "View Results", TextColor3 = Color3.fromRGB(235, 235, 235),
+		TextSize = 12, Font = Enum.Font.GothamMedium, AutoButtonColor = false, Parent = summary,
+		Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) }),
+		Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 16) })
+	})
+	Lib.RegisterThemeText(open, "Primary")
+	open.MouseEnter:Connect(function() Lib.Tween(open, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundTransparency = 0.82 }) end)
+	open.MouseLeave:Connect(function() Lib.Tween(open, 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, { BackgroundTransparency = 0.92 }) end)
+	open.MouseButton1Click:Connect(function()
+		if Lib.ExecReport then
+			Lib.PlayClick()
+			Lib.ShowExecutorResults(Lib.ExecReport)
+		end
+	end)
+
+	local heading = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 24), BackgroundTransparency = 1, LayoutOrder = Next(), Parent = scroll })
+	Lib.RegisterThemeText(Lib.Create("TextLabel", {
+		Size = UDim2.new(1, -4, 1, 0), Position = UDim2.fromOffset(2, 0), BackgroundTransparency = 1, Text = "Functions used by Septus Hub", TextColor3 = Color3.fromRGB(140, 140, 140),
+		TextSize = 12, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, Parent = heading
+	}), "Secondary")
 
 	for _, group in ipairs(Lib.CompatCatalog) do
 		local groupRow = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 24), BackgroundTransparency = 1, LayoutOrder = Next(), Parent = scroll })
@@ -7403,29 +9308,22 @@ function Lib.BuildInfo(view)
 		end
 	end
 
-	local busy = false
+	function Lib.ExecApply(report)
+		for entry, chip in pairs(chips) do
+			local status = STATUS[entry.status]
+			if status then
+				chip.Text, chip.TextColor3 = status[1], status[2]
+				chip.BackgroundColor3, chip.BackgroundTransparency = status[2], 0.82
+			end
+		end
+		summaryTitle.Text = string.format("%s  \u{00B7}  %d%% passed", report.executor, Lib.ExecRate(report.passed, report.failed) or 0)
+		summaryDetail.Text = string.format("Passed %d  \u{00B7}  Failed %d  \u{00B7}  Skipped %d", report.passed, report.failed, report.skipped)
+		summary.Visible = true
+	end
+
 	run.MouseButton1Click:Connect(function()
-		if busy then return end
-		busy = true
 		Lib.PlayClick()
-		run.Text = "Testing..."
-		task.spawn(function()
-			local ok, report = pcall(Lib.RunCompat)
-			busy = false
-			run.Text = "Run Test"
-			if not ok then
-				Lib.Notify({ Title = "Compatibility", Text = "Test failed: " .. tostring(report):sub(1, 80) })
-				return
-			end
-			for entry, chip in pairs(chips) do
-				local status = STATUS[entry.status]
-				if status then
-					chip.Text, chip.TextColor3 = status[1], status[2]
-					chip.BackgroundColor3, chip.BackgroundTransparency = status[2], 0.82
-				end
-			end
-			Lib.ShowCompat(report)
-		end)
+		Lib.StartExecutorTest(function(label) run.Text = label or "Run Test" end)
 	end)
 end
 
@@ -7554,13 +9452,19 @@ do
 	local View_Overview = MakeTab("Overview", 50)
 	local View_Account = MakeTab("Account", 90)
 	local View_Achievements = MakeTab("Achievements", 130)
-	Lib.BuildDevelopers(MakeTab("Developers", 170))
-	Lib.BuildUpdateLog(MakeTab("Update Log", 210))
-	Lib.BuildInfo(MakeTab("Info", 250))
+	Lib.BuildProjects(MakeTab("Projects", 170))
+	Lib.BuildDevelopers(MakeTab("Developers", 210))
+	Lib.BuildUpdateLog(MakeTab("Update Log", 250))
+	Lib.BuildExecutorTest(MakeTab("Executor Test", 290))
 	Lib.BuildDiscordButton(SideBar)
 	UI.HomeSearch = { SideBar, HomeTabs, HomeViews }
 
-	Lib.Create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 14), Parent = View_Overview })
+	View_Overview = Lib.Create("ScrollingFrame", {
+		Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 2,
+		ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = View_Overview,
+		Lib.Create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 14) }),
+		Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 12), PaddingBottom = UDim.new(0, 14) })
+	})
 
 	Lib.GraphKit = {}
 	do
@@ -7762,15 +9666,15 @@ do
 		end)
 	end
 
-	local StatsArea = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 160), BackgroundTransparency = 1, LayoutOrder = 1, Parent = View_Overview, Lib.Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 12) }) })
+	local StatsArea = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 160), BackgroundTransparency = 1, LayoutOrder = 2, Parent = View_Overview, Lib.Create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 12) }) })
 	Lib.BuildGraphCard(StatsArea, "FPS", 1, "FPS", 60)
 	Lib.BuildGraphCard(StatsArea, "Ping", 2, "Ping", 120)
 	Lib.BuildGraphCard(StatsArea, "Players", 3, "Players", 8)
-	View_Overview:GetPropertyChangedSignal("Visible"):Connect(function()
-		if View_Overview.Visible then Lib.GraphIntro() end
+	View_Overview.Parent:GetPropertyChangedSignal("Visible"):Connect(function()
+		if View_Overview.Parent.Visible then Lib.GraphIntro() end
 	end)
 
-	local InfoArea = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 130), BackgroundTransparency = 1, LayoutOrder = 2, Parent = View_Overview, Lib.Create("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }) })
+	local InfoArea = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 130), BackgroundTransparency = 1, LayoutOrder = 3, Parent = View_Overview, Lib.Create("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }) })
 	local function MakeCopyCard(title, val, layout)
 		local card = Lib.Create("Frame", {
 			Size = UDim2.new(1, 0, 0, 60), BackgroundColor3 = Color3.fromRGB(15, 15, 15), LayoutOrder = layout, Parent = InfoArea,
@@ -7812,6 +9716,7 @@ do
 	end
 	MakeCopyCard("Server ID", game.JobId ~= "" and game.JobId or "Singleplayer / Studio", 1)
 	MakeCopyCard("Place ID", tostring(game.PlaceId), 2)
+	Lib.BuildWhatsNew(View_Overview, 1)
 
 	local AccountScroll = Lib.Create("ScrollingFrame", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, ScrollBarThickness = 2, ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), BorderSizePixel = 0, Parent = View_Account })
 	local AccountLayout = Lib.Create("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder, Parent = AccountScroll })
@@ -26546,11 +28451,23 @@ function Lib.OpenUIStudio()
 		return
 	end
 
-	local Http = Services.HttpService
+	local Http, Anim = Services.HttpService, Services.Tween
+	local Quad, Quint, Back, Sine = Enum.EasingStyle.Quad, Enum.EasingStyle.Quint, Enum.EasingStyle.Back, Enum.EasingStyle.Sine
+	local Out, InOut = Enum.EasingDirection.Out, Enum.EasingDirection.InOut
+	local FAST = TweenInfo.new(0.16, Quad, Out)
+	local SMOOTH_FAST = TweenInfo.new(0.24, Quint, Out)
+	local SMOOTH = TweenInfo.new(0.34, Quint, Out)
+	local SMOOTH_SLOW = TweenInfo.new(0.45, Quint, Out)
+	local BACK = TweenInfo.new(0.36, Back, Out)
 	local FILE = "SeptusHub_UIStudio.json"
 	local KEYS = { "Background", "Surface", "Text", "Accent", "Item", "Muted", "SwitchOff" }
 	local KEY_NAMES = { Background = "Background", Surface = "Surface", Text = "Text", Accent = "Accent", Item = "Item", Muted = "Secondary Text", SwitchOff = "Switch Off" }
 	local SCALARS = { "FontIndex", "FontId", "CornerRadius", "WindowTransparency", "PanelTransparency", "HideLogo", "HideName", "CustomBg", "BgOpacity", "BgZoom", "BgSaturation", "Width", "Height", "Nav" }
+	local KEEP = { "FontIndex", "FontId", "HideLogo", "HideName", "CustomBg", "BgOpacity", "BgZoom", "BgSaturation", "Width", "Height", "Nav" }
+	local THEME_NAMES = { "Dark", "Crimson", "Blue", "Purple", "Red", "Green", "Yellow", "Cyan", "Pink", "Slate", "Plum", "Light" }
+	local PAGES = { "Gallery", "Style", "Window", "Background", "Effects", "Presets" }
+	local PANEL_W, HEAD_H, BAR_H = 360, 118, 34
+	local PAGE_Y = HEAD_H + BAR_H + 8
 	local FX_BOOLS = { "Gradient", "Spin", "Snow", "Twinkle", "Shooting", "Particles" }
 	local FX_NUMS = { "Angle", "Strength", "Intensity" }
 	local FONTS = {
@@ -26575,6 +28492,23 @@ function Lib.OpenUIStudio()
 	local D, P, cur, presets, win, host, canvas = {}, nil, nil, {}, nil, nil, nil
 	local refreshers, strokes, fills, queued = {}, {}, {}, {}
 	local studio = {}
+	local zoomLabel, hostPop, SetDirty, Bump, dirty
+	local primaries, currentPage = {}, PAGES[1]
+	local PAGE_INDEX, weights, starts = {}, {}, {}
+	local total = 0
+	for i, name in ipairs(PAGES) do
+		PAGE_INDEX[name] = i
+		weights[i] = math.max(#name, 6) + 3
+		total = total + weights[i]
+	end
+	local offset = 0
+	for i = 1, #PAGES do
+		starts[i] = offset / total
+		offset = offset + weights[i]
+	end
+	local function Frac(i)
+		return weights[i] / total
+	end
 
 	local function Round(radius)
 		return Lib.Create("UICorner", { CornerRadius = UDim.new(0, radius) })
@@ -26877,6 +28811,7 @@ function Lib.OpenUIStudio()
 
 	local function Paint(kind)
 		if not P then return end
+		if SetDirty then SetDirty(true) end
 		if kind == "theme" then
 			PaintTheme()
 		elseif kind == "window" then
@@ -26913,6 +28848,7 @@ function Lib.OpenUIStudio()
 		local scale = math.clamp(math.min((area.X - 32) / w, (area.Y - 32) / h), 0.2, 1)
 		P.scale.Scale = scale
 		host.Size = UDim2.fromOffset(w * scale, h * scale)
+		if zoomLabel then zoomLabel.Text = math.floor(scale * 100 + 0.5) .. "%" end
 	end
 
 	function studio.Fit()
@@ -27102,13 +29038,87 @@ function Lib.OpenUIStudio()
 		copy.Parent = host
 	end
 
-	local function RefreshAll()
-		for _, fn in ipairs(refreshers) do fn() end
+	local function Press(button, amount)
+		local scale = Lib.Create("UIScale", { Parent = button })
+		local down = TweenInfo.new(0.1, Quad, Out)
+		button.MouseButton1Down:Connect(function()
+			Anim:Create(scale, down, { Scale = amount or 0.95 }):Play()
+		end)
+		local function Release()
+			Anim:Create(scale, BACK, { Scale = 1 }):Play()
+		end
+		button.MouseButton1Up:Connect(Release)
+		button.MouseLeave:Connect(Release)
+		return scale
 	end
 
-	local W = math.clamp(math.floor(UI.Screen.AbsoluteSize.X / (Lib.MenuBaseScale or 1)) - 40, 700, 980)
-	local H = math.clamp(math.floor(UI.Screen.AbsoluteSize.Y / (Lib.MenuBaseScale or 1)) - 40, 460, 620)
-	local PANEL_W = 300
+	local function Caption(parent, text, x, y, w, h, size, bold, role, align)
+		local label = Lib.Create("TextLabel", {
+			Size = UDim2.new(0, w, 0, h), Position = UDim2.fromOffset(x, y), BackgroundTransparency = 1, Text = text,
+			TextColor3 = Lib.Palette[role], TextSize = size, Font = bold and Enum.Font.GothamBold or Enum.Font.GothamMedium,
+			TextXAlignment = align or Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = parent
+		})
+		Lib.RegisterThemeText(label, role)
+		return label
+	end
+
+	local function Button(parent, text, x, y, w, h, primary, size)
+		local button = Lib.Create("TextButton", {
+			Size = UDim2.fromOffset(w, h), Position = UDim2.fromOffset(x, y),
+			BackgroundColor3 = primary and Lib.Palette.Primary or Lib.Theme.Item, Text = text,
+			TextColor3 = primary and Lib.Theme.Main or Lib.Palette.Primary, TextSize = size or 12, Font = Enum.Font.GothamBold,
+			AutoButtonColor = false, ZIndex = 3, Parent = parent, Round(8)
+		})
+		if primary then
+			primaries[#primaries + 1] = button
+		else
+			Lib.RegisterThemeElement(button, "BackgroundColor3", 0.7)
+			Lib.RegisterThemeText(button, "Primary")
+		end
+		Press(button)
+		button.MouseEnter:Connect(function()
+			local base = primary and Lib.Palette.Primary or Lib.Theme.Item
+			Anim:Create(button, FAST, { BackgroundColor3 = primary and base:Lerp(Lib.Theme.Main, 0.15) or Lib.Lighten(base, 0.07) }):Play()
+		end)
+		button.MouseLeave:Connect(function()
+			Anim:Create(button, FAST, { BackgroundColor3 = primary and Lib.Palette.Primary or Lib.Theme.Item }):Play()
+		end)
+		return button
+	end
+
+	local function Field(parent, x, y, w, h, placeholder, text)
+		local stroke = Lib.Create("UIStroke", { Color = Lib.Palette.Primary, Thickness = 1, Transparency = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
+		strokes[#strokes + 1] = stroke
+		local box = Lib.Create("TextBox", {
+			Size = UDim2.fromOffset(w, h), Position = UDim2.fromOffset(x, y), BackgroundColor3 = Lib.Theme.Item, Text = text or "",
+			PlaceholderText = placeholder, PlaceholderColor3 = Lib.Palette.Secondary, TextColor3 = Lib.Palette.Primary, TextSize = 12,
+			Font = Enum.Font.GothamMedium, ClearTextOnFocus = false, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd,
+			ZIndex = 3, Parent = parent, Round(8), stroke, Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
+		})
+		Lib.RegisterThemeElement(box, "BackgroundColor3", 0.7)
+		Lib.RegisterThemeText(box, "Primary")
+		box.Focused:Connect(function()
+			Anim:Create(stroke, FAST, { Transparency = 0.45 }):Play()
+		end)
+		box.FocusLost:Connect(function()
+			Anim:Create(stroke, FAST, { Transparency = 1 }):Play()
+		end)
+		return box
+	end
+
+	local function Divider(parent)
+		Lib.Create("Frame", {
+			Size = UDim2.new(1, -28, 0, 1), Position = UDim2.new(0, 14, 1, -1), BackgroundColor3 = Lib.Palette.Primary,
+			BackgroundTransparency = 0.92, BorderSizePixel = 0, Parent = parent
+		})
+	end
+
+	local function RefreshAll(animate)
+		for _, fn in ipairs(refreshers) do fn(animate) end
+	end
+
+	local W = math.clamp(math.floor(UI.Screen.AbsoluteSize.X / (Lib.MenuBaseScale or 1)) - 40, 720, 1000)
+	local H = math.clamp(math.floor(UI.Screen.AbsoluteSize.Y / (Lib.MenuBaseScale or 1)) - 40, 480, 640)
 
 	FromLive()
 	LoadPresets()
@@ -27132,26 +29142,34 @@ function Lib.OpenUIStudio()
 	canvas = Lib.Create("Frame", {
 		Size = UDim2.new(1, -PANEL_W, 1, 0), Position = UDim2.fromOffset(PANEL_W, 0), BackgroundColor3 = Color3.new(1, 1, 1),
 		BorderSizePixel = 0, ClipsDescendants = true, Parent = body,
-		Lib.Create("UIGradient", { Rotation = 35, Color = ColorSequence.new(Color3.fromRGB(78, 84, 112), Color3.fromRGB(22, 23, 32)) })
+		Lib.Create("UIGradient", { Rotation = 35, Color = ColorSequence.new(Color3.fromRGB(70, 76, 104), Color3.fromRGB(18, 19, 28)) })
 	})
-	for _, blob in ipairs({
-		{ 0.12, 0.2, 260, Color3.fromRGB(90, 120, 255) },
-		{ 0.9, 0.85, 320, Color3.fromRGB(255, 90, 150) },
-		{ 0.7, 0.1, 180, Color3.fromRGB(70, 220, 190) }
+	for index, blob in ipairs({
+		{ 0.12, 0.2, 260, Color3.fromRGB(90, 120, 255), 0.08, 0.1 },
+		{ 0.9, 0.85, 320, Color3.fromRGB(255, 90, 150), -0.1, -0.08 },
+		{ 0.7, 0.1, 180, Color3.fromRGB(70, 220, 190), -0.12, 0.12 }
 	}) do
-		Lib.Create("Frame", {
+		local frame = Lib.Create("Frame", {
 			Size = UDim2.fromOffset(blob[3], blob[3]), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(blob[1], blob[2]),
-			BackgroundColor3 = blob[4], BackgroundTransparency = 0.5, BorderSizePixel = 0, Parent = canvas, Round(blob[3])
+			BackgroundColor3 = blob[4], BackgroundTransparency = 0.55, BorderSizePixel = 0, Parent = canvas, Round(blob[3])
 		})
+		Anim:Create(frame, TweenInfo.new(8 + index * 3, Sine, InOut, -1, true), { Position = UDim2.fromScale(blob[1] + blob[5], blob[2] + blob[6]) }):Play()
 	end
 	host = Lib.Create("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundTransparency = 1, Parent = canvas
 	})
+	hostPop = Lib.Create("UIScale", { Parent = host })
+
 	Lib.Create("TextLabel", {
-		Size = UDim2.new(1, -24, 0, 16), Position = UDim2.new(0, 12, 1, -22), BackgroundTransparency = 1,
+		Size = UDim2.new(1, -110, 0, 16), Position = UDim2.new(0, 14, 1, -24), BackgroundTransparency = 1,
 		Text = "A live copy of your interface. Nothing changes in the real UI until you press Apply.",
 		TextColor3 = Color3.fromRGB(190, 195, 210), TextSize = 11, Font = Enum.Font.GothamMedium,
-		TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 5, Parent = canvas
+		TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 5, Parent = canvas
+	})
+	zoomLabel = Lib.Create("TextLabel", {
+		Size = UDim2.fromOffset(46, 20), AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -12, 1, -10), BackgroundColor3 = Color3.new(0, 0, 0),
+		BackgroundTransparency = 0.55, Text = "100%", TextColor3 = Color3.fromRGB(225, 228, 238), TextSize = 11, Font = Enum.Font.GothamBold,
+		ZIndex = 5, Parent = canvas, Round(10)
 	})
 	canvas:GetPropertyChangedSignal("AbsoluteSize"):Connect(Fit)
 
@@ -27159,83 +29177,189 @@ function Lib.OpenUIStudio()
 		Size = UDim2.new(0, PANEL_W, 1, 0), BackgroundColor3 = Lib.Theme.Card, BorderSizePixel = 0, ZIndex = 2, Parent = body
 	})
 	Lib.RegisterThemeElement(panel, "BackgroundColor3", 1)
-
-	local function Button(parent, text, x, y, w, h, primary)
-		local button = Lib.Create("TextButton", {
-			Size = UDim2.fromOffset(w, h), Position = UDim2.fromOffset(x, y), BackgroundColor3 = primary and Color3.new(1, 1, 1) or Lib.Theme.Item,
-			Text = text, TextColor3 = primary and Color3.new(0, 0, 0) or Lib.Palette.Primary, TextSize = 12, Font = Enum.Font.GothamBold,
-			AutoButtonColor = false, ZIndex = 3, Parent = parent, Round(7)
-		})
-		if not primary then
-			Lib.RegisterThemeElement(button, "BackgroundColor3", 0.7)
-			Lib.RegisterThemeText(button, "Primary")
-		end
-		return button
-	end
-
-	local top = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 104), BackgroundTransparency = 1, ZIndex = 3, Parent = panel })
-	local applyBtn = Button(top, "Apply to UI", 12, 12, 170, 34, true)
-	local resetBtn = Button(top, "Reset", 190, 12, 98, 34, false)
-	local nameBox = Lib.Create("TextBox", {
-		Size = UDim2.fromOffset(190, 34), Position = UDim2.fromOffset(12, 54), BackgroundColor3 = Lib.Theme.Item, Text = "",
-		PlaceholderText = "Preset name...", PlaceholderColor3 = Lib.Palette.Secondary, TextColor3 = Lib.Palette.Primary, TextSize = 12,
-		Font = Enum.Font.GothamMedium, ClearTextOnFocus = false, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 3, Parent = top,
-		Round(7), Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
+	Lib.Create("Frame", {
+		Size = UDim2.new(0, 1, 1, 0), Position = UDim2.new(1, -1, 0, 0), BackgroundColor3 = Lib.Palette.Primary,
+		BackgroundTransparency = 0.92, BorderSizePixel = 0, ZIndex = 4, Parent = panel
 	})
-	Lib.RegisterThemeElement(nameBox, "BackgroundColor3", 0.7)
-	Lib.RegisterThemeText(nameBox, "Primary")
-	local saveBtn = Button(top, "Save", 210, 54, 78, 34, false)
 
-	local scroll = Lib.Create("ScrollingFrame", {
-		Size = UDim2.new(1, 0, 1, -104), Position = UDim2.fromOffset(0, 104), BackgroundTransparency = 1, ScrollBarThickness = 2,
-		ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), BorderSizePixel = 0, ZIndex = 3, Parent = panel
+	local toggle = Lib.Create("TextButton", {
+		Size = UDim2.fromOffset(28, 28), Position = UDim2.fromOffset(12, 12), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.45,
+		Text = "\u{2039}", TextColor3 = Color3.fromRGB(235, 238, 248), TextSize = 20, Font = Enum.Font.GothamBold, AutoButtonColor = false,
+		ZIndex = 6, Parent = canvas, Round(14)
 	})
-	local layout = Lib.Create("UIListLayout", { Padding = UDim.new(0, 14), SortOrder = Enum.SortOrder.LayoutOrder, Parent = scroll })
-	Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 14), Parent = scroll })
-	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-		scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
+	Press(toggle, 0.9)
+	local panelOpen = true
+	toggle.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		panelOpen = not panelOpen
+		Anim:Create(panel, SMOOTH_SLOW, { Position = UDim2.fromOffset(panelOpen and 0 or -PANEL_W, 0) }):Play()
+		Anim:Create(canvas, SMOOTH_SLOW, {
+			Position = UDim2.fromOffset(panelOpen and PANEL_W or 0, 0), Size = UDim2.new(1, panelOpen and -PANEL_W or 0, 1, 0)
+		}):Play()
+		toggle.Text = panelOpen and "\u{2039}" or "\u{203A}"
 	end)
 
-	local order = 0
-	local function Group(title)
-		order = order + 1
-		return Lib.CreateFeatureGroup(scroll, title, order)
+	local top = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, HEAD_H), BackgroundTransparency = 1, ZIndex = 3, Parent = panel })
+	local nameBox = Field(top, 12, 12, 250, 34, "Preset name...")
+	local saveBtn = Button(top, "Save", 270, 12, 78, 34, false)
+	local applyBtn = Button(top, "Apply to UI", 12, 54, 222, 34, true)
+	local resetBtn = Button(top, "Reset", 242, 54, 106, 34, false)
+	local statusDot = Lib.Create("Frame", {
+		Size = UDim2.fromOffset(8, 8), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(18, 103),
+		BackgroundColor3 = Lib.Palette.Secondary, BorderSizePixel = 0, ZIndex = 3, Parent = top, Round(6)
+	})
+	local statusText = Caption(top, "Matches the current UI", 30, 95, 300, 16, 11, false, "Secondary")
+
+	SetDirty = function(value)
+		if dirty == value then return end
+		dirty = value
+		statusText.Text = value and "Changes not applied" or "Matches the current UI"
+		statusDot.Size = UDim2.fromOffset(14, 14)
+		Anim:Create(statusDot, BACK, { Size = UDim2.fromOffset(8, 8) }):Play()
+		Anim:Create(statusDot, FAST, { BackgroundColor3 = value and Lib.Palette.SwitchOn or Lib.Palette.Secondary }):Play()
 	end
 
-	local function Caption(parent, text, x, y, w, h, size, bold, role, align)
-		local label = Lib.Create("TextLabel", {
-			Size = UDim2.new(0, w, 0, h), Position = UDim2.fromOffset(x, y), BackgroundTransparency = 1, Text = text,
-			TextColor3 = Lib.Palette[role], TextSize = size, Font = bold and Enum.Font.GothamBold or Enum.Font.GothamMedium,
-			TextXAlignment = align or Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = parent
-		})
-		Lib.RegisterThemeText(label, role)
-		return label
+	Bump = function()
+		hostPop.Scale = 0.965
+		Anim:Create(hostPop, BACK, { Scale = 1 }):Play()
 	end
 
-	local function Divider(parent)
-		Lib.Create("Frame", {
-			Size = UDim2.new(1, -28, 0, 1), Position = UDim2.new(0, 14, 1, -1), BackgroundColor3 = Color3.new(1, 1, 1),
-			BackgroundTransparency = 0.9, BorderSizePixel = 0, Parent = parent
+	local bar = Lib.Create("Frame", {
+		Size = UDim2.new(1, -24, 0, BAR_H), Position = UDim2.fromOffset(12, HEAD_H), BackgroundColor3 = Lib.Theme.Card, ZIndex = 3, Parent = panel, Round(9)
+	})
+	Lib.RegisterThemeElement(bar, "BackgroundColor3", 0.5)
+	local track = Lib.Create("Frame", { Size = UDim2.new(1, -6, 1, -6), Position = UDim2.fromOffset(3, 3), BackgroundTransparency = 1, ZIndex = 3, Parent = bar })
+	local function ThumbColor()
+		return State.LightTheme and Lib.Theme.Item or Lib.Lighten(Lib.Theme.Item, 0.08)
+	end
+	local thumb = Lib.Create("Frame", {
+		Size = UDim2.fromScale(Frac(1), 1), BackgroundColor3 = ThumbColor(), BorderSizePixel = 0, ZIndex = 3, Parent = track, Round(7)
+	})
+	Lib.MarkPanel(thumb)
+
+	local pages, scrolls, tabButtons, running, orders = {}, {}, {}, {}, {}
+	local REST = UDim2.fromOffset(0, PAGE_Y)
+	local SHOW = TweenInfo.new(0.36, Quint, Out, 0, false, 0.05)
+	local HIDE = TweenInfo.new(0.14, Quad, Enum.EasingDirection.In)
+
+	local function Play(page, info, goal)
+		local old = running[page]
+		if old then old:Cancel() end
+		local tween = Anim:Create(page, info, goal)
+		running[page] = tween
+		tween:Play()
+		return tween
+	end
+
+	local function SwitchPage(name)
+		if name == currentPage then return end
+		local direction = PAGE_INDEX[name] >= PAGE_INDEX[currentPage] and 1 or -1
+		currentPage = name
+		Anim:Create(thumb, SMOOTH, { Position = UDim2.fromScale(starts[PAGE_INDEX[name]], 0), Size = UDim2.fromScale(Frac(PAGE_INDEX[name]), 1) }):Play()
+		for key, page in pairs(pages) do
+			local selected = key == name
+			local button = tabButtons[key]
+			UI.TextThemeElements[button] = selected and "Primary" or "Secondary"
+			Anim:Create(button, FAST, { TextColor3 = selected and Lib.Palette.Primary or Lib.Palette.Secondary }):Play()
+			if selected then
+				local fresh = not page.Visible or page.GroupTransparency > 0.98
+				if fresh then
+					page.Position = UDim2.fromOffset(0, PAGE_Y + 14 * direction)
+					page.GroupTransparency = 1
+				end
+				page.Visible = true
+				Play(page, SHOW, { Position = REST, GroupTransparency = 0 })
+				if fresh then Lib.Cascade(page) end
+			elseif page.Visible then
+				Play(page, HIDE, { Position = UDim2.fromOffset(0, PAGE_Y - 10 * direction), GroupTransparency = 1 }).Completed:Connect(function(state)
+					if state == Enum.PlaybackState.Completed and currentPage ~= key then page.Visible = false end
+				end)
+			end
+		end
+	end
+
+	for index, name in ipairs(PAGES) do
+		local selected = index == 1
+		local button = Lib.Create("TextButton", {
+			Size = UDim2.fromScale(Frac(index), 1), Position = UDim2.fromScale(starts[index], 0), BackgroundTransparency = 1, Text = name,
+			TextColor3 = selected and Lib.Palette.Primary or Lib.Palette.Secondary, TextSize = 11, TextScaled = true, Font = Enum.Font.GothamBold,
+			AutoButtonColor = false, ZIndex = 4, Parent = track,
+			Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 3), PaddingRight = UDim.new(0, 3), PaddingTop = UDim.new(0, 9), PaddingBottom = UDim.new(0, 9) }),
+			Lib.Create("UITextSizeConstraint", { MaxTextSize = 11, MinTextSize = 7 })
+		})
+		Lib.RegisterThemeText(button, selected and "Primary" or "Secondary")
+		tabButtons[name] = button
+		button.MouseEnter:Connect(function()
+			if currentPage ~= name then Anim:Create(button, FAST, { TextColor3 = Lib.Palette.Primary }):Play() end
+		end)
+		button.MouseLeave:Connect(function()
+			if currentPage ~= name then Anim:Create(button, FAST, { TextColor3 = Lib.Palette.Secondary }):Play() end
+		end)
+		button.MouseButton1Click:Connect(function()
+			if currentPage ~= name then Lib.PlayClick() end
+			SwitchPage(name)
+		end)
+
+		local page = Lib.Create("CanvasGroup", {
+			Name = name, Size = UDim2.new(1, 0, 1, -PAGE_Y), Position = REST, BackgroundTransparency = 1, BorderSizePixel = 0,
+			Visible = selected, GroupTransparency = selected and 0 or 1, ZIndex = 3, Parent = panel
+		})
+		pages[name] = page
+		scrolls[name] = Lib.Create("ScrollingFrame", {
+			Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 2,
+			ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100), ScrollingDirection = Enum.ScrollingDirection.Y,
+			CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = page,
+			Lib.Create("UIListLayout", { Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder }),
+			Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 14), PaddingBottom = UDim.new(0, 16) })
 		})
 	end
 
-	local function AddSlider(group, title, min, max, store, key, suffix, kind, last)
-		local row = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 54), BackgroundTransparency = 1, Parent = group })
-		Caption(row, title, 14, 6, 170, 20, 13, true, "Primary")
-		local value = Caption(row, "", 190, 6, 76, 20, 12, false, "Secondary", Enum.TextXAlignment.Right)
-		local track = Lib.Create("Frame", {
-			Size = UDim2.new(1, -28, 0, 6), Position = UDim2.fromOffset(14, 36), BackgroundColor3 = Lib.Theme.Item, BorderSizePixel = 0, Parent = row, Round(3)
+	local function Group(pageName, title)
+		orders[pageName] = (orders[pageName] or 0) + 1
+		local card = Lib.Create("Frame", {
+			Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = Lib.Theme.Card, LayoutOrder = orders[pageName],
+			Parent = scrolls[pageName], Round(10),
+			Lib.Create("UIStroke", { Color = Color3.fromRGB(128, 128, 128), Transparency = 0.88, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+			Lib.Create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder })
 		})
-		Lib.RegisterThemeElement(track, "BackgroundColor3", 0.7)
-		local fill = Lib.Create("Frame", { Size = UDim2.new(0, 0, 1, 0), BackgroundColor3 = Lib.Palette.SwitchOn, BorderSizePixel = 0, Parent = track, Round(3) })
+		Lib.RegisterThemeElement(card, "BackgroundColor3", 0.5)
+		Lib.HoverStroke(card)
+		local head = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1, Parent = card })
+		Caption(head, title, 14, 11, 290, 18, 13, true, "Primary")
+		return card
+	end
+
+	local function AddSlider(card, title, min, max, store, key, suffix, kind, last)
+		local row = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 56), BackgroundTransparency = 1, Parent = card })
+		Caption(row, title, 14, 6, 190, 18, 12, true, "Primary")
+		local value = Lib.Create("TextLabel", {
+			Size = UDim2.fromOffset(60, 20), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -14, 0, 5), BackgroundColor3 = Lib.Theme.Item,
+			Text = "", TextColor3 = Lib.Palette.Secondary, TextSize = 11, Font = Enum.Font.GothamBold, Parent = row, Round(6)
+		})
+		Lib.RegisterThemeElement(value, "BackgroundColor3", 0.7)
+		Lib.RegisterThemeText(value, "Secondary")
+		local trackBar = Lib.Create("Frame", {
+			Size = UDim2.new(1, -28, 0, 6), Position = UDim2.fromOffset(14, 38), BackgroundColor3 = Lib.Theme.Item, BorderSizePixel = 0, Parent = row, Round(3)
+		})
+		Lib.RegisterThemeElement(trackBar, "BackgroundColor3", 0.7)
+		local fill = Lib.Create("Frame", { Size = UDim2.new(0, 0, 1, 0), BackgroundColor3 = Lib.Palette.SwitchOn, BorderSizePixel = 0, Parent = trackBar, Round(3) })
 		fills[#fills + 1] = fill
 		local knob = Lib.Create("Frame", {
 			Size = UDim2.fromOffset(14, 14), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0, 0.5),
-			BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = 2, Parent = track, Round(7)
+			BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = 2, Parent = trackBar, Round(7),
+			Lib.Create("UIStroke", { Color = Color3.new(0, 0, 0), Transparency = 0.75, Thickness = 1 })
 		})
+		local grow = Lib.Create("UIScale", { Parent = knob })
+		local function Grow(to)
+			Anim:Create(grow, SMOOTH_FAST, { Scale = to }):Play()
+		end
 		local hit = Lib.Create("TextButton", {
-			Size = UDim2.new(1, 0, 0, 24), Position = UDim2.new(0, 0, 0.5, -12), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 3, Parent = track
+			Size = UDim2.new(1, 0, 0, 26), Position = UDim2.new(0, 0, 0.5, -13), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 3, Parent = trackBar
 		})
+		hit.MouseEnter:Connect(function() Grow(1.2) end)
+		hit.MouseLeave:Connect(function() Grow(1) end)
+		hit.MouseButton1Down:Connect(function() Grow(1.45) end)
+		hit.MouseButton1Up:Connect(function() Grow(1.2) end)
 		local function Show()
 			local v = store()[key]
 			local t = (v - min) / (max - min)
@@ -27244,7 +29368,7 @@ function Lib.OpenUIStudio()
 			value.Text = v .. (suffix or "")
 		end
 		Lib.BindDrag(hit, function(position)
-			local t = math.clamp((position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+			local t = math.clamp((position.X - trackBar.AbsolutePosition.X) / trackBar.AbsoluteSize.X, 0, 1)
 			local v = math.round(min + t * (max - min))
 			if v == store()[key] then return end
 			store()[key] = v
@@ -27256,10 +29380,10 @@ function Lib.OpenUIStudio()
 		Show()
 	end
 
-	local function AddToggle(group, title, desc, store, key, kind, last)
-		local row = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 50), BackgroundTransparency = 1, Parent = group })
-		Caption(row, title, 14, 7, 190, 20, 13, true, "Primary")
-		Caption(row, desc, 14, 26, 200, 16, 11, false, "Secondary")
+	local function AddToggle(card, title, desc, store, key, kind, last)
+		local row = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 52), BackgroundTransparency = 1, Parent = card })
+		Caption(row, title, 14, 8, 220, 18, 12, true, "Primary")
+		Caption(row, desc, 14, 27, 230, 16, 11, false, "Secondary")
 		local bg = Lib.Create("TextButton", {
 			Size = UDim2.fromOffset(40, 22), Position = UDim2.new(1, -54, 0.5, -11), Text = "", AutoButtonColor = false, Parent = row, Round(11)
 		})
@@ -27268,7 +29392,7 @@ function Lib.OpenUIStudio()
 		})
 		local function Show(animate)
 			local on = store()[key] == true
-			Lib.SetSwitch(bg, knob, on, on and Lib.Palette.SwitchOn or Lib.Palette.SwitchOff, animate)
+			Lib.SetSwitch(bg, knob, on, on and Lib.Palette.SwitchOn or Lib.Palette.SwitchOff, animate == true)
 		end
 		Lib.BindSwitchPress(bg, knob)
 		Lib.RegisterSwitch(bg, function() return store()[key] == true end, Show)
@@ -27278,28 +29402,33 @@ function Lib.OpenUIStudio()
 			Show(true)
 			Paint(kind)
 		end)
-		refreshers[#refreshers + 1] = function() Show(false) end
+		refreshers[#refreshers + 1] = Show
 		if not last then Divider(row) end
 		Show(false)
 	end
 
-	local function AddChips(group, entries, isSelected, pick, columns)
+	local function AddChips(card, entries, isSelected, pick, columns)
 		local rows = math.ceil(#entries / columns)
-		local holder = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, rows * 36 + 14), BackgroundTransparency = 1, Parent = group })
+		local holder = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, rows * 36 + 12), BackgroundTransparency = 1, Parent = card })
 		Lib.Create("UIGridLayout", {
 			CellSize = UDim2.new(1 / columns, -8, 0, 28), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder, Parent = holder
 		})
-		Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 6), Parent = holder })
+		Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 6), Parent = holder })
 		local chips = {}
-		local function Show()
+		local function Show(animate)
 			for i, chip in ipairs(chips) do
-				chip.Stroke.Transparency = isSelected(entries[i][2]) and 0 or 1
+				local on = isSelected(entries[i][2])
+				if animate then
+					Anim:Create(chip.Stroke, FAST, { Transparency = on and 0 or 1 }):Play()
+				else
+					chip.Stroke.Transparency = on and 0 or 1
+				end
 			end
 		end
 		for i, entry in ipairs(entries) do
 			local chip = Lib.Create("TextButton", {
 				BackgroundColor3 = Lib.Theme.Item, Text = entry[1], TextColor3 = Lib.Palette.Primary, TextSize = 11,
-				Font = entry[3] or Enum.Font.GothamMedium, AutoButtonColor = false, LayoutOrder = i, Parent = holder, Round(7)
+				Font = entry[3] or Enum.Font.GothamMedium, AutoButtonColor = false, LayoutOrder = i, Parent = holder, Round(8)
 			})
 			Lib.RegisterThemeElement(chip, "BackgroundColor3", 0.7)
 			Lib.RegisterThemeText(chip, "Primary")
@@ -27312,20 +29441,88 @@ function Lib.OpenUIStudio()
 			})
 			strokes[#strokes + 1] = stroke
 			chips[i] = { Stroke = stroke }
+			Press(chip, 0.94)
 			chip.MouseButton1Click:Connect(function()
 				Lib.PlayClick()
 				pick(entry[2])
-				RefreshAll()
+				RefreshAll(true)
 			end)
 		end
 		refreshers[#refreshers + 1] = Show
-		Show()
+		Show(false)
 	end
 
 	table.insert(Lib.ThemeHooks, function()
 		for _, stroke in ipairs(strokes) do stroke.Color = Lib.Palette.Primary end
 		for _, fill in ipairs(fills) do fill.BackgroundColor3 = Lib.Palette.SwitchOn end
+		for _, button in ipairs(primaries) do
+			button.BackgroundColor3, button.TextColor3 = Lib.Palette.Primary, Lib.Theme.Main
+		end
+		statusDot.BackgroundColor3 = dirty and Lib.Palette.SwitchOn or Lib.Palette.Secondary
+		Anim:Create(thumb, FAST, { BackgroundColor3 = ThumbColor() }):Play()
 	end)
+
+	local function Box(parent, x, y, w, h, color, radius, alpha)
+		return Lib.Create("Frame", {
+			Position = UDim2.fromScale(x, y), Size = UDim2.fromScale(w, h), BackgroundColor3 = color, BackgroundTransparency = alpha or 0,
+			BorderSizePixel = 0, Parent = parent, Lib.Create("UICorner", { CornerRadius = UDim.new(0, radius) })
+		})
+	end
+
+	local function LookColors(d)
+		if d.Colors then return d.Colors end
+		return ColorsOf(Lib.ResolveTheme(d.ThemeIndex) or Lib.ThemePresets[1])
+	end
+
+	local function GradientOf(fx)
+		if not fx.Gradient then return nil end
+		for _, entry in ipairs(GRADIENTS) do
+			if entry[1] == fx.Style then return entry[2], entry[3], entry[4] end
+		end
+		return fx.A, fx.A:Lerp(fx.B, 0.5), fx.B
+	end
+
+	local function Mini(parent, d)
+		local c = LookColors(d)
+		local root = Lib.Create("Frame", {
+			Size = UDim2.fromScale(1, 1), BackgroundColor3 = c.Background, BorderSizePixel = 0, ClipsDescendants = true, Parent = parent,
+			Lib.Create("UICorner", { CornerRadius = UDim.new(0, math.clamp(d.CornerRadius * 0.5, 2, 9)) })
+		})
+		local fx = d.Fx
+		local ga, gb, gc = GradientOf(fx)
+		if ga then
+			Lib.Create("Frame", {
+				Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1 - fx.Strength / 100, BorderSizePixel = 0, Parent = root,
+				Lib.Create("UIGradient", {
+					Rotation = fx.Angle, Transparency = NumberSequence.new(0, 0.45),
+					Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, ga), ColorSequenceKeypoint.new(0.5, gb), ColorSequenceKeypoint.new(1, gc) })
+				})
+			})
+		end
+		Box(root, 0.05, 0.09, 0.15, 0.07, c.Text, 2, 0.25)
+		for i = 1, 3 do
+			Box(root, 0.36 + (i - 1) * 0.15, 0.08, 0.12, 0.09, i == 1 and c.Accent or c.Item, 3, i == 1 and 0 or 0.1)
+		end
+		local side = Box(root, 0.05, 0.27, 0.24, 0.66, c.Surface, 3)
+		for i = 1, 3 do
+			Box(side, 0.14, 0.12 + (i - 1) * 0.2, 0.72, 0.1, i == 1 and c.Accent or c.Muted, 2, i == 1 and 0.1 or 0.45)
+		end
+		local upper = Box(root, 0.33, 0.27, 0.62, 0.31, c.Surface, 3)
+		Box(upper, 0.06, 0.2, 0.38, 0.16, c.Text, 2, 0.2)
+		Box(upper, 0.06, 0.55, 0.55, 0.14, c.Muted, 2, 0.5)
+		local switch = Box(upper, 0.76, 0.28, 0.18, 0.44, c.Accent, 5)
+		Box(switch, 0.5, 0.14, 0.42, 0.72, Color3.new(1, 1, 1), 5)
+		local lower = Box(root, 0.33, 0.64, 0.62, 0.29, c.Surface, 3)
+		Box(lower, 0.06, 0.16, 0.3, 0.16, c.Text, 2, 0.2)
+		local rail = Box(lower, 0.06, 0.6, 0.88, 0.16, c.Item, 3)
+		Box(rail, 0, 0, 0.62, 1, c.Accent, 3)
+		return root
+	end
+
+	local function Pop(frame)
+		local scale = Lib.Create("UIScale", { Scale = 0.9, Parent = frame })
+		Anim:Create(scale, BACK, { Scale = 1 }):Play()
+	end
 
 	local GALLERY = {
 		{ "Midnight", "0B0D14", "12151F", "F2F4FA", "5B8CFF", "1A1E2B", "8C93A8", "262B3B", 12, 0, 0, { "Midnight", 45, 40, false, false, true, false, false, 50 } },
@@ -27337,18 +29534,16 @@ function Lib.OpenUIStudio()
 		{ "Ember", "120A08", "1C100C", "FFF1EA", "FF6B3D", "2A1812", "B08A7C", "3A2219", 10, 0, 0, { "Sunset", 135, 45, false, false, false, false, true, 45 } },
 		{ "Forest", "08110A", "0F1B12", "EDF7EE", "56D364", "172A1B", "7FA086", "20362A", 12, 0, 0, { "Emerald", 30, 35, false, false, false, false, true, 40 } },
 		{ "Glass", "0E1118", "161B26", "F5F7FB", "7AA2FF", "202638", "98A2B8", "2A3247", 18, 35, 30, { "Aurora", 45, 45, false, false, true, false, false, 40 } },
-		{ "Blood Moon", "0C0506", "150A0C", "FFECEE", "E11D34", "220F13", "A87F84", "331820", 8, 0, 0, { "Rose", 20, 30, false, false, false, true, false, 50 } }
+		{ "Blood Moon", "0C0506", "150A0C", "FFECEE", "E11D34", "220F13", "A87F84", "331820", 8, 0, 0, { "Rose", 20, 30, false, false, false, true, false, 50 } },
+		{ "Lavender", "100E1C", "181428", "F1ECFF", "A78BFA", "221C38", "9C92BF", "2D2547", 16, 0, 0, { "Violet", 40, 35, false, false, true, false, true, 45 } },
+		{ "Graphite", "0F0F10", "17171A", "EDEDED", "9CA3AF", "202024", "8A8A92", "2B2B30", 8, 0, 0 },
+		{ "Mint Light", "EEF8F3", "FFFFFF", "16332A", "1FB58A", "DDF0E7", "5E8577", "C4E3D5", 14, 0, 0, { "Emerald", 35, 22, false, false, false, false, true, 40 } },
+		{ "Sunset Drive", "130A14", "1E1020", "FFEDE6", "FF7A45", "2B1730", "B58A9A", "3A2040", 12, 0, 0, { "Sunset", 120, 50, true, false, true, true, false, 55 } }
 	}
 
-	local galleryGroup = Group("Gallery")
-	local galleryHolder = Lib.Create("Frame", {
-		Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = galleryGroup,
-		Lib.Create("UIGridLayout", { CellSize = UDim2.new(0.5, -8, 0, 54), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
-		Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
-	})
-	for index, e in ipairs(GALLERY) do
+	local function GalleryData(e)
 		local fx = e[12] or {}
-		local data = {
+		return {
 			Name = e[1],
 			Colors = { Background = e[2], Surface = e[3], Text = e[4], Accent = e[5], Item = e[6], Muted = e[7], SwitchOff = e[8] },
 			CornerRadius = e[9], WindowTransparency = e[10], PanelTransparency = e[11],
@@ -27357,118 +29552,210 @@ function Lib.OpenUIStudio()
 				Snow = fx[5] == true, Twinkle = fx[6] == true, Shooting = fx[7] == true, Particles = fx[8] == true, Intensity = fx[9] or 50, A = "FFFFFF", B = "000000"
 			}
 		}
-		local background, surface, accent = Color3.fromHex(e[2]), Color3.fromHex(e[3]), Color3.fromHex(e[5])
-		local card = Lib.Create("TextButton", {
-			BackgroundColor3 = Color3.new(1, 1, 1), Text = "", AutoButtonColor = false, LayoutOrder = index, Parent = galleryHolder,
-			Round(8),
-			Lib.Create("UIGradient", {
-				Rotation = 20,
-				Color = ColorSequence.new({
-					ColorSequenceKeypoint.new(0, background), ColorSequenceKeypoint.new(0.5, background),
-					ColorSequenceKeypoint.new(0.501, surface), ColorSequenceKeypoint.new(0.78, surface),
-					ColorSequenceKeypoint.new(0.781, accent), ColorSequenceKeypoint.new(1, accent)
-				})
-			}),
-			Lib.Create("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1, Transparency = 0.85, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
+	end
+
+	local function Tags(e)
+		local fx = e[12]
+		if not fx then return "No effects" end
+		local out = { fx[1] }
+		if fx[5] then out[#out + 1] = "Snow" end
+		if fx[6] then out[#out + 1] = "Stars" end
+		if fx[7] then out[#out + 1] = "Meteors" end
+		if fx[8] then out[#out + 1] = "Dust" end
+		return table.concat(out, " | ")
+	end
+
+	local function ApplyLook(e)
+		local keep = D
+		D = Unpack(GalleryData(e))
+		for _, key in ipairs(KEEP) do D[key] = keep[key] end
+		D.Name = e[1]
+		nameBox.Text = e[1]
+		RefreshAll(true)
+		Paint("all")
+		Bump()
+	end
+
+	local galleryCard = Group("Gallery", "Gallery")
+	local gItem = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 212), BackgroundTransparency = 1, Parent = galleryCard })
+	Caption(gItem, "Swipe or use the arrows to try a look instantly", 14, 0, 308, 14, 11, false, "Secondary")
+	local viewport = Lib.Create("Frame", {
+		Size = UDim2.new(1, 0, 0, 124), Position = UDim2.fromOffset(0, 22), BackgroundTransparency = 1, ClipsDescendants = true, Parent = gItem
+	})
+	local infoName = Lib.Create("TextLabel", {
+		Size = UDim2.new(1, -28, 0, 18), Position = UDim2.fromOffset(14, 152), BackgroundTransparency = 1, Text = "", TextColor3 = Lib.Palette.Primary,
+		TextSize = 14, Font = Enum.Font.GothamBold, Parent = gItem
+	})
+	Lib.RegisterThemeText(infoName, "Primary")
+	local infoTags = Lib.Create("TextLabel", {
+		Size = UDim2.new(1, -28, 0, 14), Position = UDim2.fromOffset(14, 172), BackgroundTransparency = 1, Text = "", TextColor3 = Lib.Palette.Secondary,
+		TextSize = 11, Font = Enum.Font.GothamMedium, Parent = gItem
+	})
+	Lib.RegisterThemeText(infoTags, "Secondary")
+	local dotRow = Lib.Create("Frame", {
+		Size = UDim2.new(1, 0, 0, 6), Position = UDim2.fromOffset(0, 196), BackgroundTransparency = 1, Parent = gItem,
+		Lib.Create("UIListLayout", {
+			FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder
 		})
-		Lib.Create("TextLabel", {
-			Size = UDim2.new(1, -16, 0, 18), Position = UDim2.new(0, 10, 1, -24), BackgroundTransparency = 1, Text = e[1],
-			TextColor3 = Lib.Luma(background) > 0.6 and Color3.fromRGB(20, 20, 20) or Color3.new(1, 1, 1), TextSize = 12,
-			Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, Parent = card
+	})
+
+	local CARD_W, CARD_H, STEP = 164, 108, 126
+	local gCards, gDots, focus = {}, {}, 1
+	local Layout, PaintGallery, Focus
+
+	local function ShowInfo(animate)
+		local e = GALLERY[focus]
+		infoName.Text, infoTags.Text = e[1], Tags(e)
+		if animate then
+			infoName.TextTransparency, infoTags.TextTransparency = 1, 1
+			infoName.Position, infoTags.Position = UDim2.fromOffset(14, 158), UDim2.fromOffset(14, 178)
+			Anim:Create(infoName, SMOOTH_FAST, { TextTransparency = 0, Position = UDim2.fromOffset(14, 152) }):Play()
+			Anim:Create(infoTags, SMOOTH_FAST, { TextTransparency = 0, Position = UDim2.fromOffset(14, 172) }):Play()
+		end
+	end
+
+	for index, e in ipairs(GALLERY) do
+		local scale = Lib.Create("UIScale", { Scale = 1 })
+		local stroke = Lib.Create("UIStroke", {
+			Thickness = 1, Transparency = 0.85, Color = Lib.Palette.Secondary, ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 		})
-		card.MouseButton1Click:Connect(function()
-			Lib.PlayClick()
-			D = Unpack(data)
-			D.Name = e[1]
-			nameBox.Text = e[1]
-			RefreshAll()
-			Paint("all")
-			Paint("font")
+		local card = Lib.Create("CanvasGroup", {
+			AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(CARD_W, CARD_H), Position = UDim2.fromScale(0.5, 0.5),
+			BackgroundColor3 = Lib.Theme.Item, BorderSizePixel = 0, Parent = viewport, Round(10), stroke, scale
+		})
+		local screen = Lib.Create("Frame", {
+			Position = UDim2.fromOffset(6, 6), Size = UDim2.fromOffset(CARD_W - 12, CARD_H - 12), BackgroundTransparency = 1, Parent = card
+		})
+		Mini(screen, Unpack(GalleryData(e)))
+		local hit = Lib.Create("TextButton", {
+			Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 5, Parent = card
+		})
+		gCards[index] = { Card = card, Stroke = stroke, Scale = scale, Hit = hit }
+		hit.MouseEnter:Connect(function()
+			if index == focus then Anim:Create(scale, SMOOTH_FAST, { Scale = 1.04 }):Play() end
 		end)
+		hit.MouseLeave:Connect(function()
+			if index == focus then Anim:Create(scale, SMOOTH_FAST, { Scale = 1 }):Play() end
+		end)
+		hit.InputBegan:Connect(function(input)
+			local kind = input.UserInputType
+			if kind ~= Enum.UserInputType.MouseButton1 and kind ~= Enum.UserInputType.Touch then return end
+			local startX, connection = input.Position.X, nil
+			connection = input.Changed:Connect(function()
+				if input.UserInputState ~= Enum.UserInputState.End then return end
+				connection:Disconnect()
+				local delta = input.Position.X - startX
+				Lib.PlayClick()
+				if math.abs(delta) > 36 then
+					Focus(focus + (delta < 0 and 1 or -1), false, true)
+				else
+					Focus(index, false, true)
+				end
+			end)
+		end)
+		local dot = Lib.Create("TextButton", {
+			Size = UDim2.fromOffset(6, 6), Text = "", AutoButtonColor = false, LayoutOrder = index, BackgroundColor3 = Lib.Palette.Secondary,
+			BorderSizePixel = 0, Parent = dotRow, Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) })
+		})
+		dot.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			Focus(index, false, true)
+		end)
+		gDots[index] = dot
 	end
 
-	local presetGroup = Group("Saved UI Presets")
-	local presetList = Lib.Create("Frame", {
-		Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = presetGroup,
-		Lib.Create("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
-		Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 8) })
-	})
+	local function Arrow(side, text)
+		local right = side > 0
+		local button = Lib.Create("TextButton", {
+			Size = UDim2.fromOffset(26, 26), AnchorPoint = Vector2.new(right and 1 or 0, 0.5), Position = UDim2.new(right and 1 or 0, right and -8 or 8, 0.5, 0),
+			BackgroundColor3 = Lib.Theme.Item, Text = text, TextColor3 = Lib.Palette.Primary, TextSize = 18, Font = Enum.Font.GothamBold,
+			AutoButtonColor = false, ZIndex = 30, Parent = viewport, Lib.Create("UICorner", { CornerRadius = UDim.new(1, 0) })
+		})
+		Press(button, 0.88)
+		button.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			Focus(focus + side, false, true)
+		end)
+		return button
+	end
+	local prevButton, nextButton = Arrow(-1, "\u{2039}"), Arrow(1, "\u{203A}")
 
-	local importRow = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 52), BackgroundTransparency = 1, Parent = presetGroup })
-	local importBox = Lib.Create("TextBox", {
-		Size = UDim2.new(1, -96, 0, 32), Position = UDim2.fromOffset(10, 10), BackgroundColor3 = Lib.Theme.Item, Text = "",
-		PlaceholderText = "Paste a preset code...", PlaceholderColor3 = Lib.Palette.Secondary, TextColor3 = Lib.Palette.Primary, TextSize = 11,
-		Font = Enum.Font.GothamMedium, ClearTextOnFocus = false, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd,
-		Parent = importRow, Round(7), Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
-	})
-	Lib.RegisterThemeElement(importBox, "BackgroundColor3", 0.7)
-	Lib.RegisterThemeText(importBox, "Primary")
-	local importBtn = Button(importRow, "Import", 0, 10, 74, 32, true)
-	importBtn.AnchorPoint = Vector2.new(1, 0)
-	importBtn.Position = UDim2.new(1, -10, 0, 10)
-
-	local function RebuildPresets()
-		for _, child in ipairs(presetList:GetChildren()) do
-			if child:IsA("GuiObject") then child:Destroy() end
-		end
-		if #presets == 0 then
-			local note = Lib.Create("TextLabel", {
-				Size = UDim2.new(1, 0, 0, 28), BackgroundTransparency = 1, Text = "No saved presets yet", TextColor3 = Lib.Palette.Secondary,
-				TextSize = 11, Font = Enum.Font.GothamMedium, Parent = presetList
-			})
-			Lib.RegisterThemeText(note, "Secondary")
-			return
-		end
-		for i, entry in ipairs(presets) do
-			local item = Lib.Create("Frame", {
-				Size = UDim2.new(1, 0, 0, 38), BackgroundColor3 = Lib.Theme.Item, LayoutOrder = i, Parent = presetList, Round(7)
-			})
-			Lib.RegisterThemeElement(item, "BackgroundColor3", 0.7)
-			Caption(item, tostring(entry.Name), 12, 0, 100, 38, 12, true, "Primary")
-			local copy = Button(item, "Copy", 116, 6, 46, 26, false)
-			local load = Button(item, "Load", 166, 6, 46, 26, true)
-			copy.MouseButton1Click:Connect(function()
-				Lib.PlayClick()
-				local code = Lib.ShareEncode("UI", entry.Data)
-				if not Lib.CopyText(code) then importBox.Text = code end
-				Lib.Notify({ Title = "UI Studio", Text = "Preset code copied" })
-			end)
-			local delete = Lib.Create("TextButton", {
-				Size = UDim2.fromOffset(26, 26), Position = UDim2.fromOffset(218, 6), BackgroundColor3 = Color3.fromRGB(220, 50, 50),
-				Text = "\u{00D7}", TextColor3 = Color3.new(1, 1, 1), TextSize = 14, Font = Enum.Font.GothamBold, AutoButtonColor = false, Parent = item, Round(7)
-			})
-			load.MouseButton1Click:Connect(function()
-				Lib.PlayClick()
-				D = Unpack(entry.Data)
-				D.Name = entry.Name
-				nameBox.Text = entry.Name
-				RefreshAll()
-				Paint("all")
-				Paint("font")
-			end)
-			delete.MouseButton1Click:Connect(function()
-				Lib.PlayClick()
-				table.remove(presets, i)
-				SavePresets()
-				RebuildPresets()
-			end)
+	Layout = function(instant)
+		local width = viewport.AbsoluteSize.X
+		if width <= 0 then return end
+		local info = TweenInfo.new(0.42, Quint, Out)
+		for index = 1, #GALLERY do
+			local c = gCards[index]
+			local d = index - focus
+			local ad = math.abs(d)
+			local position = UDim2.new(0, width / 2 + d * STEP, 0.5, 0)
+			local fade = ad == 0 and 0 or (ad == 1 and 0.55 or 1)
+			local size = ad == 0 and 1 or (ad == 1 and 0.82 or 0.66)
+			c.Card.ZIndex = 10 - math.min(ad, 9)
+			c.Hit.Visible = ad <= 1
+			if instant then
+				c.Card.Position, c.Card.GroupTransparency, c.Scale.Scale = position, fade, size
+			else
+				Anim:Create(c.Card, info, { Position = position, GroupTransparency = fade }):Play()
+				Anim:Create(c.Scale, info, { Scale = size }):Play()
+			end
 		end
 	end
 
-	local themeGroup = Group("Theme")
-	local swatchHolder = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 60), BackgroundTransparency = 1, Parent = themeGroup })
+	PaintGallery = function()
+		for index = 1, #GALLERY do
+			local c = gCards[index]
+			local selected = index == focus
+			c.Card.BackgroundColor3 = Lib.Theme.Item
+			Anim:Create(c.Stroke, SMOOTH_FAST, {
+				Color = selected and Lib.Palette.SwitchOn or Lib.Palette.Secondary, Thickness = selected and 2 or 1, Transparency = selected and 0 or 0.85
+			}):Play()
+			local dot = gDots[index]
+			dot.BackgroundColor3 = selected and Lib.Palette.Primary or Lib.Palette.Secondary
+			dot.BackgroundTransparency = selected and 0 or 0.55
+			Anim:Create(dot, SMOOTH_FAST, { Size = UDim2.fromOffset(selected and 18 or 6, 6) }):Play()
+		end
+		prevButton.BackgroundColor3, nextButton.BackgroundColor3 = Lib.Theme.Item, Lib.Theme.Item
+		prevButton.TextColor3 = focus > 1 and Lib.Palette.Primary or Lib.Palette.Secondary
+		nextButton.TextColor3 = focus < #GALLERY and Lib.Palette.Primary or Lib.Palette.Secondary
+	end
+
+	Focus = function(index, instant, apply)
+		index = math.clamp(index, 1, #GALLERY)
+		local moved = index ~= focus
+		focus = index
+		Layout(instant)
+		PaintGallery()
+		if moved then ShowInfo(not instant) end
+		if apply then ApplyLook(GALLERY[index]) end
+	end
+
+	viewport:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() Layout(true) end)
+	table.insert(Lib.ThemeHooks, PaintGallery)
+	ShowInfo(false)
+	Layout(true)
+	PaintGallery()
+
+	local themeCard = Group("Style", "Theme")
+	local swatchHolder = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 60), BackgroundTransparency = 1, Parent = themeCard })
 	local swatchGrid = Lib.Create("UIGridLayout", {
-		CellSize = UDim2.fromOffset(36, 36), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder, Parent = swatchHolder
+		CellSize = UDim2.new(1 / 3, -8, 0, 58), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder, Parent = swatchHolder
 	})
-	Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 12), PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 8), Parent = swatchHolder })
+	Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 4), Parent = swatchHolder })
 	swatchGrid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-		swatchHolder.Size = UDim2.new(1, 0, 0, swatchGrid.AbsoluteContentSize.Y + 24)
+		swatchHolder.Size = UDim2.new(1, 0, 0, swatchGrid.AbsoluteContentSize.Y + 12)
 	end)
 	local swatches = {}
 
-	local function ShowSwatches()
-		for index, stroke in pairs(swatches) do
-			stroke.Transparency = (not D.Colors and D.ThemeIndex == index) and 0 or 1
+	local function ShowSwatches(animate)
+		for index, rec in pairs(swatches) do
+			local on = not D.Colors and D.ThemeIndex == index
+			rec.Check.Visible = on
+			if animate then
+				Anim:Create(rec.Stroke, FAST, { Transparency = on and 0 or 1 }):Play()
+			else
+				rec.Stroke.Transparency = on and 0 or 1
+			end
 		end
 	end
 
@@ -27477,47 +29764,58 @@ function Lib.OpenUIStudio()
 			if child:IsA("GuiButton") then child:Destroy() end
 		end
 		table.clear(swatches)
-		local presetsCount = #Lib.ThemePresets
+		local count = #Lib.ThemePresets
 		local list = {}
-		for i = 1, presetsCount do list[#list + 1] = { i, Lib.ThemePresets[i], i } end
-		list[#list + 1] = { 0, Lib.HalloweenTheme, presetsCount + 1 }
-		list[#list + 1] = { -1, Lib.WinterTheme, presetsCount + 2 }
-		list[#list + 1] = { -2, Lib.GTATheme, presetsCount + 3 }
-		for k, theme in ipairs(State.CustomThemes) do list[#list + 1] = { presetsCount + k, theme, presetsCount + 3 + k } end
-		for _, entry in ipairs(list) do
-			local index, spec, slot = entry[1], entry[2], entry[3]
-			local isTable = typeof(spec) == "table"
+		for i = 1, count do list[#list + 1] = { i, Lib.ThemePresets[i], THEME_NAMES[i] or ("Theme " .. i) } end
+		list[#list + 1] = { 0, Lib.HalloweenTheme, "Halloween" }
+		list[#list + 1] = { -1, Lib.WinterTheme, "Winter" }
+		list[#list + 1] = { -2, Lib.GTATheme, "GTA VI" }
+		for k, theme in ipairs(State.CustomThemes) do list[#list + 1] = { count + k, theme, theme.Name or ("Custom " .. k) } end
+		for slot, entry in ipairs(list) do
+			local index, spec, name = entry[1], entry[2], entry[3]
+			local derived = Lib.DeriveTheme(spec)
+			local stroke = Lib.Create("UIStroke", { Color = Lib.Palette.Primary, Thickness = 1.5, Transparency = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
+			strokes[#strokes + 1] = stroke
 			local swatch = Lib.Create("TextButton", {
-				BackgroundColor3 = isTable and Color3.new(1, 1, 1) or spec, Text = "", AutoButtonColor = false, LayoutOrder = slot, Parent = swatchHolder, Round(8)
+				BackgroundColor3 = Lib.Theme.Item, Text = "", AutoButtonColor = false, LayoutOrder = slot, Parent = swatchHolder, Round(8), stroke
 			})
-			if isTable then
-				Lib.Create("UIGradient", {
-					Rotation = 45,
-					Color = ColorSequence.new({
-						ColorSequenceKeypoint.new(0, spec.Background), ColorSequenceKeypoint.new(0.4, spec.Background),
-						ColorSequenceKeypoint.new(0.401, spec.Surface), ColorSequenceKeypoint.new(0.7, spec.Surface),
-						ColorSequenceKeypoint.new(0.701, spec.Accent), ColorSequenceKeypoint.new(1, spec.Accent)
-					}),
-					Parent = swatch
+			Lib.RegisterThemeElement(swatch, "BackgroundColor3", 0.7)
+			local strips = Lib.Create("Frame", {
+				Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 0, 22), BackgroundTransparency = 1, ClipsDescendants = true, Parent = swatch, Round(5)
+			})
+			local colors = { derived.Main, derived.Card, derived.SwitchOn, derived.Primary }
+			for k = 1, 4 do
+				Lib.Create("Frame", {
+					Size = UDim2.new(0.25, k < 4 and 1 or 0, 1, 0), Position = UDim2.fromScale((k - 1) * 0.25, 0), BackgroundColor3 = colors[k], BorderSizePixel = 0, Parent = strips
 				})
 			end
-			local stroke = Lib.Create("UIStroke", {
-				Color = Color3.new(1, 1, 1), Thickness = 2, Transparency = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = swatch
+			Caption(swatch, name, 8, 33, 70, 14, 11, true, "Primary")
+			local check = Lib.Create("TextLabel", {
+				Position = UDim2.new(1, -22, 0, 33), Size = UDim2.fromOffset(14, 14), BackgroundTransparency = 1, Text = "\u{2713}",
+				TextColor3 = Lib.Palette.Primary, TextSize = 12, Font = Enum.Font.GothamBold, Visible = false, Parent = swatch
 			})
-			swatches[index] = stroke
+			Lib.RegisterThemeText(check, "Primary")
+			swatches[index] = { Stroke = stroke, Check = check }
+			local scale = Press(swatch, 0.95)
+			swatch.MouseEnter:Connect(function()
+				Anim:Create(scale, SMOOTH_FAST, { Scale = 1.05 }):Play()
+			end)
+			swatch.MouseLeave:Connect(function()
+				Anim:Create(scale, SMOOTH_FAST, { Scale = 1 }):Play()
+			end)
 			swatch.MouseButton1Click:Connect(function()
 				Lib.PlayClick()
 				D.ThemeIndex, D.Colors, D.Name = index, nil, nil
-				RefreshAll()
+				RefreshAll(true)
 				Paint("theme")
 			end)
 		end
-		ShowSwatches()
+		ShowSwatches(false)
 	end
 	refreshers[#refreshers + 1] = ShowSwatches
 
-	local colorGroup = Group("Custom Colors")
-	local rows, pickerKey = {}, nil
+	local colorCard = Group("Style", "Custom Colors")
+	local rows, pickerKey, pickerOpen = {}, nil, false
 	local pk = { H = 0, S = 0, V = 0 }
 	local sv, svKnob, hue, hueKnob
 
@@ -27534,17 +29832,25 @@ function Lib.OpenUIStudio()
 		PickerVisuals()
 	end
 
+	local function MarkRows()
+		for key, rec in pairs(rows) do
+			Anim:Create(rec.stroke, FAST, { Transparency = (pickerOpen and pickerKey == key) and 0 or 0.85, Thickness = (pickerOpen and pickerKey == key) and 2 or 1 }):Play()
+		end
+	end
+
 	local function SetColor(key, color, fromPicker)
 		if not D.Colors then D.Colors = ColorsOf(Spec()) end
 		D.Colors[key] = color
 		rows[key].swatch.BackgroundColor3 = color
 		rows[key].hex.Text = "#" .. color:ToHex()
 		if not fromPicker and pickerKey == key then LoadPicker(color) end
-		ShowSwatches()
+		ShowSwatches(false)
 		Queue("theme")
 	end
 
-	local pickerFrame = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 158), BackgroundTransparency = 1, Visible = false, LayoutOrder = 99, Parent = colorGroup })
+	local pickerFrame = Lib.Create("Frame", {
+		Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1, ClipsDescendants = true, LayoutOrder = 99, Parent = colorCard
+	})
 	sv = Lib.Create("Frame", {
 		Size = UDim2.new(1, -28, 0, 110), Position = UDim2.fromOffset(14, 10), BackgroundColor3 = Color3.new(1, 0, 0), Parent = pickerFrame, Round(6)
 	})
@@ -27589,24 +29895,29 @@ function Lib.OpenUIStudio()
 	end)
 
 	for index, key in ipairs(KEYS) do
-		local row = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 38), BackgroundTransparency = 1, LayoutOrder = index, Parent = colorGroup })
-		Caption(row, KEY_NAMES[key], 14, 0, 130, 38, 12, true, "Primary")
+		local row = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1, LayoutOrder = index, Parent = colorCard })
+		Caption(row, KEY_NAMES[key], 14, 0, 130, 40, 12, true, "Primary")
+		local stroke = Lib.Create("UIStroke", { Color = Lib.Palette.Primary, Thickness = 1, Transparency = 0.85, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
+		strokes[#strokes + 1] = stroke
 		local swatch = Lib.Create("TextButton", {
-			Size = UDim2.fromOffset(26, 26), Position = UDim2.new(1, -122, 0.5, -13), Text = "", AutoButtonColor = false, Parent = row, Round(7),
-			Lib.Create("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1, Transparency = 0.85 })
+			Size = UDim2.fromOffset(26, 26), Position = UDim2.new(1, -126, 0.5, -13), Text = "", AutoButtonColor = false, Parent = row, Round(7), stroke
 		})
+		Press(swatch, 0.9)
 		local hex = Lib.Create("TextBox", {
-			Size = UDim2.fromOffset(80, 26), Position = UDim2.new(1, -90, 0.5, -13), BackgroundColor3 = Lib.Theme.Item, Text = "",
+			Size = UDim2.fromOffset(80, 26), Position = UDim2.new(1, -94, 0.5, -13), BackgroundColor3 = Lib.Theme.Item, Text = "",
 			TextColor3 = Lib.Palette.Primary, TextSize = 11, Font = Enum.Font.GothamMedium, ClearTextOnFocus = false, Parent = row, Round(7)
 		})
 		Lib.RegisterThemeElement(hex, "BackgroundColor3", 0.7)
 		Lib.RegisterThemeText(hex, "Primary")
-		rows[key] = { swatch = swatch, hex = hex }
+		rows[key] = { swatch = swatch, hex = hex, stroke = stroke }
 		swatch.MouseButton1Click:Connect(function()
 			Lib.PlayClick()
+			local same = pickerOpen and pickerKey == key
 			pickerKey = key
-			pickerFrame.Visible = true
-			LoadPicker((D.Colors or ColorsOf(Spec()))[key])
+			pickerOpen = not same
+			if pickerOpen then LoadPicker((D.Colors or ColorsOf(Spec()))[key]) end
+			Anim:Create(pickerFrame, SMOOTH, { Size = UDim2.new(1, 0, 0, pickerOpen and 158 or 0) }):Play()
+			MarkRows()
 		end)
 		hex.FocusLost:Connect(function()
 			local ok, color = pcall(Color3.fromHex, hex.Text)
@@ -27626,68 +29937,210 @@ function Lib.OpenUIStudio()
 		if pickerKey then LoadPicker(colors[pickerKey]) end
 	end
 
-	local windowGroup = Group("Window")
 	local function Self() return D end
 	local function Fx() return D.Fx end
-	AddSlider(windowGroup, "Corner Radius", 0, 28, Self, "CornerRadius", "", "window")
-	AddSlider(windowGroup, "Window Transparency", 0, 80, Self, "WindowTransparency", "%", "window")
-	AddSlider(windowGroup, "Panel Transparency", 0, 100, Self, "PanelTransparency", "%", "window")
-	AddToggle(windowGroup, "Hide Logo", "Hides the header icon", Self, "HideLogo", "window")
-	AddToggle(windowGroup, "Hide Name", "Hides the header title", Self, "HideName", "window", true)
 
-	local fontGroup = Group("Font")
+	local fontCard = Group("Style", "Font")
 	local fontEntries = {}
 	for i, font in ipairs(FONTS) do fontEntries[i] = { font[1], i, font[2] } end
-	AddChips(fontGroup, fontEntries, function(value) return D.FontIndex == value end, function(value)
+	AddChips(fontCard, fontEntries, function(value) return D.FontIndex == value end, function(value)
 		D.FontIndex, D.FontId = value, nil
 		Paint("font")
 	end, 3)
 
-	local bgGroup = Group("Background")
-	local bgRow = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 52), BackgroundTransparency = 1, Parent = bgGroup })
-	local bgBox = Lib.Create("TextBox", {
-		Size = UDim2.new(1, -28, 0, 34), Position = UDim2.fromOffset(14, 9), BackgroundColor3 = Lib.Theme.Item, Text = D.CustomBg,
-		PlaceholderText = "Asset ID or image URL...", PlaceholderColor3 = Lib.Palette.Secondary, TextColor3 = Lib.Palette.Primary, TextSize = 12,
-		Font = Enum.Font.GothamMedium, ClearTextOnFocus = false, TextXAlignment = Enum.TextXAlignment.Left, Parent = bgRow,
-		Round(7), Lib.Create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) })
-	})
-	Lib.RegisterThemeElement(bgBox, "BackgroundColor3", 0.7)
-	Lib.RegisterThemeText(bgBox, "Primary")
-	bgBox.FocusLost:Connect(function()
-		D.CustomBg = bgBox.Text:match("^%s*(.-)%s*$")
-		Paint("bg")
-	end)
-	refreshers[#refreshers + 1] = function() bgBox.Text = D.CustomBg end
-	AddSlider(bgGroup, "Background Opacity", 10, 100, Self, "BgOpacity", "%", "bg")
-	AddSlider(bgGroup, "Background Zoom", 100, 160, Self, "BgZoom", "%", "bg", true)
+	local shapeCard = Group("Window", "Shape")
+	AddSlider(shapeCard, "Corner Radius", 0, 28, Self, "CornerRadius", "", "window")
+	AddSlider(shapeCard, "Window Transparency", 0, 80, Self, "WindowTransparency", "%", "window")
+	AddSlider(shapeCard, "Panel Transparency", 0, 100, Self, "PanelTransparency", "%", "window", true)
 
-	local fxGroup = Group("Gradient & Effects")
-	AddToggle(fxGroup, "Background Gradient", "Soft color gradient", Fx, "Gradient", "bg")
-	local styleEntries = {}
-	for i, entry in ipairs(GRADIENTS) do styleEntries[i] = { entry[1], entry[1] } end
-	styleEntries[#styleEntries + 1] = { "Custom", "Custom" }
-	AddChips(fxGroup, styleEntries, function(value) return D.Fx.Style == value end, function(value)
-		D.Fx.Style = value
-		Paint("bg")
-	end, 3)
-	AddSlider(fxGroup, "Gradient Strength", 5, 100, Fx, "Strength", "%", "bg")
-	AddSlider(fxGroup, "Gradient Angle", 0, 360, Fx, "Angle", "\u{00B0}", "bg")
-	AddToggle(fxGroup, "Animated Gradient", "Applied to the real UI", Fx, "Spin", "bg")
-	AddToggle(fxGroup, "Snowfall", "Calm falling snowflakes", Fx, "Snow", "bg")
-	AddToggle(fxGroup, "Twinkling Stars", "Softly fading stars", Fx, "Twinkle", "bg")
-	AddToggle(fxGroup, "Shooting Stars", "A rare falling star", Fx, "Shooting", "bg")
-	AddToggle(fxGroup, "Floating Particles", "Slow drifting dust", Fx, "Particles", "bg")
-	AddSlider(fxGroup, "Effect Intensity", 20, 100, Fx, "Intensity", "%", "bg", true)
+	local headerCard = Group("Window", "Header")
+	AddToggle(headerCard, "Hide Logo", "Hides the header icon", Self, "HideLogo", "window")
+	AddToggle(headerCard, "Hide Name", "Hides the header title", Self, "HideName", "window", true)
 
-	local layoutGroup = Group("Layout")
-	AddSlider(layoutGroup, "Window Width", 560, 1500, Self, "Width", " px", "layout")
-	AddSlider(layoutGroup, "Window Height", 380, 950, Self, "Height", " px", "layout")
-	local navHead = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, Parent = layoutGroup })
-	Caption(navHead, "Navigation Position", 14, 8, 220, 18, 12, true, "Primary")
-	AddChips(layoutGroup, { { "Left", "Left" }, { "Center", "Center" }, { "Right", "Right" } }, function(value) return D.Nav == value end, function(value)
+	local layoutCard = Group("Window", "Layout")
+	AddSlider(layoutCard, "Window Width", 560, 1500, Self, "Width", " px", "layout")
+	AddSlider(layoutCard, "Window Height", 380, 950, Self, "Height", " px", "layout")
+	Caption(Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, Parent = layoutCard }), "Navigation Position", 14, 6, 220, 18, 12, true, "Primary")
+	AddChips(layoutCard, { { "Left", "Left" }, { "Center", "Center" }, { "Right", "Right" } }, function(value) return D.Nav == value end, function(value)
 		D.Nav = value
 		Paint("layout")
 	end, 3)
+
+	local bgCard = Group("Background", "Background Image")
+	local bgPreviewRow = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 108), BackgroundTransparency = 1, Parent = bgCard })
+	local bgPreview = Lib.Create("Frame", {
+		Size = UDim2.new(1, -28, 0, 96), Position = UDim2.fromOffset(14, 4), BackgroundColor3 = Lib.Theme.Item, ClipsDescendants = true, Parent = bgPreviewRow, Round(8)
+	})
+	Lib.RegisterThemeElement(bgPreview, "BackgroundColor3", 0.7)
+	local bgEmpty = Caption(bgPreview, "No background image", 0, 0, 308, 96, 12, false, "Secondary", Enum.TextXAlignment.Center)
+	bgEmpty.Size = UDim2.fromScale(1, 1)
+	local bgThumb = Lib.Create("ImageLabel", {
+		Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ScaleType = Enum.ScaleType.Crop, Visible = false, ImageTransparency = 1, Parent = bgPreview
+	})
+	local bgShown
+	local function ShowBgPreview()
+		if D.CustomBg ~= "" then
+			if bgShown ~= D.CustomBg then
+				bgShown = D.CustomBg
+				bgThumb.Image = (Lib.ResolveImage(D.CustomBg))
+				bgThumb.ImageTransparency = 1
+				bgThumb.Visible = true
+				Anim:Create(bgThumb, SMOOTH, { ImageTransparency = 0 }):Play()
+			end
+			bgEmpty.Visible = false
+		else
+			bgShown = nil
+			bgThumb.Visible = false
+			bgEmpty.Visible = true
+		end
+	end
+	local bgRow = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 50), BackgroundTransparency = 1, Parent = bgCard })
+	local bgBox = Field(bgRow, 14, 6, 238, 34, "Asset ID or image URL...", D.CustomBg)
+	local bgClear = Button(bgRow, "Clear", 260, 6, 62, 34, false)
+	bgBox.FocusLost:Connect(function()
+		D.CustomBg = bgBox.Text:match("^%s*(.-)%s*$")
+		Paint("bg")
+		ShowBgPreview()
+	end)
+	bgClear.MouseButton1Click:Connect(function()
+		Lib.PlayClick()
+		bgBox.Text = ""
+		D.CustomBg = ""
+		Paint("bg")
+		ShowBgPreview()
+	end)
+	refreshers[#refreshers + 1] = function()
+		bgBox.Text = D.CustomBg
+		ShowBgPreview()
+	end
+	local bgTune = Group("Background", "Image Tuning")
+	AddSlider(bgTune, "Background Opacity", 10, 100, Self, "BgOpacity", "%", "bg")
+	AddSlider(bgTune, "Background Zoom", 100, 160, Self, "BgZoom", "%", "bg", true)
+
+	local gradCard = Group("Effects", "Gradient")
+	AddToggle(gradCard, "Background Gradient", "Soft color gradient", Fx, "Gradient", "bg")
+	local styleHolder = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 3 * 48 + 12), BackgroundTransparency = 1, Parent = gradCard })
+	Lib.Create("UIGridLayout", {
+		CellSize = UDim2.new(1 / 3, -8, 0, 40), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder, Parent = styleHolder
+	})
+	Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 6), Parent = styleHolder })
+	local styleTiles = {}
+	local styleNames = {}
+	for i, entry in ipairs(GRADIENTS) do styleNames[i] = entry[1] end
+	styleNames[#styleNames + 1] = "Custom"
+	for i, name in ipairs(styleNames) do
+		local stroke = Lib.Create("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2, Transparency = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
+		local gradient = Lib.Create("UIGradient", { Rotation = 20 })
+		local tile = Lib.Create("TextButton", {
+			BackgroundColor3 = Color3.new(1, 1, 1), Text = name, TextColor3 = Color3.new(1, 1, 1), TextSize = 11, Font = Enum.Font.GothamBold,
+			TextStrokeTransparency = 0.6, AutoButtonColor = false, LayoutOrder = i, Parent = styleHolder, Round(8), stroke, gradient
+		})
+		Press(tile, 0.94)
+		styleTiles[i] = { Name = name, Stroke = stroke, Gradient = gradient }
+		tile.MouseButton1Click:Connect(function()
+			Lib.PlayClick()
+			D.Fx.Style = name
+			RefreshAll(true)
+			Paint("bg")
+		end)
+	end
+	refreshers[#refreshers + 1] = function(animate)
+		for i, rec in ipairs(styleTiles) do
+			local a, b, c
+			if rec.Name == "Custom" then
+				a, b, c = D.Fx.A, D.Fx.A:Lerp(D.Fx.B, 0.5), D.Fx.B
+			else
+				a, b, c = GRADIENTS[i][2], GRADIENTS[i][3], GRADIENTS[i][4]
+			end
+			rec.Gradient.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, a), ColorSequenceKeypoint.new(0.5, b), ColorSequenceKeypoint.new(1, c) })
+			local on = D.Fx.Style == rec.Name
+			if animate then
+				Anim:Create(rec.Stroke, FAST, { Transparency = on and 0 or 1 }):Play()
+			else
+				rec.Stroke.Transparency = on and 0 or 1
+			end
+		end
+	end
+	AddSlider(gradCard, "Gradient Strength", 5, 100, Fx, "Strength", "%", "bg")
+	AddSlider(gradCard, "Gradient Angle", 0, 360, Fx, "Angle", "\u{00B0}", "bg")
+	AddToggle(gradCard, "Animated Gradient", "Applied to the real UI", Fx, "Spin", "bg", true)
+
+	local fxCard = Group("Effects", "Effects")
+	AddToggle(fxCard, "Snowfall", "Calm falling snowflakes", Fx, "Snow", "bg")
+	AddToggle(fxCard, "Twinkling Stars", "Softly fading stars", Fx, "Twinkle", "bg")
+	AddToggle(fxCard, "Shooting Stars", "A rare falling star", Fx, "Shooting", "bg")
+	AddToggle(fxCard, "Floating Particles", "Slow drifting dust", Fx, "Particles", "bg")
+	AddSlider(fxCard, "Effect Intensity", 20, 100, Fx, "Intensity", "%", "bg", true)
+
+	local savedCard = Group("Presets", "Saved UI Presets")
+	local presetList = Lib.Create("Frame", {
+		Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = savedCard,
+		Lib.Create("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+		Lib.Create("UIPadding", { PaddingTop = UDim.new(0, 2), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 12) })
+	})
+	local importCard = Group("Presets", "Import")
+	local importRow = Lib.Create("Frame", { Size = UDim2.new(1, 0, 0, 50), BackgroundTransparency = 1, Parent = importCard })
+	local importBox = Field(importRow, 14, 6, 238, 34, "Paste a preset code...")
+	local importBtn = Button(importRow, "Import", 260, 6, 62, 34, true)
+
+	local function LoadEntry(entry)
+		D = Unpack(entry.Data)
+		D.Name = entry.Name
+		nameBox.Text = entry.Name
+		RefreshAll(true)
+		Paint("all")
+		Paint("font")
+		Bump()
+	end
+
+	local function RebuildPresets(highlight)
+		for _, child in ipairs(presetList:GetChildren()) do
+			if child:IsA("GuiObject") then child:Destroy() end
+		end
+		if #presets == 0 then
+			local note = Lib.Create("TextLabel", {
+				Size = UDim2.new(1, 0, 0, 44), BackgroundTransparency = 1, Text = "No saved presets yet", TextColor3 = Lib.Palette.Secondary,
+				TextSize = 12, Font = Enum.Font.GothamMedium, Parent = presetList
+			})
+			Lib.RegisterThemeText(note, "Secondary")
+			return
+		end
+		for i, entry in ipairs(presets) do
+			local d = Unpack(entry.Data)
+			local item = Lib.Create("Frame", {
+				Size = UDim2.new(1, 0, 0, 76), BackgroundColor3 = Lib.Theme.Item, LayoutOrder = i, Parent = presetList, Round(9)
+			})
+			Lib.RegisterThemeElement(item, "BackgroundColor3", 0.7)
+			local thumbBox = Lib.Create("Frame", { Size = UDim2.fromOffset(96, 60), Position = UDim2.fromOffset(8, 8), BackgroundTransparency = 1, Parent = item })
+			Mini(thumbBox, d)
+			Caption(item, tostring(entry.Name), 112, 8, 190, 18, 12, true, "Primary")
+			Caption(item, "Radius " .. d.CornerRadius, 112, 26, 190, 14, 10, false, "Secondary")
+			local load = Button(item, "Load", 112, 46, 60, 24, true, 11)
+			local copy = Button(item, "Copy", 178, 46, 60, 24, false, 11)
+			local delete = Lib.Create("TextButton", {
+				Size = UDim2.fromOffset(28, 24), Position = UDim2.fromOffset(244, 46), BackgroundColor3 = Color3.fromRGB(220, 50, 50),
+				Text = "\u{00D7}", TextColor3 = Color3.new(1, 1, 1), TextSize = 15, Font = Enum.Font.GothamBold, AutoButtonColor = false, ZIndex = 3, Parent = item, Round(8)
+			})
+			Press(delete, 0.9)
+			load.MouseButton1Click:Connect(function()
+				Lib.PlayClick()
+				LoadEntry(entry)
+			end)
+			copy.MouseButton1Click:Connect(function()
+				Lib.PlayClick()
+				local code = Lib.ShareEncode("UI", entry.Data)
+				if not Lib.CopyText(code) then importBox.Text = code end
+				Lib.Notify({ Title = "UI Studio", Text = "Preset code copied" })
+			end)
+			delete.MouseButton1Click:Connect(function()
+				Lib.PlayClick()
+				table.remove(presets, i)
+				SavePresets()
+				RebuildPresets()
+			end)
+			if highlight and entry.Name == highlight then Pop(item) end
+		end
+	end
 
 	importBtn.MouseButton1Click:Connect(function()
 		Lib.PlayClick()
@@ -27704,9 +30157,10 @@ function Lib.OpenUIStudio()
 		D = Unpack(data)
 		D.Name = type(data.Name) == "string" and data.Name:sub(1, 24) or nil
 		importBox.Text = ""
-		RefreshAll()
+		RefreshAll(true)
 		Paint("all")
 		Paint("font")
+		Bump()
 		Lib.Notify({ Title = "UI Studio", Text = "Preset imported, press Apply or Save" })
 	end)
 
@@ -27727,7 +30181,7 @@ function Lib.OpenUIStudio()
 		end
 		if not replaced then presets[#presets + 1] = entry end
 		SavePresets()
-		RebuildPresets()
+		RebuildPresets(name)
 		Lib.Notify({ Title = "UI Studio", Text = "Saved preset: " .. name })
 	end)
 
@@ -27736,26 +30190,40 @@ function Lib.OpenUIStudio()
 		Lib.ApplyAppearance(ToDump())
 		Lib.ApplyLayout(D.Width, D.Height, D.Nav)
 		Lib.Notify({ Title = "UI Studio", Text = "Applied to the interface" })
+		SetDirty(false)
+		applyBtn.Text = "Applied \u{2713}"
+		task.delay(1.4, function()
+			if applyBtn.Parent then applyBtn.Text = "Apply to UI" end
+		end)
 		task.delay(0.5, function()
-			if win.IsVisible() then studio.Sync() end
+			if win.IsVisible() then studio.Sync(true) end
 		end)
 	end)
 
 	resetBtn.MouseButton1Click:Connect(function()
 		Lib.PlayClick()
-		studio.Sync()
+		studio.Sync(true)
+		Bump()
 	end)
 
-	function studio.Sync()
+	function studio.Sync(silent)
 		ClearClone()
 		FromLive()
+		nameBox.Text = ""
 		BuildSwatches()
 		RebuildPresets()
 		BuildClone()
-		RefreshAll()
+		RefreshAll(false)
 		Paint("all")
 		Fit()
 		if P then studio.Show(P.active) end
+		SetDirty(false)
+		if not silent then
+			task.delay(0.08, function()
+				local page = pages[currentPage]
+				if page and win.IsVisible() then Lib.Cascade(page) end
+			end)
+		end
 	end
 
 	BuildSwatches()
@@ -27767,9 +30235,11 @@ end
 function Lib.BuildStudioCard(parent, layoutOrder)
 	local card = Lib.Create("Frame", {
 		Name = "UIStudioCard", Size = UDim2.new(1, 0, 0, 88), BackgroundColor3 = Color3.fromRGB(15, 15, 15),
-		LayoutOrder = layoutOrder, Parent = parent, Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) })
+		LayoutOrder = layoutOrder, Parent = parent, Lib.Create("UICorner", { CornerRadius = UDim.new(0, 10) }),
+		Lib.Create("UIStroke", { Color = Color3.fromRGB(128, 128, 128), Transparency = 0.88, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
 	})
 	Lib.RegisterThemeElement(card, "BackgroundColor3", 0.5)
+	Lib.HoverStroke(card)
 
 	local icon = Lib.Create("ImageLabel", {
 		Size = UDim2.fromOffset(18, 18), Position = UDim2.fromOffset(14, 14), BackgroundTransparency = 1,
@@ -27791,11 +30261,27 @@ function Lib.BuildStudioCard(parent, layoutOrder)
 	})
 	Lib.RegisterThemeText(desc, "Secondary")
 
+	local scale = Lib.Create("UIScale", { Scale = 1 })
 	local open = Lib.Create("TextButton", {
 		Size = UDim2.fromOffset(140, 36), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0),
 		BackgroundColor3 = Color3.new(1, 1, 1), Text = "Open UI Studio", TextColor3 = Color3.new(0, 0, 0), TextSize = 12,
-		Font = Enum.Font.GothamBold, AutoButtonColor = false, Parent = card, Lib.Create("UICorner", { CornerRadius = UDim.new(0, 7) })
+		Font = Enum.Font.GothamBold, AutoButtonColor = false, Parent = card, Lib.Create("UICorner", { CornerRadius = UDim.new(0, 8) }), scale
 	})
+	local quad, quint, out = Enum.EasingStyle.Quad, Enum.EasingStyle.Quint, Enum.EasingDirection.Out
+	open.MouseEnter:Connect(function()
+		Lib.Tween(open, 0.15, quad, out, { BackgroundColor3 = Color3.fromRGB(215, 215, 215) })
+		Lib.Tween(scale, 0.25, quint, out, { Scale = 1.04 })
+	end)
+	open.MouseLeave:Connect(function()
+		Lib.Tween(open, 0.15, quad, out, { BackgroundColor3 = Color3.new(1, 1, 1) })
+		Lib.Tween(scale, 0.25, quint, out, { Scale = 1 })
+	end)
+	open.MouseButton1Down:Connect(function()
+		Lib.Tween(scale, 0.1, quad, out, { Scale = 0.95 })
+	end)
+	open.MouseButton1Up:Connect(function()
+		Lib.Tween(scale, 0.25, quint, out, { Scale = 1.04 })
+	end)
 	open.MouseButton1Click:Connect(function()
 		Lib.PlayClick()
 		Lib.OpenUIStudio()
