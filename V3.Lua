@@ -9328,7 +9328,7 @@ function Lib.BuildExecutorTest(view)
 end
 
 function Lib.BuildDiscordButton(parent)
-	local CODE = "GjMcEKnRQJ"
+	local CODE = "BftNnxefUE"
 	local URL = "https://discord.gg/" .. CODE
 	local ICON = ""
 	local UIS, Http, Gui = Services.UserInputService, Services.HttpService, Services.GuiService
